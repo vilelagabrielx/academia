@@ -58,6 +58,8 @@ sys.modules['reportlab.lib.pagesizes'] = MagicMock()
 sys.modules['reportlab.platypus'] = MagicMock()
 sys.modules['reportlab.lib.units'] = MagicMock()
 sys.modules['reportlab.lib.styles'] = MagicMock()
+sys.modules['lingua'] = MagicMock()
+sys.modules['django_prometheus'] = MagicMock()
 
 
 # Third Party

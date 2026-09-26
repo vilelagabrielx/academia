@@ -126,10 +126,10 @@ INSTALLED_APPS = [
     'actstream',
 
     # Fontawesome
-    'fontawesomefree',
+    # 'fontawesomefree',
 
     # Prometheus
-    'django_prometheus',
+    # 'django_prometheus',
 
     # Django-allauth
     'allauth',
@@ -146,7 +146,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     # Prometheus
-    'django_prometheus.middleware.PrometheusBeforeMiddleware',
+    # 'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -182,7 +182,7 @@ MIDDLEWARE = [
     'simple_history.middleware.HistoryRequestMiddleware',
 
     # Prometheus
-    'django_prometheus.middleware.PrometheusAfterMiddleware',
+    # 'django_prometheus.middleware.PrometheusAfterMiddleware',
 
     # Django Axes
     'axes.middleware.AxesMiddleware',  # should be the last one in the list
