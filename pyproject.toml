@@ -27,8 +27,6 @@ classifiers = [
 ]
 
 dependencies = [
-    "boto3~=1.43.2",
-    "celery[redis]~=5.6.0",
     "crispy-bootstrap5~=2026.3",
     "django-activity-stream~=2.0.0",
     "django-allauth[mfa,idp-oidc]~=65.19.0",
@@ -50,7 +48,6 @@ dependencies = [
     "django[argon2]~=6.0.7",
     "drf-spectacular[sidecar]~=0.30.0",
     "easy-thumbnails~=2.10.1",
-    "flower~=2.1.0",
     "fontawesomefree~=6.6.0",
     "gevent>=26.5.0",
     "icalendar~=7.2.0",
@@ -63,7 +60,6 @@ dependencies = [
     "packaging~=26.2",
     "pillow~=12.3.0",
     "psycopg[binary]~=3.3.2",
-    "reportlab~=5.0.0",
     "requests~=2.34.0",
     "tqdm~=4.70.0",
     "tzdata~=2026.2",

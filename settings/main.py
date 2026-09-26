@@ -19,6 +19,47 @@ import hashlib
 import secrets
 import warnings
 
+# Mocks to bypass removed heavy libraries in Vercel
+import sys
+from unittest.mock import MagicMock
+
+class DummyCelery:
+    def __init__(self, *args, **kwargs): pass
+    def config_from_object(self, *args, **kwargs): pass
+    def autodiscover_tasks(self, *args, **kwargs): pass
+    def task(self, *args, **kwargs):
+        def decorator(f):
+            f.delay = f
+            return f
+        return decorator
+
+class DummySharedTask:
+    def __call__(self, *args, **kwargs):
+        if len(args) == 1 and callable(args[0]):
+            f = args[0]
+            f.delay = f
+            return f
+        def decorator(f):
+            f.delay = f
+            return f
+        return decorator
+
+class DummyCeleryModule(MagicMock):
+    Celery = DummyCelery
+    shared_task = DummySharedTask()
+
+sys.modules['celery'] = DummyCeleryModule()
+sys.modules['boto3'] = MagicMock()
+sys.modules['botocore'] = MagicMock()
+sys.modules['reportlab'] = MagicMock()
+sys.modules['reportlab.pdfgen'] = MagicMock()
+sys.modules['reportlab.lib'] = MagicMock()
+sys.modules['reportlab.lib.pagesizes'] = MagicMock()
+sys.modules['reportlab.platypus'] = MagicMock()
+sys.modules['reportlab.lib.units'] = MagicMock()
+sys.modules['reportlab.lib.styles'] = MagicMock()
+
+
 # Third Party
 import environ
 

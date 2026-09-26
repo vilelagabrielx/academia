@@ -16,6 +16,13 @@ extras/
 AUTHORS.md
 CHANGELOG.md
 
+# Lockfiles para forçar a Vercel a usar o pyproject.toml atualizado
+uv.lock
+poetry.lock
+extras/
+AUTHORS.md
+CHANGELOG.md
+
 # Caches
 __pycache__/
 *.pyc
