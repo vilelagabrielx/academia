@@ -37,6 +37,11 @@ env = environ.Env(
     DJANGO_DEBUG=(bool, False)
 )
 
+env_file = BASE_DIR.parent / '.env'
+if env_file.exists():
+    environ.Env.read_env(env_file)
+
+
 # A list of keys used in the docker repo as defaults. To prevent instances using
 # these defaults in production, servers with these keys will warn and generate
 # random ones
