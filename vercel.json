@@ -1,0 +1,19 @@
+{
+  "builds": [
+    {
+      "src": "wger/wsgi.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "wger/wsgi.py"
+    }
+  ],
+  "functions": {
+    "wger/wsgi.py": {
+      "excludeFiles": "{**/*.md,**/*.txt,**/*.rst,**/*.png,**/*.jpg,**/*.jpeg,**/*.pdf,**/*.map,tests/**,**/tests/**,docs/**,**/__pycache__/**,**/.pytest_cache/**,**/.ruff_cache/**,**/.venv/**,venv/**}"
+    }
+  }
+}
