@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import crypto from 'crypto';
+import cache from './cache.js';
 
 // Connection pool targeting Supabase DB
 const pool = new Pool({
@@ -240,108 +241,111 @@ export async function checkExistingBilling(userId, dueDateStr) {
 
 // Students CRUD
 export async function getStudents(search = '') {
-  await initDbSchema();
-  await query(
-    `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status IN ('pending', 'charged')`
-  );
-
-  let sql = `
-    SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.is_staff, u.date_joined,
-           p.whatsapp, p.instagram, p.photo_base64, p.gym_id, p.age, p.height, p.goal, p.blood_type, p.training_days, p.current_weight,
-           COALESCE(p.enrollment_status, 'active') as enrollment_status, p.membership_expires_at,
-           p.fase_shape, p.nivel_treino, p.frequencia_semanal, p.divisao_treino,
-           p.objetivo_principal, p.objetivos_secundarios, p.pontos_fracos, p.lesoes_restricoes,
-           p.altura, p.observacoes_treinador,
-           p.peso_meta, p.bf_meta, p.braco_meta, p.antebraco_meta, p.ombro_meta, p.peitoral_meta,
-           p.cintura_meta, p.abdomen_meta, p.dorsal_meta, p.coxa_meta, p.gluteo_meta, p.panturrilha_meta, p.pescoco_meta,
-           p.restricoes_articulares, p.condicoes_cardio_metabolicas, p.cirurgias_reabilitacao, p.status_atestado, p.atestado_file_base64,
-           p.medicamentos_uso_continuo, p.dor_cronica_nivel, p.dor_cronica_regiao, p.horas_sono_media, p.qualidade_sono_estresse,
-           p.recursos_ergogenicos, p.contato_emergencia_nome, p.contato_emergencia_parentesco, p.contato_emergencia_telefone,
-           p.birth_date, p.data_nascimento, p.prazo_meta, p.dia_vencimento_recorrente,
-           (SELECT COUNT(*) FROM manager_routine r WHERE r.user_id = u.id) as routine_count
-    FROM auth_user u
-    LEFT JOIN core_userprofile p ON p.user_id = u.id
-    WHERE u.is_staff = false AND u.is_superuser = false
-  `;
-  const params = [];
-  if (search) {
-    params.push(`%${search}%`);
-    sql += ` AND (u.first_name ILIKE $1 OR u.last_name ILIKE $1 OR u.username ILIKE $1 OR u.email ILIKE $1 OR p.whatsapp ILIKE $1 OR p.instagram ILIKE $1)`;
-  }
-  sql += ` ORDER BY u.date_joined DESC`;
-  const res = await query(sql, params);
-  const students = res.rows;
-  
-  const todayStr = new Date().toISOString().split('T')[0];
-  const currentMonthStr = todayStr.slice(0, 7); // 'YYYY-MM'
-
-  for (const s of students) {
-    if (s.enrollment_status === 'active' && s.membership_expires_at && s.membership_expires_at < todayStr) {
-      s.enrollment_status = 'renewal_needed';
-      await query(`UPDATE core_userprofile SET enrollment_status = 'renewal_needed' WHERE user_id = $1`, [s.id]);
-    }
-
-    // Latest body evaluations
-    const evalRes = await query(
-      `SELECT * FROM gym_medidas_historico WHERE aluno_id = $1 ORDER BY data_registro DESC, id DESC LIMIT 2`,
-      [s.id]
-    );
-    s.latest_evaluation = evalRes.rows[0] || null;
-    s.previous_evaluation = evalRes.rows[1] || null;
-
-    // Get all non-cancelled billings
-    const bRes = await query(
-      `SELECT * FROM gym_billing 
-       WHERE user_id = $1 AND status != 'cancelled' 
-       ORDER BY due_date DESC, id DESC`,
-      [s.id]
-    );
-    const allBillings = bRes.rows;
-
-    const currentMonthBilling = allBillings.find(
-      (b) => b.due_date && b.due_date.toISOString().split('T')[0].slice(0, 7) === currentMonthStr
+  const cacheKey = `students:search:${search.toLowerCase().trim()}`;
+  return cache.getOrFetch(cacheKey, async () => {
+    await initDbSchema();
+    await query(
+      `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status IN ('pending', 'charged')`
     );
 
-    const latestBilling = allBillings[0] || null;
-    s.latest_billing_amount = latestBilling ? latestBilling.amount : null;
-    s.latest_billing_status = latestBilling ? latestBilling.status : null;
-    s.latest_billing_due_date = latestBilling ? latestBilling.due_date : null;
-    s.latest_billing = latestBilling;
-
-    const paidBilling = allBillings.find((b) => b.status === 'paid');
-    s.last_paid_amount = paidBilling ? paidBilling.amount : null;
-    s.last_paid_date = paidBilling ? paidBilling.paid_date : null;
-
-    if (!currentMonthBilling) {
-      s.billing_status = 'sem_cobranca';
-      s.billing_status_rank = 1;
-      s.current_billing = null;
-    } else if (currentMonthBilling.status === 'paid') {
-      s.billing_status = 'em_dia';
-      s.billing_status_rank = 4;
-      s.current_billing = currentMonthBilling;
-    } else if (currentMonthBilling.status === 'overdue' || currentMonthBilling.due_date.toISOString().split('T')[0] < todayStr) {
-      s.billing_status = 'atrasada';
-      s.billing_status_rank = 2;
-      s.current_billing = currentMonthBilling;
-    } else {
-      s.billing_status = 'pendente';
-      s.billing_status_rank = 3;
-      s.current_billing = currentMonthBilling;
+    let sql = `
+      SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.is_staff, u.date_joined,
+             p.whatsapp, p.instagram, p.photo_base64, p.gym_id, p.age, p.height, p.goal, p.blood_type, p.training_days, p.current_weight,
+             COALESCE(p.enrollment_status, 'active') as enrollment_status, p.membership_expires_at,
+             p.fase_shape, p.nivel_treino, p.frequencia_semanal, p.divisao_treino,
+             p.objetivo_principal, p.objetivos_secundarios, p.pontos_fracos, p.lesoes_restricoes,
+             p.altura, p.observacoes_treinador,
+             p.peso_meta, p.bf_meta, p.braco_meta, p.antebraco_meta, p.ombro_meta, p.peitoral_meta,
+             p.cintura_meta, p.abdomen_meta, p.dorsal_meta, p.coxa_meta, p.gluteo_meta, p.panturrilha_meta, p.pescoco_meta,
+             p.restricoes_articulares, p.condicoes_cardio_metabolicas, p.cirurgias_reabilitacao, p.status_atestado, p.atestado_file_base64,
+             p.medicamentos_uso_continuo, p.dor_cronica_nivel, p.dor_cronica_regiao, p.horas_sono_media, p.qualidade_sono_estresse,
+             p.recursos_ergogenicos, p.contato_emergencia_nome, p.contato_emergencia_parentesco, p.contato_emergencia_telefone,
+             p.birth_date, p.data_nascimento, p.prazo_meta, p.dia_vencimento_recorrente,
+             (SELECT COUNT(*) FROM manager_routine r WHERE r.user_id = u.id) as routine_count
+      FROM auth_user u
+      LEFT JOIN core_userprofile p ON p.user_id = u.id
+      WHERE u.is_staff = false AND u.is_superuser = false
+    `;
+    const params = [];
+    if (search) {
+      params.push(`%${search}%`);
+      sql += ` AND (u.first_name ILIKE $1 OR u.last_name ILIKE $1 OR u.username ILIKE $1 OR u.email ILIKE $1 OR p.whatsapp ILIKE $1 OR p.instagram ILIKE $1)`;
     }
-  }
+    sql += ` ORDER BY u.date_joined DESC`;
+    const res = await query(sql, params);
+    const students = res.rows;
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    const currentMonthStr = todayStr.slice(0, 7); // 'YYYY-MM'
 
-  // Priority Sort
-  students.sort((a, b) => {
-    if (a.billing_status_rank !== b.billing_status_rank) {
-      return a.billing_status_rank - b.billing_status_rank;
+    for (const s of students) {
+      if (s.enrollment_status === 'active' && s.membership_expires_at && s.membership_expires_at < todayStr) {
+        s.enrollment_status = 'renewal_needed';
+        await query(`UPDATE core_userprofile SET enrollment_status = 'renewal_needed' WHERE user_id = $1`, [s.id]);
+      }
+
+      // Latest body evaluations
+      const evalRes = await query(
+        `SELECT * FROM gym_medidas_historico WHERE aluno_id = $1 ORDER BY data_registro DESC, id DESC LIMIT 2`,
+        [s.id]
+      );
+      s.latest_evaluation = evalRes.rows[0] || null;
+      s.previous_evaluation = evalRes.rows[1] || null;
+
+      // Get all non-cancelled billings
+      const bRes = await query(
+        `SELECT * FROM gym_billing 
+         WHERE user_id = $1 AND status != 'cancelled' 
+         ORDER BY due_date DESC, id DESC`,
+        [s.id]
+      );
+      const allBillings = bRes.rows;
+
+      const currentMonthBilling = allBillings.find(
+        (b) => b.due_date && b.due_date.toISOString().split('T')[0].slice(0, 7) === currentMonthStr
+      );
+
+      const latestBilling = allBillings[0] || null;
+      s.latest_billing_amount = latestBilling ? latestBilling.amount : null;
+      s.latest_billing_status = latestBilling ? latestBilling.status : null;
+      s.latest_billing_due_date = latestBilling ? latestBilling.due_date : null;
+      s.latest_billing = latestBilling;
+
+      const paidBilling = allBillings.find((b) => b.status === 'paid');
+      s.last_paid_amount = paidBilling ? paidBilling.amount : null;
+      s.last_paid_date = paidBilling ? paidBilling.paid_date : null;
+
+      if (!currentMonthBilling) {
+        s.billing_status = 'sem_cobranca';
+        s.billing_status_rank = 1;
+        s.current_billing = null;
+      } else if (currentMonthBilling.status === 'paid') {
+        s.billing_status = 'em_dia';
+        s.billing_status_rank = 4;
+        s.current_billing = currentMonthBilling;
+      } else if (currentMonthBilling.status === 'overdue' || currentMonthBilling.due_date.toISOString().split('T')[0] < todayStr) {
+        s.billing_status = 'atrasada';
+        s.billing_status_rank = 2;
+        s.current_billing = currentMonthBilling;
+      } else {
+        s.billing_status = 'pendente';
+        s.billing_status_rank = 3;
+        s.current_billing = currentMonthBilling;
+      }
     }
-    const dateA = a.current_billing?.due_date || a.latest_billing_due_date || a.date_joined || '';
-    const dateB = b.current_billing?.due_date || b.latest_billing_due_date || b.date_joined || '';
-    return String(dateA).localeCompare(String(dateB));
-  });
 
-  return students;
+    // Priority Sort
+    students.sort((a, b) => {
+      if (a.billing_status_rank !== b.billing_status_rank) {
+        return a.billing_status_rank - b.billing_status_rank;
+      }
+      const dateA = a.current_billing?.due_date || a.latest_billing_due_date || a.date_joined || '';
+      const dateB = b.current_billing?.due_date || b.latest_billing_due_date || b.date_joined || '';
+      return String(dateA).localeCompare(String(dateB));
+    });
+
+    return students;
+  }, 30);
 }
 
 export async function createStudent(data = {}) {
@@ -830,28 +834,32 @@ export async function deleteStudent(id) {
 
 // Exercises
 export async function getExercises(search = '', categoryId = null) {
-  let sql = `
-    SELECT e.id, t.name, t.description, c.name as category_name, c.id as category_id
-    FROM exercises_exercise e
-    JOIN exercises_translation t ON t.exercise_id = e.id AND t.language_id = 2
-    LEFT JOIN exercises_exercisecategory c ON c.id = e.category_id
-    WHERE 1=1
-  `;
-  const params = [];
-  if (search) {
-    params.push(`%${search}%`);
-    sql += ` AND (t.name ILIKE $${params.length} OR t.description ILIKE $${params.length})`;
-  }
-  if (categoryId) {
-    params.push(categoryId);
-    sql += ` AND e.category_id = $${params.length}`;
-  }
-  sql += ` ORDER BY t.name ASC LIMIT 200`;
-  const res = await query(sql, params);
-  return res.rows;
+  const cacheKey = `exercises:${search.toLowerCase().trim()}:${categoryId || 'all'}`;
+  return cache.getOrFetch(cacheKey, async () => {
+    let sql = `
+      SELECT e.id, t.name, t.description, c.name as category_name, c.id as category_id
+      FROM exercises_exercise e
+      JOIN exercises_translation t ON t.exercise_id = e.id AND t.language_id = 2
+      LEFT JOIN exercises_exercisecategory c ON c.id = e.category_id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (search) {
+      params.push(`%${search}%`);
+      sql += ` AND (t.name ILIKE $${params.length} OR t.description ILIKE $${params.length})`;
+    }
+    if (categoryId) {
+      params.push(categoryId);
+      sql += ` AND e.category_id = $${params.length}`;
+    }
+    sql += ` ORDER BY t.name ASC LIMIT 200`;
+    const res = await query(sql, params);
+    return res.rows;
+  }, 300);
 }
 
 export async function createExercise({ name, description, category_id }) {
+  cache.delPrefix('exercises:');
   const now = new Date();
   const uuid = crypto.randomUUID();
   const exRes = await query(
@@ -1908,46 +1916,49 @@ export async function getMonthlyProfitHistory(monthsCount = 6) {
 }
 
 export async function getCashFlowSummary({ month_year } = {}) {
-  await ensureExpensesGenerated(month_year);
-  await ensureStudentBillingsGenerated(month_year);
+  const cacheKey = `cashflow:summary:${month_year || 'current'}`;
+  return cache.getOrFetch(cacheKey, async () => {
+    await ensureExpensesGenerated(month_year);
+    await ensureStudentBillingsGenerated(month_year);
 
-  const monthPattern = month_year && month_year !== 'all' ? `${month_year}%` : `${new Date().toISOString().slice(0, 7)}%`;
+    const monthPattern = month_year && month_year !== 'all' ? `${month_year}%` : `${new Date().toISOString().slice(0, 7)}%`;
 
-  const revRes = await query(`
-    SELECT COALESCE(SUM(amount), 0) as total_receitas, COUNT(*) as count_receitas
-    FROM gym_billing
-    WHERE status = 'paid' AND due_date::text LIKE $1
-  `, [monthPattern]);
+    const revRes = await query(`
+      SELECT COALESCE(SUM(amount), 0) as total_receitas, COUNT(*) as count_receitas
+      FROM gym_billing
+      WHERE status = 'paid' AND due_date::text LIKE $1
+    `, [monthPattern]);
 
-  const expRes = await query(`
-    SELECT COALESCE(SUM(amount), 0) as total_despesas, COUNT(*) as count_despesas
-    FROM gym_expenses
-    WHERE status = 'PAID' AND due_date::text LIKE $1
-  `, [monthPattern]);
+    const expRes = await query(`
+      SELECT COALESCE(SUM(amount), 0) as total_despesas, COUNT(*) as count_despesas
+      FROM gym_expenses
+      WHERE status = 'PAID' AND due_date::text LIKE $1
+    `, [monthPattern]);
 
-  const fixedRes = await query(`
-    SELECT COALESCE(SUM(base_amount), 0) as total_custo_fixo
-    FROM gym_expense_recurrences
-    WHERE status = 'ACTIVE'
-  `);
+    const fixedRes = await query(`
+      SELECT COALESCE(SUM(base_amount), 0) as total_custo_fixo
+      FROM gym_expense_recurrences
+      WHERE status = 'ACTIVE'
+    `);
 
-  const receitas = parseFloat(revRes.rows[0].total_receitas || 0);
-  const despesas = parseFloat(expRes.rows[0].total_despesas || 0);
-  const custoFixo = parseFloat(fixedRes.rows[0].total_custo_fixo || 0);
-  const lucroLiquido = receitas - despesas;
-  
-  const mensalidadeMedia = 150;
-  const alunosPontoEquilibrio = custoFixo > 0 ? Math.ceil(custoFixo / mensalidadeMedia) : 0;
-  const history = await getMonthlyProfitHistory(6);
+    const receitas = parseFloat(revRes.rows[0].total_receitas || 0);
+    const despesas = parseFloat(expRes.rows[0].total_despesas || 0);
+    const custoFixo = parseFloat(fixedRes.rows[0].total_custo_fixo || 0);
+    const lucroLiquido = receitas - despesas;
+    
+    const mensalidadeMedia = 150;
+    const alunosPontoEquilibrio = custoFixo > 0 ? Math.ceil(custoFixo / mensalidadeMedia) : 0;
+    const history = await getMonthlyProfitHistory(6);
 
-  return {
-    receitas,
-    despesas,
-    lucro_liquido: lucroLiquido,
-    custo_fixo: custoFixo,
-    alunos_ponto_equilibrio: alunosPontoEquilibrio,
-    mensalidade_media: mensalidadeMedia,
-    history
-  };
+    return {
+      receitas,
+      despesas,
+      lucro_liquido: lucroLiquido,
+      custo_fixo: custoFixo,
+      alunos_ponto_equilibrio: alunosPontoEquilibrio,
+      mensalidade_media: mensalidadeMedia,
+      history
+    };
+  }, 30);
 }
 
