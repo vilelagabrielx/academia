@@ -195,6 +195,15 @@ export default function FinancialPage() {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'fluxo' || params.get('chart') === 'true') {
+        setActiveTab('fluxo');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     loadData();
   }, [statusFilter, expenseCategoryFilter, monthFilter]);
 
@@ -383,6 +392,15 @@ export default function FinancialPage() {
 
         {/* Master Quick Action Buttons */}
         <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveTab('fluxo')}
+            className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black px-3.5 py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 flex items-center gap-2 transition-all text-xs cursor-pointer border border-cyan-300"
+            title="Abrir o gráfico de lucro mensal e fluxo de caixa"
+          >
+            <TrendingUp className="w-4 h-4 text-slate-950" />
+            <span>📊 Ver Gráfico de Lucro</span>
+          </button>
+
           <button
             onClick={() => setShowCreateBillingModal(true)}
             className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-3.5 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all text-xs cursor-pointer"
