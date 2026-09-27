@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CreditCard, Plus, CheckCircle2, AlertCircle, Clock, MessageCircle, FileText, Download, Eye, Trash2, Search, DollarSign, Send, Filter, Printer } from 'lucide-react';
+import { 
+  CreditCard, Plus, CheckCircle2, AlertCircle, Clock, MessageCircle, FileText, Download, Eye, 
+  Trash2, Search, DollarSign, Send, Filter, Printer, BellRing, Upload, Calendar, Check
+} from 'lucide-react';
 
 export default function BillingsPage() {
-  const [summary, setSummary] = useState({ total_paid: 0, total_pending: 0, total_overdue: 0 });
+  const [summary, setSummary] = useState({ total_paid: 0, total_pending: 0, total_charged: 0, total_overdue: 0 });
   const [billings, setBillings] = useState([]);
   const [students, setStudents] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
@@ -26,6 +29,22 @@ export default function BillingsPage() {
   const [showWaModal, setShowWaModal] = useState(false);
   const [selectedWaBilling, setSelectedWaBilling] = useState(null);
   const [waMessage, setWaMessage] = useState('');
+
+  // Mark as Charged Modal (Cobrança Feita + Lembrete em X dias)
+  const [showChargeModal, setShowChargeModal] = useState(false);
+  const [selectedChargeBilling, setSelectedChargeBilling] = useState(null);
+  const [remindDays, setRemindDays] = useState('3');
+  const [customRemindDate, setCustomRemindDate] = useState('');
+  const [chargeNotes, setChargeNotes] = useState('');
+  const [charging, setCharging] = useState(false);
+
+  // Mark as Paid Modal (with Optional Proof Upload)
+  const [showPaidModal, setShowPaidModal] = useState(false);
+  const [selectedPaidBilling, setSelectedPaidBilling] = useState(null);
+  const [paidProofBase64, setPaidProofBase64] = useState('');
+  const [paidProofFilename, setPaidProofFilename] = useState('');
+  const [paidNotes, setPaidNotes] = useState('');
+  const [savingPaid, setSavingPaid] = useState(false);
 
   // Proof Viewer Modal
   const [showProofModal, setShowProofModal] = useState(false);
@@ -49,7 +68,7 @@ export default function BillingsPage() {
       const bData = await bRes.json();
       const sData = await sRes.json();
 
-      setSummary(bData.summary || { total_paid: 0, total_pending: 0, total_overdue: 0 });
+      setSummary(bData.summary || { total_paid: 0, total_pending: 0, total_charged: 0, total_overdue: 0 });
       setBillings(bData.billings || []);
       setStudents(sData.students || []);
     } catch (err) {
@@ -83,19 +102,81 @@ export default function BillingsPage() {
     }
   };
 
-  const handleMarkAsPaid = async (billing) => {
-    if (!confirm(`Confirmar o pagamento de R$ ${billing.amount} para ${billing.first_name || billing.username}?`)) return;
+  // Mark Billing as Charged + Set Reminder
+  const handleMarkAsChargedSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedChargeBilling) return;
+
+    setCharging(true);
     try {
-      const res = await fetch(`/api/billings/${billing.id}`, {
-        method: 'PUT',
+      const res = await fetch(`/api/billings/${selectedChargeBilling.id}/charge`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'paid', paid_date: new Date().toISOString(), receipt_generated: true }),
+        body: JSON.stringify({
+          remind_days: remindDays !== 'custom' ? remindDays : null,
+          remind_at: remindDays === 'custom' ? customRemindDate : null,
+          charge_notes: chargeNotes,
+        }),
       });
-      if (!res.ok) throw new Error('Erro ao marcar cobrança como paga');
+
+      if (!res.ok) throw new Error('Erro ao registrar cobrança feita');
+
+      setShowChargeModal(false);
+      setSelectedChargeBilling(null);
+      setChargeNotes('');
       loadData();
     } catch (err) {
       alert(err.message);
+    } finally {
+      setCharging(false);
     }
+  };
+
+  // Mark Billing as Paid (with optional proof)
+  const handlePaidSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedPaidBilling) return;
+
+    setSavingPaid(true);
+    try {
+      const res = await fetch(`/api/billings/${selectedPaidBilling.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'paid',
+          paid_date: new Date().toISOString(),
+          receipt_generated: true,
+          notes: paidNotes || selectedPaidBilling.notes,
+          proof_base64: paidProofBase64 || undefined,
+          proof_filename: paidProofFilename || undefined,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Erro ao registrar pagamento');
+
+      setShowPaidModal(false);
+      setSelectedPaidBilling(null);
+      setPaidProofBase64('');
+      setPaidProofFilename('');
+      setPaidNotes('');
+      loadData();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSavingPaid(false);
+    }
+  };
+
+  const handleProofFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPaidProofFilename(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setPaidProofBase64(event.target.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleDeleteBilling = async (id) => {
@@ -109,7 +190,6 @@ export default function BillingsPage() {
     }
   };
 
-  // Open WhatsApp Reminder Modal with pre-filled editable message
   const openWaReminder = (billing) => {
     const name = billing.first_name || billing.username;
     const amountStr = parseFloat(billing.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
@@ -146,7 +226,7 @@ export default function BillingsPage() {
             <CreditCard className="w-6 h-6 text-emerald-400" />
             Módulo de Cobranças & Mensalidades
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Gerencie pagamentos, envie lembretes via WhatsApp e confira comprovantes.</p>
+          <p className="text-xs text-slate-400 mt-1">Marque cobranças efetuadas com lembrete personalizado, receba comprovantes e emita recibos.</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
@@ -158,38 +238,50 @@ export default function BillingsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="glass-panel p-6 rounded-2xl border border-slate-800 flex items-center gap-4 bg-emerald-950/10">
-          <div className="p-4 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 className="w-7 h-7" />
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center gap-4 bg-emerald-950/10">
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Total Recebido</span>
-            <span className="text-2xl font-extrabold text-emerald-400">
+            <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">Total Recebido</span>
+            <span className="text-xl font-extrabold text-emerald-400">
               R$ {parseFloat(summary.total_paid || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </div>
 
-        <div className="glass-panel p-6 rounded-2xl border border-slate-800 flex items-center gap-4 bg-amber-950/10">
-          <div className="p-4 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Clock className="w-7 h-7" />
+        <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center gap-4 bg-amber-950/10">
+          <div className="p-3.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <Clock className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Pendente (A vencer)</span>
-            <span className="text-2xl font-extrabold text-amber-400">
+            <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">Pendentes</span>
+            <span className="text-xl font-extrabold text-amber-400">
               R$ {parseFloat(summary.total_pending || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </div>
 
-        <div className="glass-panel p-6 rounded-2xl border border-slate-800 flex items-center gap-4 bg-rose-950/20">
-          <div className="p-4 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-            <AlertCircle className="w-7 h-7" />
+        <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center gap-4 bg-amber-900/10">
+          <div className="p-3.5 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/20">
+            <BellRing className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Atrasado</span>
-            <span className="text-2xl font-extrabold text-rose-400">
+            <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">Cobrados (Lembrete)</span>
+            <span className="text-xl font-extrabold text-amber-300">
+              R$ {parseFloat(summary.total_charged || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+
+        <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center gap-4 bg-rose-950/20">
+          <div className="p-3.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">Atrasados</span>
+            <span className="text-xl font-extrabold text-rose-400">
               R$ {parseFloat(summary.total_overdue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
@@ -204,7 +296,7 @@ export default function BillingsPage() {
               <AlertCircle className="w-5 h-5 text-rose-400" />
               🔴 Cobranças Atrasadas ({overdueBillings.length})
             </h2>
-            <span className="text-xs text-slate-400">Envie o lembrete de cobrança direto no WhatsApp do aluno</span>
+            <span className="text-xs text-slate-400">Clique para enviar WhatsApp ou marcar lembrete</span>
           </div>
 
           <div className="overflow-x-auto">
@@ -214,7 +306,7 @@ export default function BillingsPage() {
                   <th className="py-3 px-4">Aluno</th>
                   <th className="py-3 px-4">Valor</th>
                   <th className="py-3 px-4">Vencimento</th>
-                  <th className="py-3 px-4 text-right">Cobrar via WhatsApp</th>
+                  <th className="py-3 px-4 text-right">Ações de Cobrança</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-rose-500/10">
@@ -235,17 +327,26 @@ export default function BillingsPage() {
                     <td className="py-3.5 px-4 font-semibold text-slate-300">
                       {new Date(b.due_date).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
-                      {b.whatsapp ? (
+                    <td className="py-3.5 px-4 text-right space-x-2">
+                      <button
+                        onClick={() => {
+                          setSelectedChargeBilling(b);
+                          setShowChargeModal(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-bold text-xs transition-all cursor-pointer border border-amber-500/30"
+                      >
+                        <BellRing className="w-3.5 h-3.5" />
+                        <span>Cobrança Feita</span>
+                      </button>
+
+                      {b.whatsapp && (
                         <button
                           onClick={() => openWaReminder(b)}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer"
                         >
-                          <MessageCircle className="w-4 h-4" />
+                          <MessageCircle className="w-3.5 h-3.5" />
                           <span>WhatsApp</span>
                         </button>
-                      ) : (
-                        <span className="text-slate-500 italic text-[11px]">Sem número</span>
                       )}
                     </td>
                   </tr>
@@ -260,10 +361,10 @@ export default function BillingsPage() {
       <div className="glass-panel rounded-2xl border border-slate-800 p-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Status Tabs */}
-          <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+          <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto">
             <button
               onClick={() => setStatusFilter('')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all whitespace-nowrap ${
                 statusFilter === '' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -271,15 +372,23 @@ export default function BillingsPage() {
             </button>
             <button
               onClick={() => setStatusFilter('pending')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all whitespace-nowrap ${
                 statusFilter === 'pending' ? 'bg-amber-500/20 text-amber-400 shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
               Pendentes
             </button>
             <button
+              onClick={() => setStatusFilter('charged')}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all whitespace-nowrap ${
+                statusFilter === 'charged' ? 'bg-amber-400/20 text-amber-300 shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Cobrados (Lembrete)
+            </button>
+            <button
               onClick={() => setStatusFilter('paid')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all whitespace-nowrap ${
                 statusFilter === 'paid' ? 'bg-emerald-500/20 text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -287,7 +396,7 @@ export default function BillingsPage() {
             </button>
             <button
               onClick={() => setStatusFilter('overdue')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all whitespace-nowrap ${
                 statusFilter === 'overdue' ? 'bg-rose-500/20 text-rose-400 shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -321,9 +430,8 @@ export default function BillingsPage() {
                   <th className="py-3.5 px-4">Aluno</th>
                   <th className="py-3.5 px-4">Valor (R$)</th>
                   <th className="py-3.5 px-4">Vencimento</th>
-                  <th className="py-3.5 px-4">Forma</th>
-                  <th className="py-3.5 px-4 text-center">Situação</th>
-                  <th className="py-3.5 px-4 text-center">Comprovante Pix</th>
+                  <th className="py-3.5 px-4">Situação & Lembrete</th>
+                  <th className="py-3.5 px-4 text-center">Comprovante</th>
                   <th className="py-3.5 px-4 text-right">Ações</th>
                 </tr>
               </thead>
@@ -334,25 +442,34 @@ export default function BillingsPage() {
                       {b.first_name} {b.last_name}
                       <span className="text-[10px] text-slate-500 block font-mono">@{b.username}</span>
                     </td>
+
                     <td className="py-3.5 px-4 font-extrabold text-white">
                       R$ {parseFloat(b.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
+
                     <td className="py-3.5 px-4 font-semibold text-slate-300">
                       {new Date(b.due_date).toLocaleDateString('pt-BR')}
                     </td>
+
                     <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-medium">
-                        {b.payment_method}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
                       {b.status === 'paid' ? (
                         <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[11px] inline-flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" /> Pago
                         </span>
+                      ) : b.status === 'charged' ? (
+                        <div className="space-y-0.5">
+                          <span className="px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20 font-bold text-[11px] inline-flex items-center gap-1">
+                            <BellRing className="w-3.5 h-3.5" /> Cobrado (Amarelo)
+                          </span>
+                          {b.remind_at && (
+                            <span className="text-[10px] text-slate-400 block">
+                              Lembrete: {new Date(b.remind_at).toLocaleDateString('pt-BR')}
+                            </span>
+                          )}
+                        </div>
                       ) : b.status === 'overdue' ? (
                         <span className="px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold text-[11px] inline-flex items-center gap-1">
-                          <AlertCircle className="w-3.5 h-3.5" /> Atrasado
+                          <AlertCircle className="w-3.5 h-3.5" /> Atrasado (Vermelho)
                         </span>
                       ) : (
                         <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold text-[11px] inline-flex items-center gap-1">
@@ -360,6 +477,7 @@ export default function BillingsPage() {
                         </span>
                       )}
                     </td>
+
                     <td className="py-3.5 px-4 text-center">
                       {b.proof_base64 ? (
                         <button
@@ -375,28 +493,47 @@ export default function BillingsPage() {
                         <span className="text-slate-600 italic">Sem anexo</span>
                       )}
                     </td>
+
                     <td className="py-3.5 px-4 text-right space-x-2">
                       {b.status !== 'paid' && (
-                        <button
-                          onClick={() => handleMarkAsPaid(b)}
-                          title="Marcar como Pago"
-                          className="p-1.5 rounded-lg text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedChargeBilling(b);
+                              setShowChargeModal(true);
+                            }}
+                            title="Marcar Cobrança Feita & Lembrete"
+                            className="p-1.5 rounded-lg text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 transition-all"
+                          >
+                            <BellRing className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setSelectedPaidBilling(b);
+                              setShowPaidModal(true);
+                            }}
+                            title="Marcar como Pago (Recebido)"
+                            className="p-1.5 rounded-lg text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+                        </>
                       )}
+
                       {b.status === 'paid' && (
                         <button
                           onClick={() => {
                             setSelectedReceipt(b);
                             setShowReceiptModal(true);
                           }}
-                          title="Gerar Recibo de Pagamento"
+                          title="Gerar Recibo"
                           className="p-1.5 rounded-lg text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all"
                         >
                           <Printer className="w-4 h-4 text-emerald-400" />
                         </button>
                       )}
+
                       <button
                         onClick={() => handleDeleteBilling(b.id)}
                         title="Excluir"
@@ -413,14 +550,169 @@ export default function BillingsPage() {
         )}
       </div>
 
-      {/* Modal: New Billing Creation */}
+      {/* MODAL 1: MARK AS CHARGED & SET REMINDER (COBRANÇA FEITA + LEMBRETE EM X DIAS) */}
+      {showChargeModal && selectedChargeBilling && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <BellRing className="w-5 h-5 text-amber-400" />
+                Marcar Cobrança Feita & Definir Lembrete
+              </h3>
+              <button onClick={() => setShowChargeModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleMarkAsChargedSubmit} className="space-y-4 text-xs">
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                <span className="font-semibold text-white block">
+                  Aluno: {selectedChargeBilling.first_name} {selectedChargeBilling.last_name}
+                </span>
+                <span className="text-amber-400 font-bold block">
+                  Valor: R$ {parseFloat(selectedChargeBilling.amount).toFixed(2)}
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Me Lembre em (Dias):</label>
+                <select
+                  value={remindDays}
+                  onChange={(e) => setRemindDays(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-amber-400"
+                >
+                  <option value="2">Em 2 dias (Amarelo)</option>
+                  <option value="3">Em 3 dias (Amarelo)</option>
+                  <option value="5">Em 5 dias (Amarelo)</option>
+                  <option value="7">Em 7 dias (Amarelo)</option>
+                  <option value="custom">Data Personalizada...</option>
+                </select>
+              </div>
+
+              {remindDays === 'custom' && (
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Data Específica do Lembrete</label>
+                  <input
+                    type="date"
+                    required
+                    value={customRemindDate}
+                    onChange={(e) => setCustomRemindDate(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-amber-400"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Observações da Cobrança (Opcional)</label>
+                <textarea
+                  rows={2}
+                  value={chargeNotes}
+                  onChange={(e) => setChargeNotes(e.target.value)}
+                  placeholder="Ex: Mandei mensagem no WhatsApp, disse que pagará na sexta..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowChargeModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={charging}
+                  className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-amber-400 hover:bg-amber-300"
+                >
+                  {charging ? 'Salvando...' : 'Salvar Cobrança e Lembrete'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: MARK AS PAID (REGISTRAR PAGAMENTO COM COMPROVANTE OPCIONAL) */}
+      {showPaidModal && selectedPaidBilling && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                Registrar Pagamento Recebido
+              </h3>
+              <button onClick={() => setShowPaidModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handlePaidSubmit} className="space-y-4 text-xs">
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                <span className="font-semibold text-white block">
+                  Aluno: {selectedPaidBilling.first_name} {selectedPaidBilling.last_name}
+                </span>
+                <span className="text-emerald-400 font-extrabold text-sm block">
+                  Valor Pago: R$ {parseFloat(selectedPaidBilling.amount).toFixed(2)}
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">
+                  Anexar Comprovante (Opcional - Imagem/PDF):
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handleProofFileUpload}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-slate-300 focus:outline-none"
+                />
+              </div>
+
+              {paidProofFilename && (
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 font-semibold flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  <span>Comprovante: {paidProofFilename}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Observações do Pagamento (Opcional)</label>
+                <input
+                  type="text"
+                  value={paidNotes}
+                  onChange={(e) => setPaidNotes(e.target.value)}
+                  placeholder="Ex: Recebido em dinheiro no balcão / Pix..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowPaidModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPaid}
+                  className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400"
+                >
+                  {savingPaid ? 'Confirmando...' : 'Confirmar Pagamento'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: NEW BILLING MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Plus className="w-5 h-5 text-emerald-400" />
-                Criar Nova Cobrança / Mensalidade
+                Criar Nova Cobrança
               </h3>
               <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white">✕</button>
             </div>
@@ -445,7 +737,7 @@ export default function BillingsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Valor da Mensalidade (R$) *</label>
+                  <label className="block font-semibold text-slate-300 mb-1">Valor (R$) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -469,7 +761,7 @@ export default function BillingsPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">Forma de Pagamento Preferencial</label>
+                <label className="block font-semibold text-slate-300 mb-1">Forma de Pagamento</label>
                 <select
                   value={newBilling.payment_method}
                   onChange={(e) => setNewBilling({ ...newBilling, payment_method: e.target.value })}
@@ -480,17 +772,6 @@ export default function BillingsPage() {
                   <option value="Dinheiro">Dinheiro</option>
                   <option value="Boleto">Boleto</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Observações (Opcional)</label>
-                <input
-                  type="text"
-                  value={newBilling.notes}
-                  onChange={(e) => setNewBilling({ ...newBilling, notes: e.target.value })}
-                  placeholder="Ex: Mensalidade de Outubro/2026..."
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                />
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
@@ -514,7 +795,7 @@ export default function BillingsPage() {
         </div>
       )}
 
-      {/* Modal: WhatsApp Custom Message Sender */}
+      {/* MODAL 4: WHATSAPP REMINDER */}
       {showWaModal && selectedWaBilling && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
@@ -534,7 +815,7 @@ export default function BillingsPage() {
 
               <div>
                 <label className="block font-semibold text-slate-300 mb-1">
-                  Mensagem Pronta (Você pode editar antes de enviar):
+                  Mensagem Pronta (Editável):
                 </label>
                 <textarea
                   rows={6}
@@ -564,7 +845,7 @@ export default function BillingsPage() {
         </div>
       )}
 
-      {/* Modal: View Proof Attachment */}
+      {/* MODAL 5: PROOF VIEWER */}
       {showProofModal && selectedProof && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="glass-panel w-full max-w-lg rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
@@ -601,10 +882,14 @@ export default function BillingsPage() {
                   <span>Baixar Arquivo</span>
                 </a>
                 <button
-                  onClick={() => handleMarkAsPaid(selectedProof)}
+                  onClick={() => {
+                    setShowProofModal(false);
+                    setSelectedPaidBilling(selectedProof);
+                    setShowPaidModal(true);
+                  }}
                   className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
                 >
-                  Confirmar e Marcar Pago
+                  Confirmar Pagamento
                 </button>
               </div>
             </div>
@@ -612,7 +897,7 @@ export default function BillingsPage() {
         </div>
       )}
 
-      {/* Modal: Printable Payment Receipt */}
+      {/* MODAL 6: RECEIPT */}
       {showReceiptModal && selectedReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="bg-white text-slate-900 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-6">

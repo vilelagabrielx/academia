@@ -453,14 +453,19 @@ export async function getBillingSummary() {
   await query(
     `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status = 'pending'`
   );
+  await query(
+    `UPDATE gym_billing SET status = 'overdue' WHERE remind_at < CURRENT_DATE AND status = 'charged'`
+  );
 
   const res = await query(`
     SELECT 
       COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) as total_paid,
       COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as total_pending,
+      COALESCE(SUM(CASE WHEN status = 'charged' THEN amount ELSE 0 END), 0) as total_charged,
       COALESCE(SUM(CASE WHEN status = 'overdue' THEN amount ELSE 0 END), 0) as total_overdue,
       COUNT(CASE WHEN status = 'paid' THEN 1 END) as count_paid,
       COUNT(CASE WHEN status = 'pending' THEN 1 END) as count_pending,
+      COUNT(CASE WHEN status = 'charged' THEN 1 END) as count_charged,
       COUNT(CASE WHEN status = 'overdue' THEN 1 END) as count_overdue
     FROM gym_billing
   `);
@@ -470,6 +475,9 @@ export async function getBillingSummary() {
 export async function getBillings({ status, user_id, search } = {}) {
   await query(
     `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status = 'pending'`
+  );
+  await query(
+    `UPDATE gym_billing SET status = 'overdue' WHERE remind_at < CURRENT_DATE AND status = 'charged'`
   );
 
   let sql = `
@@ -512,7 +520,26 @@ export async function createBilling({ user_id, amount, due_date, payment_method 
   return res.rows[0];
 }
 
-export async function updateBillingStatus(id, { status, paid_date, receipt_generated, notes }) {
+export async function markBillingAsCharged(id, { remind_days = 3, remind_at = null, charge_notes = '' }) {
+  const now = new Date();
+  let remindDate = remind_at;
+  if (!remindDate && remind_days) {
+    const d = new Date();
+    d.setDate(d.getDate() + parseInt(remind_days, 10));
+    remindDate = d.toISOString().split('T')[0];
+  }
+
+  const res = await query(
+    `UPDATE gym_billing 
+     SET status = 'charged', charged_at = $1, remind_at = $2, charge_notes = $3
+     WHERE id = $4
+     RETURNING *`,
+    [now, remindDate, charge_notes || '', id]
+  );
+  return res.rows[0];
+}
+
+export async function updateBillingStatus(id, { status, paid_date, receipt_generated, notes, proof_base64, proof_filename }) {
   let sql = `UPDATE gym_billing SET status = $1`;
   const params = [status];
 
@@ -529,6 +556,13 @@ export async function updateBillingStatus(id, { status, paid_date, receipt_gener
   if (notes !== undefined) {
     params.push(notes);
     sql += `, notes = $${params.length}`;
+  }
+
+  if (proof_base64 !== undefined) {
+    params.push(proof_base64);
+    sql += `, proof_base64 = $${params.length}`;
+    params.push(proof_filename || 'comprovante.jpg');
+    sql += `, proof_filename = $${params.length}`;
   }
 
   params.push(id);
@@ -556,6 +590,9 @@ export async function deleteBilling(id) {
 export async function getOverdueBillings() {
   await query(
     `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status = 'pending'`
+  );
+  await query(
+    `UPDATE gym_billing SET status = 'overdue' WHERE remind_at < CURRENT_DATE AND status = 'charged'`
   );
 
   const res = await query(`
