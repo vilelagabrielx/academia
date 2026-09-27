@@ -2435,7 +2435,7 @@ export default function StudentsPage() {
                   <button
                     type="button"
                     onClick={() => setWizardStep((s) => s - 1)}
-                    className="px-4 py-2 rounded-xl text-slate-300 bg-slate-800 hover:bg-slate-700 flex items-center gap-1"
+                    className="px-4 py-2 rounded-xl font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 flex items-center gap-1 cursor-pointer transition-all"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     <span>Anterior</span>
@@ -2444,23 +2444,27 @@ export default function StudentsPage() {
                   <div></div>
                 )}
 
-                <div className="flex gap-2">
-                  {wizardStep < 5 ? (
+                <div className="flex items-center gap-2">
+                  {wizardStep < 5 && (
                     <button
                       type="button"
                       onClick={() => setWizardStep((s) => s + 1)}
-                      className="px-4 py-2 rounded-xl font-semibold text-slate-950 bg-slate-200 hover:bg-white flex items-center gap-1"
+                      className="px-5 py-2 rounded-xl font-extrabold text-slate-950 bg-emerald-400 hover:bg-emerald-300 flex items-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer transition-all"
                     >
                       <span>Próximo</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
-                  ) : null}
+                  )}
 
                   <button
                     type="button"
                     onClick={handleSubmitWizard}
                     disabled={submitting}
-                    className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 shadow-md shadow-emerald-500/20"
+                    className={`px-5 py-2 rounded-xl font-bold transition-all cursor-pointer ${
+                      wizardStep === 5
+                        ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                    }`}
                   >
                     {submitting ? 'Salvando...' : editingStudentId ? 'Salvar Alterações' : 'Concluir Cadastro'}
                   </button>
