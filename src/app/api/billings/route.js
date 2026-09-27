@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getBillings, getBillingSummary, createBilling } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   try {
     const user = await getSessionUser();
@@ -14,7 +16,6 @@ export async function GET(request) {
     const userId = searchParams.get('user_id') || null;
     const search = searchParams.get('search') || '';
 
-    // If request asks for summary
     const summary = await getBillingSummary();
     const billings = await getBillings({ status, user_id: userId, search });
 
