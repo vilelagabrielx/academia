@@ -91,6 +91,26 @@ export async function initDbSchema() {
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS panturrilha_meta NUMERIC(5,2);`);
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS pescoco_meta NUMERIC(5,2);`);
 
+    // Anamnese Clínica, Saúde & Segurança
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS restricoes_articulares TEXT;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS condicoes_cardio_metabolicas TEXT;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS cirurgias_reabilitacao TEXT;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS status_atestado VARCHAR(50) DEFAULT 'Liberado Total';`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS atestado_file_base64 TEXT;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS medicamentos_uso_continuo TEXT;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dor_cronica_nivel INTEGER DEFAULT 0;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dor_cronica_regiao VARCHAR(100);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS horas_sono_media NUMERIC(3,1);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS qualidade_sono_estresse VARCHAR(50);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS recursos_ergogenicos TEXT;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS contato_emergencia_nome VARCHAR(150);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS contato_emergencia_parentesco VARCHAR(50);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS contato_emergencia_telefone VARCHAR(50);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS birth_date DATE;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS data_nascimento DATE;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS prazo_meta VARCHAR(50);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dia_vencimento_recorrente INTEGER DEFAULT 5;`);
+
     // Evaluation history table
     await query(`
       CREATE TABLE IF NOT EXISTS gym_medidas_historico (
@@ -111,6 +131,8 @@ export async function initDbSchema() {
         braco_direito NUMERIC(5,2),
         braco_esquerdo NUMERIC(5,2),
         braco_contraido NUMERIC(5,2),
+        braco_direito_contraido NUMERIC(5,2),
+        braco_esquerdo_contraido NUMERIC(5,2),
         antebraco_direito NUMERIC(5,2),
         antebraco_esquerdo NUMERIC(5,2),
         coxa_direita NUMERIC(5,2),
@@ -122,6 +144,8 @@ export async function initDbSchema() {
         resumo_alteracao TEXT
       );
     `);
+    await query(`ALTER TABLE gym_medidas_historico ADD COLUMN IF NOT EXISTS braco_direito_contraido NUMERIC(5,2);`);
+    await query(`ALTER TABLE gym_medidas_historico ADD COLUMN IF NOT EXISTS braco_esquerdo_contraido NUMERIC(5,2);`);
 
     // Meta history table
     await query(`
@@ -193,6 +217,10 @@ export async function getStudents(search = '') {
            p.altura, p.observacoes_treinador,
            p.peso_meta, p.bf_meta, p.braco_meta, p.antebraco_meta, p.ombro_meta, p.peitoral_meta,
            p.cintura_meta, p.abdomen_meta, p.dorsal_meta, p.coxa_meta, p.gluteo_meta, p.panturrilha_meta, p.pescoco_meta,
+           p.restricoes_articulares, p.condicoes_cardio_metabolicas, p.cirurgias_reabilitacao, p.status_atestado, p.atestado_file_base64,
+           p.medicamentos_uso_continuo, p.dor_cronica_nivel, p.dor_cronica_regiao, p.horas_sono_media, p.qualidade_sono_estresse,
+           p.recursos_ergogenicos, p.contato_emergencia_nome, p.contato_emergencia_parentesco, p.contato_emergencia_telefone,
+           p.birth_date, p.data_nascimento, p.prazo_meta, p.dia_vencimento_recorrente,
            (SELECT COUNT(*) FROM manager_routine r WHERE r.user_id = u.id) as routine_count
     FROM auth_user u
     LEFT JOIN core_userprofile p ON p.user_id = u.id
@@ -465,14 +493,45 @@ export async function updateStudent(id, data = {}) {
         coxa_meta = COALESCE($28, coxa_meta),
         gluteo_meta = COALESCE($29, gluteo_meta),
         panturrilha_meta = COALESCE($30, panturrilha_meta),
-        pescoco_meta = COALESCE($31, pescoco_meta)
+        pescoco_meta = COALESCE($31, pescoco_meta),
+        restricoes_articulares = COALESCE($34, restricoes_articulares),
+        condicoes_cardio_metabolicas = COALESCE($35, condicoes_cardio_metabolicas),
+        cirurgias_reabilitacao = COALESCE($36, cirurgias_reabilitacao),
+        status_atestado = COALESCE($37, status_atestado),
+        atestado_file_base64 = COALESCE(NULLIF($38, ''), atestado_file_base64),
+        medicamentos_uso_continuo = COALESCE($39, medicamentos_uso_continuo),
+        dor_cronica_nivel = COALESCE($40, dor_cronica_nivel),
+        dor_cronica_regiao = COALESCE($41, dor_cronica_regiao),
+        horas_sono_media = COALESCE($42, horas_sono_media),
+        qualidade_sono_estresse = COALESCE($43, qualidade_sono_estresse),
+        recursos_ergogenicos = COALESCE($44, recursos_ergogenicos),
+        contato_emergencia_nome = COALESCE($45, contato_emergencia_nome),
+        contato_emergencia_parentesco = COALESCE($46, contato_emergencia_parentesco),
+        contato_emergencia_telefone = COALESCE($47, contato_emergencia_telefone),
+        birth_date = COALESCE($48, birth_date),
+        data_nascimento = COALESCE($49, data_nascimento),
+        prazo_meta = COALESCE($50, prazo_meta),
+        dia_vencimento_recorrente = COALESCE($51, dia_vencimento_recorrente)
     WHERE user_id = $33
   `;
+
+  let computedAge = data.age ? parseInt(data.age, 10) : null;
+  const bDateStr = data.birth_date || data.data_nascimento;
+  if (bDateStr) {
+    const birth = new Date(bDateStr);
+    if (!isNaN(birth.getTime())) {
+      const today = new Date();
+      let ageCalc = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) ageCalc--;
+      if (ageCalc >= 0) computedAge = ageCalc;
+    }
+  }
 
   await query(pSql, [
     data.whatsapp !== undefined ? data.whatsapp : null,
     data.photo_base64 || '',
-    data.age ? parseInt(data.age, 10) : null,
+    computedAge,
     data.height ? parseInt(data.height, 10) : null,
     parseNum(data.current_weight),
     data.blood_type || null,
@@ -503,6 +562,24 @@ export async function updateStudent(id, data = {}) {
     parseNum(data.pescoco_meta),
     data.instagram !== undefined ? data.instagram : null,
     id,
+    data.restricoes_articulares !== undefined ? (typeof data.restricoes_articulares === 'object' ? JSON.stringify(data.restricoes_articulares) : data.restricoes_articulares) : null,
+    data.condicoes_cardio_metabolicas !== undefined ? (typeof data.condicoes_cardio_metabolicas === 'object' ? JSON.stringify(data.condicoes_cardio_metabolicas) : data.condicoes_cardio_metabolicas) : null,
+    data.cirurgias_reabilitacao !== undefined ? data.cirurgias_reabilitacao : null,
+    data.status_atestado || null,
+    data.atestado_file_base64 || '',
+    data.medicamentos_uso_continuo !== undefined ? data.medicamentos_uso_continuo : null,
+    data.dor_cronica_nivel !== undefined && data.dor_cronica_nivel !== '' ? parseInt(data.dor_cronica_nivel, 10) : null,
+    data.dor_cronica_regiao !== undefined ? data.dor_cronica_regiao : null,
+    parseNum(data.horas_sono_media),
+    data.qualidade_sono_estresse || null,
+    data.recursos_ergogenicos !== undefined ? data.recursos_ergogenicos : null,
+    data.contato_emergencia_nome !== undefined ? data.contato_emergencia_nome : null,
+    data.contato_emergencia_parentesco !== undefined ? data.contato_emergencia_parentesco : null,
+    data.contato_emergencia_telefone !== undefined ? data.contato_emergencia_telefone : null,
+    data.birth_date || data.data_nascimento || null,
+    data.data_nascimento || data.birth_date || null,
+    data.prazo_meta || null,
+    data.dia_vencimento_recorrente ? parseInt(data.dia_vencimento_recorrente, 10) : 5,
   ]);
 
   return { id };
@@ -535,7 +612,9 @@ export async function addBodyEvaluation(alunoId, evalData = {}, registeredBy = '
   const quadril = parseNum(evalData.quadril);
   const braco_direito = parseNum(evalData.braco_direito);
   const braco_esquerdo = parseNum(evalData.braco_esquerdo);
-  const braco_contraido = parseNum(evalData.braco_contraido);
+  const braco_contraido = parseNum(evalData.braco_contraido || evalData.braco_direito_contraido);
+  const braco_direito_contraido = parseNum(evalData.braco_direito_contraido || evalData.braco_contraido);
+  const braco_esquerdo_contraido = parseNum(evalData.braco_esquerdo_contraido);
   const antebraco_direito = parseNum(evalData.antebraco_direito);
   const antebraco_esquerdo = parseNum(evalData.antebraco_esquerdo);
   const coxa_direita = parseNum(evalData.coxa_direita);
@@ -562,7 +641,7 @@ export async function addBodyEvaluation(alunoId, evalData = {}, registeredBy = '
       }
     };
 
-    compareMetric(braco_contraido || braco_direito, prev.braco_contraido || prev.braco_direito);
+    compareMetric(braco_direito_contraido || braco_contraido, prev.braco_direito_contraido || prev.braco_contraido);
     compareMetric(peitoral_torax, prev.peitoral_torax);
     compareMetric(ombro, prev.ombro);
     compareMetric(dorsal_largura, prev.dorsal_largura);
@@ -598,9 +677,9 @@ export async function addBodyEvaluation(alunoId, evalData = {}, registeredBy = '
   const res = await query(
     `INSERT INTO gym_medidas_historico 
      (aluno_id, registrado_por, peso, bf_percentual, pescoco, ombro, peitoral_torax, dorsal_largura, dorsal_espessura,
-      cintura, abdomen, quadril, braco_direito, braco_esquerdo, braco_contraido, antebraco_direito, antebraco_esquerdo,
-      coxa_direita, coxa_esquerda, gluteo, panturrilha_direita, panturrilha_esquerda, observacoes, resumo_alteracao)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+      cintura, abdomen, quadril, braco_direito, braco_esquerdo, braco_contraido, braco_direito_contraido, braco_esquerdo_contraido,
+      antebraco_direito, antebraco_esquerdo, coxa_direita, coxa_esquerda, gluteo, panturrilha_direita, panturrilha_esquerda, observacoes, resumo_alteracao)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
      RETURNING *`,
     [
       alunoId,
@@ -618,6 +697,8 @@ export async function addBodyEvaluation(alunoId, evalData = {}, registeredBy = '
       braco_direito,
       braco_esquerdo,
       braco_contraido,
+      braco_direito_contraido,
+      braco_esquerdo_contraido,
       antebraco_direito,
       antebraco_esquerdo,
       coxa_direita,
@@ -626,7 +707,7 @@ export async function addBodyEvaluation(alunoId, evalData = {}, registeredBy = '
       panturrilha_direita,
       panturrilha_esquerda,
       observacoes,
-      resumo_alteracao,
+      resumo_alteracao
     ]
   );
 

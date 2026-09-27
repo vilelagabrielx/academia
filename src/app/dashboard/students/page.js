@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Users, UserPlus, Search, MessageCircle, Instagram, Edit3, Trash2, ArrowUpRight, Camera, Key, Check, 
-  AlertCircle, ChevronRight, ChevronLeft, Heart, Dumbbell, Calendar, CreditCard, Droplet, Target, Scale, User, FileText, CheckCircle2, Clock, Eye, Repeat, AlertTriangle, RefreshCw, Plus, Award, Activity, TrendingUp, TrendingDown, Layers, ShieldAlert, BarChart3, History, ArrowLeftRight
+  AlertCircle, ChevronRight, ChevronLeft, Heart, Dumbbell, Calendar, CreditCard, Droplet, Target, Scale, User, FileText, CheckCircle2, Clock, Eye, Repeat, AlertTriangle, RefreshCw, Plus, Award, Activity, TrendingUp, TrendingDown, Layers, ShieldAlert, BarChart3, History, ArrowLeftRight, Zap, Sparkles
 } from 'lucide-react';
 
 const FASE_OPTIONS = ['Bulking', 'Cutting', 'Manutenção', 'Recomposição'];
@@ -16,6 +16,24 @@ const PONTOS_FRACOS_OPTIONS = [
   'Deltoide lateral', 'Deltoide posterior', 'Deltoide anterior', 'Trapézio',
   'Bíceps', 'Tríceps', 'Antebraço', 'Abdômen', 'Oblíquos',
   'Quadríceps', 'Posterior de coxa', 'Glúteos', 'Panturrilha', 'Outro'
+];
+
+const RESTRICOES_ARTICULARES_OPTIONS = [
+  'Hérnia de disco (cervical/lombar)',
+  'Condromalácia patelar',
+  'Tendinite / Bursite de ombro',
+  'Lesão de Labrum',
+  'Manguito rotador',
+  'Pinçamento de nervo ciático',
+  'Instabilidade de tornozelo'
+];
+
+const CONDICOES_CARDIO_OPTIONS = [
+  'Hipertensão (Pressão Alta)',
+  'Hipotensão (Pressão Baixa)',
+  'Diabetes (Tipo 1 ou 2)',
+  'Labirintite',
+  'Arritmia cardíaca'
 ];
 
 export default function StudentsPage() {
@@ -46,7 +64,9 @@ export default function StudentsPage() {
     abdomen: '',
     quadril: '',
     braco_direito: '',
+    braco_direito_contraido: '',
     braco_esquerdo: '',
+    braco_esquerdo_contraido: '',
     braco_contraido: '',
     antebraco_direito: '',
     antebraco_esquerdo: '',
@@ -65,8 +85,13 @@ export default function StudentsPage() {
 
   // Multi-step Registration Wizard Modal State
   const [showWizardModal, setShowWizardModal] = useState(false);
+  const [wizardMode, setWizardMode] = useState('fast'); // 'fast' | 'full'
   const [wizardStep, setWizardStep] = useState(1);
   const [editingStudentId, setEditingStudentId] = useState(null);
+  const [hasDraft, setHasDraft] = useState(false);
+
+  // Accordion Toggle for Step 3 (Aferição Corporal)
+  const [showEvalAccordion, setShowEvalAccordion] = useState(false);
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -74,16 +99,19 @@ export default function StudentsPage() {
     username: '',
     email: '',
     whatsapp: '',
+    instagram: '',
     password: '',
     photo_base64: '',
+    data_nascimento: '',
+    birth_date: '',
     age: '',
-    height: '',
+    height: '175',
     current_weight: '',
     blood_type: 'O+',
     goal: 'Hipertrofia',
     training_days: 'Segunda, Quarta, Sexta',
 
-    // Ficha Avançada
+    // Ficha Avançada & Objetivos
     fase_shape: 'Bulking',
     nivel_treino: 'Intermediário',
     frequencia_semanal: '5x por semana',
@@ -91,11 +119,27 @@ export default function StudentsPage() {
     objetivo_principal: 'Hipertrofia',
     objetivos_secundarios: '',
     pontos_fracos: [],
-    lesoes_restricoes: '',
     altura: '175',
     observacoes_treinador: '',
 
-    // Metas corporais
+    // Saúde Clínica & Segurança
+    restricoes_articulares: [],
+    condicoes_cardio_metabolicas: [],
+    cirurgias_reabilitacao: '',
+    status_atestado: 'Pendente',
+    atestado_file_base64: '',
+    medicamentos_uso_continuo: '',
+    dor_cronica_nivel: '',
+    dor_cronica_regiao: '',
+    horas_sono_media: '',
+    qualidade_sono_estresse: '',
+    recursos_ergogenicos: '',
+    contato_emergencia_nome: '',
+    contato_emergencia_parentesco: '',
+    contato_emergencia_telefone: '',
+
+    // Metas corporais & Contexto Temporal
+    prazo_meta: '90 dias (3 meses)',
     peso_meta: '',
     bf_meta: '',
     braco_meta: '',
@@ -110,12 +154,41 @@ export default function StudentsPage() {
     panturrilha_meta: '',
     pescoco_meta: '',
 
+    initial_evaluation: {
+      data_registro: new Date().toISOString().split('T')[0],
+      peso: '',
+      bf_percentual: '',
+      pescoco: '',
+      ombro: '',
+      peitoral_torax: '',
+      dorsal_largura: '',
+      dorsal_espessura: '',
+      cintura: '',
+      abdomen: '',
+      quadril: '',
+      braco_direito: '',
+      braco_direito_contraido: '',
+      braco_esquerdo: '',
+      braco_esquerdo_contraido: '',
+      braco_contraido: '',
+      antebraco_direito: '',
+      antebraco_esquerdo: '',
+      coxa_direita: '',
+      coxa_esquerda: '',
+      gluteo: '',
+      panturrilha_direita: '',
+      panturrilha_esquerda: '',
+      observacoes: ''
+    },
+
     create_first_billing: false,
     billing_amount: '150.00',
     billing_due_date: new Date().toISOString().split('T')[0],
+    dia_vencimento_recorrente: 5,
     billing_notes: 'Mensalidade',
     billing_payment_method: 'Pix',
     is_recurring: false,
+    send_whatsapp_now: false,
   });
 
   // Renew / Create Billing Modal State
@@ -137,6 +210,81 @@ export default function StudentsPage() {
   useEffect(() => {
     loadStudents();
   }, []);
+
+  // Keyboard shortcut: Ctrl + S / Cmd + S to save wizard from anywhere
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        if (showWizardModal && !submitting) {
+          e.preventDefault();
+          handleSubmitWizard();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showWizardModal, submitting, formData, editingStudentId, wizardMode]);
+
+  // Draft auto-save to localStorage
+  useEffect(() => {
+    if (showWizardModal && formData.first_name && !editingStudentId) {
+      try {
+        localStorage.setItem('student_wizard_draft', JSON.stringify({ formData, wizardStep, wizardMode }));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, [formData, wizardStep, wizardMode, showWizardModal, editingStudentId]);
+
+  const calculateAge = (birthDateStr) => {
+    if (!birthDateStr) return null;
+    const birth = new Date(birthDateStr);
+    if (isNaN(birth.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age >= 0 ? age : null;
+  };
+
+  // Focus shift helper on Enter key for measurement fields
+  const handleMeasurementKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const form = e.target.form;
+      if (!form) return;
+      const index = Array.prototype.indexOf.call(form, e.target);
+      if (index >= 0 && index < form.elements.length - 1) {
+        const next = form.elements[index + 1];
+        if (next && typeof next.focus === 'function') {
+          next.focus();
+          if (typeof next.select === 'function') next.select();
+        }
+      }
+    }
+  };
+
+  const restoreDraft = () => {
+    try {
+      const saved = localStorage.getItem('student_wizard_draft');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.formData) setFormData(parsed.formData);
+        if (parsed.wizardStep) setWizardStep(parsed.wizardStep);
+        if (parsed.wizardMode) setWizardMode(parsed.wizardMode);
+        setHasDraft(false);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem('student_wizard_draft');
+      setHasDraft(false);
+    } catch (e) {}
+  };
 
   const loadStudents = async () => {
     setLoading(true);
@@ -185,8 +333,21 @@ export default function StudentsPage() {
 
   const handleOpenCreateWizard = () => {
     setEditingStudentId(null);
+    setWizardMode('fast');
     setWizardStep(1);
+    setShowEvalAccordion(false);
     setErrorMsg('');
+
+    let draftExists = false;
+    try {
+      const saved = localStorage.getItem('student_wizard_draft');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.formData && parsed.formData.first_name) draftExists = true;
+      }
+    } catch (e) {}
+    setHasDraft(draftExists);
+
     setFormData({
       first_name: '',
       last_name: '',
@@ -196,6 +357,8 @@ export default function StudentsPage() {
       instagram: '',
       password: '',
       photo_base64: '',
+      data_nascimento: '',
+      birth_date: '',
       age: '',
       height: '175',
       current_weight: '',
@@ -210,10 +373,25 @@ export default function StudentsPage() {
       objetivo_principal: 'Hipertrofia',
       objetivos_secundarios: '',
       pontos_fracos: [],
-      lesoes_restricoes: '',
       altura: '175',
       observacoes_treinador: '',
 
+      restricoes_articulares: [],
+      condicoes_cardio_metabolicas: [],
+      cirurgias_reabilitacao: '',
+      status_atestado: 'Pendente',
+      atestado_file_base64: '',
+      medicamentos_uso_continuo: '',
+      dor_cronica_nivel: '',
+      dor_cronica_regiao: '',
+      horas_sono_media: '',
+      qualidade_sono_estresse: '',
+      recursos_ergogenicos: '',
+      contato_emergencia_nome: '',
+      contato_emergencia_parentesco: '',
+      contato_emergencia_telefone: '',
+
+      prazo_meta: '90 dias (3 meses)',
       peso_meta: '',
       bf_meta: '',
       braco_meta: '',
@@ -241,7 +419,9 @@ export default function StudentsPage() {
         abdomen: '',
         quadril: '',
         braco_direito: '',
+        braco_direito_contraido: '',
         braco_esquerdo: '',
+        braco_esquerdo_contraido: '',
         braco_contraido: '',
         antebraco_direito: '',
         antebraco_esquerdo: '',
@@ -256,17 +436,22 @@ export default function StudentsPage() {
       create_first_billing: false,
       billing_amount: '150.00',
       billing_due_date: new Date().toISOString().split('T')[0],
+      dia_vencimento_recorrente: 5,
       billing_notes: 'Mensalidade',
       billing_payment_method: 'Pix',
       is_recurring: false,
+      send_whatsapp_now: false,
     });
     setShowWizardModal(true);
   };
 
   const handleOpenEditWizard = (student) => {
     setEditingStudentId(student.id);
+    setWizardMode('full');
     setWizardStep(1);
+    setShowEvalAccordion(false);
     setErrorMsg('');
+    setHasDraft(false);
 
     let parsedPontosFracos = [];
     if (student.pontos_fracos) {
@@ -277,6 +462,26 @@ export default function StudentsPage() {
       }
     }
 
+    let parsedRestricoes = [];
+    if (student.restricoes_articulares) {
+      try {
+        parsedRestricoes = typeof student.restricoes_articulares === 'string' ? JSON.parse(student.restricoes_articulares) : student.restricoes_articulares;
+      } catch {
+        parsedRestricoes = student.restricoes_articulares ? String(student.restricoes_articulares).split(',').map(s => s.trim()) : [];
+      }
+    }
+
+    let parsedCardio = [];
+    if (student.condicoes_cardio_metabolicas) {
+      try {
+        parsedCardio = typeof student.condicoes_cardio_metabolicas === 'string' ? JSON.parse(student.condicoes_cardio_metabolicas) : student.condicoes_cardio_metabolicas;
+      } catch {
+        parsedCardio = student.condicoes_cardio_metabolicas ? String(student.condicoes_cardio_metabolicas).split(',').map(s => s.trim()) : [];
+      }
+    }
+
+    const bDateStr = student.birth_date || student.data_nascimento ? String(student.birth_date || student.data_nascimento).split('T')[0] : '';
+
     setFormData({
       first_name: student.first_name || '',
       last_name: student.last_name || '',
@@ -286,7 +491,9 @@ export default function StudentsPage() {
       instagram: student.instagram || '',
       password: '',
       photo_base64: student.photo_base64 || '',
-      age: student.age || '',
+      data_nascimento: bDateStr,
+      birth_date: bDateStr,
+      age: student.age || (bDateStr ? String(calculateAge(bDateStr)) : ''),
       height: student.height || '175',
       current_weight: student.current_weight || '',
       blood_type: student.blood_type || 'O+',
@@ -300,10 +507,25 @@ export default function StudentsPage() {
       objetivo_principal: student.objetivo_principal || student.goal || 'Hipertrofia',
       objetivos_secundarios: student.objetivos_secundarios || '',
       pontos_fracos: parsedPontosFracos,
-      lesoes_restricoes: student.lesoes_restricoes || '',
       altura: student.altura || student.height || '175',
       observacoes_treinador: student.observacoes_treinador || '',
 
+      restricoes_articulares: parsedRestricoes,
+      condicoes_cardio_metabolicas: parsedCardio,
+      cirurgias_reabilitacao: student.cirurgias_reabilitacao || '',
+      status_atestado: student.status_atestado || 'Pendente',
+      atestado_file_base64: student.atestado_file_base64 || '',
+      medicamentos_uso_continuo: student.medicamentos_uso_continuo || '',
+      dor_cronica_nivel: student.dor_cronica_nivel || '',
+      dor_cronica_regiao: student.dor_cronica_regiao || '',
+      horas_sono_media: student.horas_sono_media || '',
+      qualidade_sono_estresse: student.qualidade_sono_estresse || '',
+      recursos_ergogenicos: student.recursos_ergogenicos || '',
+      contato_emergencia_nome: student.contato_emergencia_nome || '',
+      contato_emergencia_parentesco: student.contato_emergencia_parentesco || '',
+      contato_emergencia_telefone: student.contato_emergencia_telefone || '',
+
+      prazo_meta: student.prazo_meta || '90 dias (3 meses)',
       peso_meta: student.peso_meta || '',
       bf_meta: student.bf_meta || '',
       braco_meta: student.braco_meta || '',
@@ -320,7 +542,7 @@ export default function StudentsPage() {
 
       initial_evaluation: {
         data_registro: new Date().toISOString().split('T')[0],
-        peso: '',
+        peso: student.current_weight || '',
         bf_percentual: '',
         pescoco: '',
         ombro: '',
@@ -331,7 +553,9 @@ export default function StudentsPage() {
         abdomen: '',
         quadril: '',
         braco_direito: '',
+        braco_direito_contraido: '',
         braco_esquerdo: '',
+        braco_esquerdo_contraido: '',
         braco_contraido: '',
         antebraco_direito: '',
         antebraco_esquerdo: '',
@@ -346,9 +570,11 @@ export default function StudentsPage() {
       create_first_billing: false,
       billing_amount: student.latest_billing_amount || '150.00',
       billing_due_date: student.latest_billing_due_date ? new Date(student.latest_billing_due_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      dia_vencimento_recorrente: student.dia_vencimento_recorrente || 5,
       billing_notes: 'Mensalidade',
       billing_payment_method: 'Pix',
       is_recurring: false,
+      send_whatsapp_now: false,
     });
     setViewingStudent(null);
     setShowWizardModal(true);
@@ -457,17 +683,32 @@ export default function StudentsPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleAtestadoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setFormData((prev) => ({ ...prev, atested_file_base64: event.target.result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmitWizard = async (e) => {
     if (e) e.preventDefault();
     if (!formData.first_name && !editingStudentId) {
       return setErrorMsg('O Nome do aluno é o único campo obrigatório!');
     }
 
+    if (formData.create_first_billing && !formData.whatsapp.trim()) {
+      return setErrorMsg('Para gerar a primeira cobrança, o preenchimento do WhatsApp é OBRIGATÓRIO!');
+    }
+
     setSubmitting(true);
     setErrorMsg('');
 
     try {
-      const cleanPhone = formData.whatsapp.replace(/\D/g, '');
+      const cleanPhone = formData.whatsapp ? formData.whatsapp.replace(/\D/g, '') : '';
       const formattedPhone = cleanPhone ? (cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`) : '';
 
       const payload = {
@@ -486,6 +727,18 @@ export default function StudentsPage() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao salvar aluno');
+
+      // Clear draft on successful save
+      clearDraft();
+
+      // Immediate WhatsApp Billing Dispatch Trigger if checked or Fast Mode
+      if ((formData.send_whatsapp_now || wizardMode === 'fast') && formattedPhone) {
+        const amountStr = parseFloat(formData.billing_amount || '150.00').toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        const dueDateStr = new Date(formData.billing_due_date || new Date()).toLocaleDateString('pt-BR');
+        const msg = `Olá, ${formData.first_name}! Sua matrícula foi cadastrada com sucesso. Complete sua anamnese e ficha de treino aqui! ${formData.create_first_billing ? `Sua mensalidade de R$ ${amountStr} com vencimento em ${dueDateStr} está disponível.` : ''}`;
+        const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`;
+        window.open(waUrl, '_blank');
+      }
 
       setShowWizardModal(false);
       loadStudents();
@@ -523,7 +776,6 @@ export default function StudentsPage() {
       setTimeout(() => setEvalSuccessToast(null), 5000);
 
       setShowNewEvalModal(false);
-      // Reload history and profile
       openStudentProfile(viewingStudent);
       loadStudents();
     } catch (err) {
@@ -601,28 +853,6 @@ export default function StudentsPage() {
     }
   };
 
-  // Helper for computing progress bar % against goal
-  const calculateGoalProgress = (key, currentVal, targetVal) => {
-    if (!currentVal || !targetVal) return null;
-    const curr = parseFloat(currentVal);
-    const target = parseFloat(targetVal);
-    if (isNaN(curr) || isNaN(target) || target === 0) return null;
-
-    const isReduction = ['cintura', 'abdomen', 'bf_percentual'].includes(key);
-
-    if (isReduction) {
-      // For reduction, assume 100% when curr <= target.
-      // If curr > target, estimate relative reduction progress
-      if (curr <= target) return 100;
-      const initialEstimate = curr + 10;
-      const progress = ((initialEstimate - curr) / (initialEstimate - target)) * 100;
-      return Math.min(Math.max(Math.round(progress), 0), 100);
-    } else {
-      const progress = (curr / target) * 100;
-      return Math.min(Math.max(Math.round(progress), 0), 100);
-    }
-  };
-
   const latestEval = studentHistory.evaluations[0] || null;
   const prevEval = studentHistory.evaluations[1] || null;
 
@@ -684,7 +914,7 @@ export default function StudentsPage() {
               <thead className="bg-slate-900/90 uppercase tracking-wider text-slate-400 font-semibold border-b border-slate-800">
                 <tr>
                   <th className="py-3.5 px-4">Aluno / Perfil</th>
-                  <th className="py-3.5 px-4">Fase & Objetivo</th>
+                  <th className="py-3.5 px-4">Alertas de Saúde & Ficha</th>
                   <th className="py-3.5 px-4">Treino & Divisão</th>
                   <th className="py-3.5 px-4 text-center">Situação Cobrança</th>
                   <th className="py-3.5 px-4 text-right">Ações</th>
@@ -695,6 +925,7 @@ export default function StudentsPage() {
                   const phone = student.whatsapp?.replace(/\D/g, '');
                   const waUrl = phone ? `https://wa.me/${phone.startsWith('55') ? phone : `55${phone}`}` : null;
                   const status = student.billing_status;
+                  const computedAgeVal = calculateAge(student.birth_date || student.data_nascimento);
 
                   return (
                     <tr
@@ -723,13 +954,23 @@ export default function StudentsPage() {
                           </div>
                         )}
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-sm text-white group-hover:text-emerald-400 transition-colors">
                               {student.first_name} {student.last_name}
                             </span>
-                            {student.lesoes_restricoes && (
-                              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-extrabold text-[9px] border border-amber-500/30 flex items-center gap-1" title={student.lesoes_restricoes}>
-                                <AlertTriangle className="w-3 h-3" /> RESTRIÇÃO
+                            {computedAgeVal !== null && (
+                              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-bold">
+                                {computedAgeVal} anos
+                              </span>
+                            )}
+                            {student.restricoes_articulares && (
+                              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-extrabold text-[9px] border border-amber-500/30 flex items-center gap-1" title={typeof student.restricoes_articulares === 'string' ? student.restricoes_articulares : JSON.stringify(student.restricoes_articulares)}>
+                                <AlertTriangle className="w-3 h-3 text-amber-400" /> RESTRIÇÃO ARTICULAR
+                              </span>
+                            )}
+                            {student.condicoes_cardio_metabolicas && (
+                              <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-extrabold text-[9px] border border-rose-500/30 flex items-center gap-1" title={typeof student.condicoes_cardio_metabolicas === 'string' ? student.condicoes_cardio_metabolicas : JSON.stringify(student.condicoes_cardio_metabolicas)}>
+                                <ShieldAlert className="w-3 h-3 text-rose-400" /> CARDIO / METABÓLICO
                               </span>
                             )}
                           </div>
@@ -857,7 +1098,7 @@ export default function StudentsPage() {
         )}
       </div>
 
-      {/* MODAL 1: FICHA DO ALUNO COMPLETA (VISUALIZAÇÃO RÁPIDA & EVOLUÇÃO) */}
+      {/* MODAL 1: FICHA DO ALUNO COMPLETA */}
       {viewingStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md">
           <div className="glass-panel w-full max-w-4xl rounded-3xl p-4 sm:p-6 border border-slate-800 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
@@ -867,7 +1108,7 @@ export default function StudentsPage() {
                 <Dumbbell className="w-6 h-6 text-emerald-400" />
                 <div>
                   <h3 className="text-lg font-extrabold text-white">Ficha do Aluno — Musculação & Evolução</h3>
-                  <span className="text-xs text-slate-400">Acompanhamento completo de Shape, Metas, Medidas e Performance</span>
+                  <span className="text-xs text-slate-400">Acompanhamento completo de Shape, Metas, Saúde e Performance</span>
                 </div>
               </div>
               <button
@@ -878,7 +1119,7 @@ export default function StudentsPage() {
               </button>
             </div>
 
-            {/* Student Header Card with Badges */}
+            {/* Student Header Card with Health Badges */}
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/40 p-5 rounded-2xl border border-slate-800">
               {viewingStudent.photo_base64 ? (
                 <img
@@ -898,6 +1139,11 @@ export default function StudentsPage() {
                     {viewingStudent.first_name} {viewingStudent.last_name}
                   </h2>
                   <span className="text-xs text-slate-400 font-mono">@{viewingStudent.username}</span>
+                  {calculateAge(viewingStudent.birth_date || viewingStudent.data_nascimento) !== null && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-extrabold border border-emerald-500/30">
+                      🎉 {calculateAge(viewingStudent.birth_date || viewingStudent.data_nascimento)} anos
+                    </span>
+                  )}
                 </div>
 
                 {/* Badges Section */}
@@ -917,17 +1163,63 @@ export default function StudentsPage() {
                       [{viewingStudent.objetivo_principal || viewingStudent.goal}]
                     </span>
                   )}
-                  {viewingStudent.divisao_treino && (
-                    <span className="px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-extrabold text-[11px]">
-                      [{viewingStudent.divisao_treino} {viewingStudent.frequencia_semanal ? `• ${viewingStudent.frequencia_semanal}` : ''}]
-                    </span>
-                  )}
-                  {viewingStudent.pontos_fracos && viewingStudent.pontos_fracos.length > 0 && (
-                    <span className="px-2.5 py-1 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 font-extrabold text-[11px]">
-                      [Foco: {Array.isArray(viewingStudent.pontos_fracos) ? viewingStudent.pontos_fracos.join(' + ') : viewingStudent.pontos_fracos}]
+                  {viewingStudent.status_atestado && (
+                    <span className={`px-2.5 py-1 rounded-xl font-extrabold text-[11px] border ${
+                      viewingStudent.status_atestado === 'Liberado Total'
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                        : viewingStudent.status_atestado === 'Liberado com Restrições'
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                        : 'bg-rose-500/20 border-rose-500/40 text-rose-300 animate-pulse'
+                    }`}>
+                      Atestado: {viewingStudent.status_atestado}
                     </span>
                   )}
                 </div>
+
+                {/* Health Alert Badges */}
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1">
+                  {viewingStudent.restricoes_articulares && (
+                    <span className="px-2.5 py-1 rounded-xl bg-orange-500/20 border border-orange-500/40 text-orange-300 font-extrabold text-[11px] flex items-center gap-1">
+                      <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
+                      Restrições: {Array.isArray(viewingStudent.restricoes_articulares) ? viewingStudent.restricoes_articulares.join(', ') : viewingStudent.restricoes_articulares}
+                    </span>
+                  )}
+
+                  {viewingStudent.condicoes_cardio_metabolicas && (
+                    <span className="px-2.5 py-1 rounded-xl bg-red-600/20 border border-red-500/50 text-red-300 font-extrabold text-[11px] flex items-center gap-1">
+                      <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
+                      Cardio: {Array.isArray(viewingStudent.condicoes_cardio_metabolicas) ? viewingStudent.condicoes_cardio_metabolicas.join(', ') : viewingStudent.condicoes_cardio_metabolicas}
+                    </span>
+                  )}
+
+                  {viewingStudent.cirurgias_reabilitacao && (
+                    <span className="px-2.5 py-1 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 font-extrabold text-[11px]">
+                      Cirurgia: {viewingStudent.cirurgias_reabilitacao}
+                    </span>
+                  )}
+                </div>
+
+                {/* Contato de Emergência Box */}
+                {viewingStudent.contato_emergencia_nome && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-200 mt-2">
+                    <div className="flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="font-bold">Emergência:</span>
+                      <span>{viewingStudent.contato_emergencia_nome} ({viewingStudent.contato_emergencia_parentesco || 'Contato'})</span>
+                    </div>
+                    {viewingStudent.contato_emergencia_telefone && (
+                      <a
+                        href={`https://wa.me/${viewingStudent.contato_emergencia_telefone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-extrabold flex items-center gap-1 text-[11px]"
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        <span>{viewingStudent.contato_emergencia_telefone}</span>
+                      </a>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex flex-wrap gap-2 pt-1">
                   {viewingStudent.whatsapp && (
@@ -955,27 +1247,11 @@ export default function StudentsPage() {
                       <span className="font-extrabold tracking-wide">
                         {viewingStudent.instagram.startsWith('@') ? viewingStudent.instagram : `@${viewingStudent.instagram}`}
                       </span>
-                      <span className="text-[9px] bg-pink-500/20 text-pink-300 px-1.5 py-0.5 rounded border border-pink-500/40 uppercase font-black tracking-wider">
-                        Destaque 🌟
-                      </span>
                     </a>
                   )}
                 </div>
               </div>
             </div>
-
-            {/* SEÇÃO 5: ALERTA DE RESTRIÇÕES / LESÕES */}
-            {viewingStudent.lesoes_restricoes && (
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1">
-                <div className="flex items-center gap-2 font-black text-amber-400 text-xs uppercase tracking-wide">
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>⚠️ RESTRIÇÃO / ALERTA DE SAÚDE</span>
-                </div>
-                <p className="text-xs text-amber-200/90 font-medium pl-6">
-                  {viewingStudent.lesoes_restricoes}
-                </p>
-              </div>
-            )}
 
             {/* Navigation Tabs inside Modal */}
             <div className="flex border-b border-slate-800 gap-2 overflow-x-auto text-xs">
@@ -999,7 +1275,7 @@ export default function StudentsPage() {
                 }`}
               >
                 <Scale className="w-4 h-4" />
-                Medidas Corporais
+                Aferição Corporal
               </button>
               <button
                 onClick={() => setActiveTab('desempenho')}
@@ -1009,8 +1285,8 @@ export default function StudentsPage() {
                     : 'border-transparent text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Dumbbell className="w-4 h-4" />
-                Performance de Treino
+                <Award className="w-4 h-4" />
+                Performance & PRs
               </button>
               <button
                 onClick={() => setActiveTab('historico')}
@@ -1021,202 +1297,45 @@ export default function StudentsPage() {
                 }`}
               >
                 <History className="w-4 h-4" />
-                Histórico de Aferições ({studentHistory.evaluations.length})
+                Timeline de Avaliações
               </button>
             </div>
 
             {/* TAB CONTENT 1: RESUMO & SHAPE */}
             {activeTab === 'resumo' && (
               <div className="space-y-6 text-xs">
-                {/* 1. Composição e Peso */}
+                {/* Visual Indicators Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 space-y-1">
-                    <span className="text-slate-400 font-semibold flex items-center gap-1 text-[11px]">
-                      <Scale className="w-3.5 h-3.5 text-cyan-400" /> Peso Atual
+                  <div className="glass-panel p-4 rounded-2xl border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 font-semibold block uppercase">Peso Atual</span>
+                    <span className="text-xl font-black text-white block mt-1">
+                      {latestEval?.peso ? `${latestEval.peso} kg` : viewingStudent.current_weight ? `${viewingStudent.current_weight} kg` : '—'}
                     </span>
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-lg font-black text-white">
-                        {latestEval?.peso ? `${latestEval.peso} kg` : viewingStudent.current_weight ? `${viewingStudent.current_weight} kg` : 'Não inf.'}
-                      </span>
-                      {viewingStudent.peso_meta && (
-                        <span className="text-[10px] text-slate-400 font-semibold">Meta: {viewingStudent.peso_meta} kg</span>
-                      )}
-                    </div>
-                    {latestEval?.peso && prevEval?.peso && (
-                      <div className="text-[10px]">
-                        {(() => {
-                          const st = getMeasurementStatus('peso', latestEval.peso, prevEval.peso, viewingStudent.fase_shape || 'Bulking');
-                          return st ? <span className={`font-bold ${st.color}`}>{st.icon} {st.diffStr} kg ({st.label})</span> : null;
-                        })()}
-                      </div>
-                    )}
                   </div>
 
-                  <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 space-y-1">
-                    <span className="text-slate-400 font-semibold flex items-center gap-1 text-[11px]">
-                      <Droplet className="w-3.5 h-3.5 text-purple-400" /> BF (Gordura)
+                  <div className="glass-panel p-4 rounded-2xl border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 font-semibold block uppercase">% Gordura (BF)</span>
+                    <span className="text-xl font-black text-cyan-400 block mt-1">
+                      {latestEval?.bf_percentual ? `${latestEval.bf_percentual}%` : '—'}
                     </span>
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-lg font-black text-white">
-                        {latestEval?.bf_percentual ? `${latestEval.bf_percentual}%` : 'Não inf.'}
-                      </span>
-                      {viewingStudent.bf_meta && (
-                        <span className="text-[10px] text-slate-400 font-semibold">Meta: {viewingStudent.bf_meta}%</span>
-                      )}
-                    </div>
-                    {latestEval?.bf_percentual && prevEval?.bf_percentual && (
-                      <div className="text-[10px]">
-                        {(() => {
-                          const st = getMeasurementStatus('bf_percentual', latestEval.bf_percentual, prevEval.bf_percentual);
-                          return st ? <span className={`font-bold ${st.color}`}>{st.icon} {st.diffStr}% ({st.label})</span> : null;
-                        })()}
-                      </div>
-                    )}
                   </div>
 
-                  <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 space-y-1">
-                    <span className="text-slate-400 font-semibold flex items-center gap-1 text-[11px]">
-                      <User className="w-3.5 h-3.5 text-emerald-400" /> Altura
+                  <div className="glass-panel p-4 rounded-2xl border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 font-semibold block uppercase">Braço D. Contraído</span>
+                    <span className="text-xl font-black text-purple-400 block mt-1">
+                      {latestEval?.braco_direito_contraido || latestEval?.braco_contraido || latestEval?.braco_direito ? `${latestEval.braco_direito_contraido || latestEval.braco_contraido || latestEval.braco_direito} cm` : '—'}
                     </span>
-                    <span className="text-lg font-black text-white block">
-                      {viewingStudent.altura ? `${(parseFloat(viewingStudent.altura)/100).toFixed(2)} m` : viewingStudent.height ? `${viewingStudent.height} cm` : 'Não inf.'}
-                    </span>
-                    <span className="text-[10px] text-slate-500 block">Estatura corporal</span>
                   </div>
 
-                  <div className="glass-panel p-3.5 rounded-2xl border border-slate-800 space-y-1">
-                    <span className="text-slate-400 font-semibold flex items-center gap-1 text-[11px]">
-                      <Calendar className="w-3.5 h-3.5 text-amber-400" /> Última Aferição
-                    </span>
-                    <span className="text-sm font-black text-white block">
-                      {latestEval?.data_registro ? new Date(latestEval.data_registro).toLocaleDateString('pt-BR') : 'Sem registro'}
-                    </span>
-                    <span className="text-[10px] text-emerald-400 font-semibold block">
-                      {studentHistory.evaluations.length} avaliação(ões)
+                  <div className="glass-panel p-4 rounded-2xl border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 font-semibold block uppercase">Cintura</span>
+                    <span className="text-xl font-black text-emerald-400 block mt-1">
+                      {latestEval?.cintura ? `${latestEval.cintura} cm` : '—'}
                     </span>
                   </div>
                 </div>
 
-                {/* 2. Shape / Medidas Principais com Barras de Progresso Animadas */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Target className="w-4 h-4 text-emerald-400" />
-                      Shape & Metas Corporais Principais
-                    </h4>
-                    <button
-                      onClick={() => setActiveTab('medidas')}
-                      className="text-xs font-semibold text-emerald-400 hover:underline"
-                    >
-                      Ver todas as medidas →
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {[
-                      { key: 'braco', name: 'Braço', icon: '💪', val: latestEval?.braco_contraido || latestEval?.braco_direito, meta: viewingStudent.braco_meta, prev: prevEval?.braco_contraido || prevEval?.braco_direito },
-                      { key: 'ombro', name: 'Ombros', icon: '📐', val: latestEval?.ombro, meta: viewingStudent.ombro_meta, prev: prevEval?.ombro },
-                      { key: 'peitoral_torax', name: 'Peitoral', icon: '🏋️', val: latestEval?.peitoral_torax, meta: viewingStudent.peitoral_meta, prev: prevEval?.peitoral_torax },
-                      { key: 'cintura', name: 'Cintura', icon: '📏', val: latestEval?.cintura, meta: viewingStudent.cintura_meta, prev: prevEval?.cintura },
-                      { key: 'dorsal_largura', name: 'Dorsal / Largura', icon: '🦅', val: latestEval?.dorsal_largura, meta: viewingStudent.dorsal_meta, prev: prevEval?.dorsal_largura },
-                      { key: 'coxa_direita', name: 'Coxa', icon: '🦵', val: latestEval?.coxa_direita, meta: viewingStudent.coxa_meta, prev: prevEval?.coxa_direita },
-                    ].map((item) => {
-                      const prog = calculateGoalProgress(item.key, item.val, item.meta);
-                      const st = getMeasurementStatus(item.key, item.val, item.prev, viewingStudent.fase_shape || 'Bulking');
-
-                      return (
-                        <div key={item.key} className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-white flex items-center gap-1.5 text-xs">
-                              <span>{item.icon}</span> {item.name}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              {st && (
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${st.badgeBg}`}>
-                                  {st.icon} {st.diffStr} cm
-                                </span>
-                              )}
-                              <span className="font-extrabold text-white text-sm">
-                                {item.val ? `${item.val} cm` : '—'}
-                              </span>
-                            </div>
-                          </div>
-
-                          {item.meta ? (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
-                                <span>Meta: {item.meta} cm</span>
-                                <span>{prog != null ? `${prog}%` : '—'}</span>
-                              </div>
-                              <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
-                                <div
-                                  className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full rounded-full transition-all duration-1000 ease-out"
-                                  style={{ width: `${prog || 0}%` }}
-                                ></div>
-                              </div>
-                              {prog >= 100 && (
-                                <span className="text-[10px] text-emerald-400 font-black flex items-center gap-1 mt-0.5">
-                                  🎯 Meta Atingida!
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-slate-500 italic block">Meta não definida</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 3. Proporção do Shape (Calculated values only) */}
-                <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-3">
-                  <h4 className="text-xs font-bold text-white flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-cyan-400" />
-                    📐 Proporção do Shape (Relações Calculadas)
-                  </h4>
-                  <p className="text-[11px] text-slate-400">Valores calculados automaticamente a partir dos dados de aferição disponíveis.</p>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-                    <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[10px] text-slate-400 font-semibold block">Ombros / Cintura</span>
-                      <span className="text-base font-black text-cyan-300 block mt-1">
-                        {latestEval?.ombro && latestEval?.cintura
-                          ? (parseFloat(latestEval.ombro) / parseFloat(latestEval.cintura)).toFixed(2)
-                          : '—'}
-                      </span>
-                    </div>
-
-                    <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[10px] text-slate-400 font-semibold block">Peitoral / Cintura</span>
-                      <span className="text-base font-black text-cyan-300 block mt-1">
-                        {latestEval?.peitoral_torax && latestEval?.cintura
-                          ? (parseFloat(latestEval.peitoral_torax) / parseFloat(latestEval.cintura)).toFixed(2)
-                          : '—'}
-                      </span>
-                    </div>
-
-                    <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[10px] text-slate-400 font-semibold block">Braço / Cintura</span>
-                      <span className="text-base font-black text-cyan-300 block mt-1">
-                        {(latestEval?.braco_contraido || latestEval?.braco_direito) && latestEval?.cintura
-                          ? (parseFloat(latestEval.braco_contraido || latestEval.braco_direito) / parseFloat(latestEval.cintura)).toFixed(2)
-                          : '—'}
-                      </span>
-                    </div>
-
-                    <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-center">
-                      <span className="text-[10px] text-slate-400 font-semibold block">Coxa / Cintura</span>
-                      <span className="text-base font-black text-cyan-300 block mt-1">
-                        {latestEval?.coxa_direita && latestEval?.cintura
-                          ? (parseFloat(latestEval.coxa_direita) / parseFloat(latestEval.cintura)).toFixed(2)
-                          : '—'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Observações do Treinador */}
+                {/* Observações do Treinador */}
                 {viewingStudent.observacoes_treinador && (
                   <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-1">
                     <span className="font-bold text-slate-300 text-xs flex items-center gap-1.5">
@@ -1228,7 +1347,7 @@ export default function StudentsPage() {
               </div>
             )}
 
-            {/* TAB CONTENT 2: MEDIDAS CORPORAIS COMPLETAS E BILATERAIS */}
+            {/* TAB CONTENT 2: MEDIDAS CORPORAIS */}
             {activeTab === 'medidas' && (
               <div className="space-y-6 text-xs">
                 <div className="flex items-center justify-between">
@@ -1245,22 +1364,23 @@ export default function StudentsPage() {
                   </button>
                 </div>
 
-                {/* Bilateral Difference Callout if any side diff exists */}
-                {latestEval?.braco_direito && latestEval?.braco_esquerdo && Math.abs(parseFloat(latestEval.braco_direito) - parseFloat(latestEval.braco_esquerdo)) >= 0.5 && (
+                {/* Bilateral Arms Contrast Callout */}
+                {latestEval?.braco_direito_contraido && latestEval?.braco_esquerdo_contraido && Math.abs(parseFloat(latestEval.braco_direito_contraido) - parseFloat(latestEval.braco_esquerdo_contraido)) >= 0.5 && (
                   <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
                     <span>
-                      ⚠️ Diferença entre lados detectada no Braço: Direito ({latestEval.braco_direito} cm) vs. Esquerdo ({latestEval.braco_esquerdo} cm) — Diferença de {Math.abs(parseFloat(latestEval.braco_direito) - parseFloat(latestEval.braco_esquerdo)).toFixed(1)} cm.
+                      ⚠️ Assimetria em Braço Contraído: Direito ({latestEval.braco_direito_contraido} cm) vs. Esquerdo ({latestEval.braco_esquerdo_contraido} cm) — Diferença de {Math.abs(parseFloat(latestEval.braco_direito_contraido) - parseFloat(latestEval.braco_esquerdo_contraido)).toFixed(1)} cm.
                     </span>
                   </div>
                 )}
 
                 {/* Complete Measurements Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    { key: 'braco_direito', label: 'Braço Direito', val: latestEval?.braco_direito, prev: prevEval?.braco_direito },
-                    { key: 'braco_esquerdo', label: 'Braço Esquerdo', val: latestEval?.braco_esquerdo, prev: prevEval?.braco_esquerdo },
-                    { key: 'braco_contraido', label: 'Braço Contraído', val: latestEval?.braco_contraido, prev: prevEval?.braco_contraido },
+                    { key: 'braco_direito', label: 'Braço D. Relaxado', val: latestEval?.braco_direito, prev: prevEval?.braco_direito },
+                    { key: 'braco_direito_contraido', label: 'Braço D. Contraído', val: latestEval?.braco_direito_contraido || latestEval?.braco_contraido, prev: prevEval?.braco_direito_contraido || prevEval?.braco_contraido },
+                    { key: 'braco_esquerdo', label: 'Braço E. Relaxado', val: latestEval?.braco_esquerdo, prev: prevEval?.braco_esquerdo },
+                    { key: 'braco_esquerdo_contraido', label: 'Braço E. Contraído', val: latestEval?.braco_esquerdo_contraido, prev: prevEval?.braco_esquerdo_contraido },
                     { key: 'antebraco_direito', label: 'Antebraço D', val: latestEval?.antebraco_direito, prev: prevEval?.antebraco_direito },
                     { key: 'antebraco_esquerdo', label: 'Antebraço E', val: latestEval?.antebraco_esquerdo, prev: prevEval?.antebraco_esquerdo },
                     { key: 'ombro', label: 'Ombros', val: latestEval?.ombro, prev: prevEval?.ombro },
@@ -1270,8 +1390,8 @@ export default function StudentsPage() {
                     { key: 'cintura', label: 'Cintura', val: latestEval?.cintura, prev: prevEval?.cintura },
                     { key: 'abdomen', label: 'Abdômen', val: latestEval?.abdomen, prev: prevEval?.abdomen },
                     { key: 'quadril', label: 'Quadril', val: latestEval?.quadril, prev: prevEval?.quadril },
-                    { key: 'coxa_direita', label: 'Coxa Direita', val: latestEval?.coxa_direita, prev: prevEval?.coxa_direita },
-                    { key: 'coxa_esquerda', label: 'Coxa Esquerda', val: latestEval?.coxa_esquerda, prev: prevEval?.coxa_esquerda },
+                    { key: 'coxa_direita', label: 'Coxa Medial D', val: latestEval?.coxa_direita, prev: prevEval?.coxa_direita },
+                    { key: 'coxa_esquerda', label: 'Coxa Medial E', val: latestEval?.coxa_esquerda, prev: prevEval?.coxa_esquerda },
                     { key: 'gluteo', label: 'Glúteo', val: latestEval?.gluteo, prev: prevEval?.gluteo },
                     { key: 'panturrilha_direita', label: 'Panturrilha D', val: latestEval?.panturrilha_direita, prev: prevEval?.panturrilha_direita },
                     { key: 'panturrilha_esquerda', label: 'Panturrilha E', val: latestEval?.panturrilha_esquerda, prev: prevEval?.panturrilha_esquerda },
@@ -1297,7 +1417,7 @@ export default function StudentsPage() {
               </div>
             )}
 
-            {/* TAB CONTENT 3: PERFORMANCE DE TREINO & RECORDES PESSOAIS */}
+            {/* TAB CONTENT 3: PERFORMANCE */}
             {activeTab === 'desempenho' && (
               <div className="space-y-6 text-xs">
                 <div className="flex items-center justify-between">
@@ -1311,7 +1431,6 @@ export default function StudentsPage() {
                   <div className="glass-panel p-8 rounded-2xl border border-slate-800 text-center text-slate-500">
                     <Dumbbell className="w-8 h-8 text-slate-600 mx-auto mb-2" />
                     <p>Nenhum log de treino registrado ainda para este aluno.</p>
-                    <p className="text-[10px] mt-1">Conforme o aluno registra treinos pelo aplicativo, seus recordes de carga e repetições aparecerão aqui automaticamente.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -1323,19 +1442,9 @@ export default function StudentsPage() {
                             {pr.exercise_name || `Exercício #${pr.exercise_id}`}
                           </span>
                         </div>
-
                         <div className="flex items-baseline justify-between pt-1">
-                          <span className="text-xl font-black text-emerald-400">
-                            {pr.max_weight} kg
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-semibold">
-                            {pr.max_reps} reps
-                          </span>
-                        </div>
-
-                        <div className="text-[10px] text-slate-500 font-mono pt-1 border-t border-slate-800/80 flex justify-between">
-                          <span>Volume max: {pr.max_volume ? `${pr.max_volume} kg` : '—'}</span>
-                          <span>{pr.last_log_date ? new Date(pr.last_log_date).toLocaleDateString('pt-BR') : ''}</span>
+                          <span className="text-xl font-black text-emerald-400">{pr.max_weight} kg</span>
+                          <span className="text-[10px] text-slate-400 font-semibold">{pr.max_reps} reps</span>
                         </div>
                       </div>
                     ))}
@@ -1344,7 +1453,7 @@ export default function StudentsPage() {
               </div>
             )}
 
-            {/* TAB CONTENT 4: HISTÓRICO DE AFERIÇÕES & COMPARAÇÃO */}
+            {/* TAB CONTENT 4: HISTÓRICO DE AVALIAÇÕES */}
             {activeTab === 'historico' && (
               <div className="space-y-6 text-xs">
                 <div className="flex items-center justify-between">
@@ -1371,65 +1480,35 @@ export default function StudentsPage() {
                   <div className="glass-panel p-8 rounded-2xl border border-slate-800 text-center text-slate-500">
                     <Scale className="w-8 h-8 text-slate-600 mx-auto mb-2" />
                     <p>Nenhuma avaliação registrada ainda.</p>
-                    <button
-                      onClick={() => setShowNewEvalModal(true)}
-                      className="mt-3 px-4 py-2 bg-emerald-500 text-slate-950 font-bold rounded-xl"
-                    >
-                      Registrar Primeira Avaliação
-                    </button>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {studentHistory.evaluations.map((evalItem, index) => {
-                      const prevItem = studentHistory.evaluations[index + 1] || null;
-
-                      return (
-                        <div key={evalItem.id || index} className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-3">
-                          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                            <span className="font-extrabold text-white flex items-center gap-2">
-                              📅 {new Date(evalItem.data_registro).toLocaleDateString('pt-BR')}
-                              {index === 0 && (
-                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase">
-                                  Última / Atual
-                                </span>
-                              )}
-                            </span>
-                            <span className="text-[10px] text-slate-500">Registrado por: {evalItem.registrado_por || 'Sistema'}</span>
-                          </div>
-
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                            <div>
-                              <span className="text-slate-400 block text-[10px]">Peso:</span>
-                              <span className="font-bold text-white">{evalItem.peso ? `${evalItem.peso} kg` : '—'}</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-400 block text-[10px]">BF:</span>
-                              <span className="font-bold text-white">{evalItem.bf_percentual ? `${evalItem.bf_percentual}%` : '—'}</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-400 block text-[10px]">Braço Contraído:</span>
-                              <span className="font-bold text-white">{evalItem.braco_contraido || evalItem.braco_direito ? `${evalItem.braco_contraido || evalItem.braco_direito} cm` : '—'}</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-400 block text-[10px]">Cintura:</span>
-                              <span className="font-bold text-white">{evalItem.cintura ? `${evalItem.cintura} cm` : '—'}</span>
-                            </div>
-                          </div>
-
-                          {evalItem.resumo_alteracao && (
-                            <p className="text-[10px] text-emerald-400 font-semibold bg-emerald-950/30 p-2 rounded-xl border border-emerald-900/50">
-                              {evalItem.resumo_alteracao}
-                            </p>
-                          )}
+                    {studentHistory.evaluations.map((evalItem, index) => (
+                      <div key={evalItem.id || index} className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-3">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                          <span className="font-extrabold text-white flex items-center gap-2">
+                            📅 {new Date(evalItem.data_registro).toLocaleDateString('pt-BR')}
+                            {index === 0 && (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase">
+                                Última / Atual
+                              </span>
+                            )}
+                          </span>
                         </div>
-                      );
-                    })}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                          <div><span className="text-slate-400 block text-[10px]">Peso:</span><span className="font-bold text-white">{evalItem.peso ? `${evalItem.peso} kg` : '—'}</span></div>
+                          <div><span className="text-slate-400 block text-[10px]">BF:</span><span className="font-bold text-white">{evalItem.bf_percentual ? `${evalItem.bf_percentual}%` : '—'}</span></div>
+                          <div><span className="text-slate-400 block text-[10px]">Braço D Contraído:</span><span className="font-bold text-white">{evalItem.braco_direito_contraido || evalItem.braco_contraido || evalItem.braco_direito ? `${evalItem.braco_direito_contraido || evalItem.braco_contraido || evalItem.braco_direito} cm` : '—'}</span></div>
+                          <div><span className="text-slate-400 block text-[10px]">Cintura:</span><span className="font-bold text-white">{evalItem.cintura ? `${evalItem.cintura} cm` : '—'}</span></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Modal Bottom Actions Bar (Section 34) */}
+            {/* Modal Bottom Actions Bar */}
             <div className="flex flex-wrap justify-between items-center gap-2 pt-4 border-t border-slate-800">
               <div className="flex flex-wrap gap-2">
                 <button
@@ -1465,7 +1544,7 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* MODAL: NOVA AFERIÇÃO / AVALIAÇÃO CORPORAL (SEÇÃO 28) */}
+      {/* MODAL: NOVA AFERIÇÃO / AVALIAÇÃO CORPORAL */}
       {showNewEvalModal && viewingStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
           <div className="glass-panel w-full max-w-2xl rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
@@ -1493,6 +1572,7 @@ export default function StudentsPage() {
                   <label className="block font-semibold text-slate-300 mb-1">Peso (kg)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="0.1"
                     value={evalFormData.peso}
                     onChange={(e) => setEvalFormData({ ...evalFormData, peso: e.target.value })}
@@ -1504,6 +1584,7 @@ export default function StudentsPage() {
                   <label className="block font-semibold text-slate-300 mb-1">BF (% Gordura)</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="0.1"
                     value={evalFormData.bf_percentual}
                     onChange={(e) => setEvalFormData({ ...evalFormData, bf_percentual: e.target.value })}
@@ -1517,92 +1598,37 @@ export default function StudentsPage() {
               <div className="p-3 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
                 <span className="font-bold text-emerald-400 block">Tronco & Proporção</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <div>
-                    <label className="block text-slate-400 mb-1">Pescoço (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.pescoco} onChange={(e) => setEvalFormData({ ...evalFormData, pescoco: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Ombros (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.ombro} onChange={(e) => setEvalFormData({ ...evalFormData, ombro: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Peitoral (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.peitoral_torax} onChange={(e) => setEvalFormData({ ...evalFormData, peitoral_torax: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Dorsal Largura (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.dorsal_largura} onChange={(e) => setEvalFormData({ ...evalFormData, dorsal_largura: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Dorsal Espessura (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.dorsal_espessura} onChange={(e) => setEvalFormData({ ...evalFormData, dorsal_espessura: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Cintura (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.cintura} onChange={(e) => setEvalFormData({ ...evalFormData, cintura: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Abdômen (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.abdomen} onChange={(e) => setEvalFormData({ ...evalFormData, abdomen: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Quadril (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.quadril} onChange={(e) => setEvalFormData({ ...evalFormData, quadril: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
+                  <div><label className="block text-slate-400 mb-1">Pescoço (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.pescoco} onChange={(e) => setEvalFormData({ ...evalFormData, pescoco: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Ombros (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.ombro} onChange={(e) => setEvalFormData({ ...evalFormData, ombro: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Peitoral (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.peitoral_torax} onChange={(e) => setEvalFormData({ ...evalFormData, peitoral_torax: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Dorsal Largura (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.dorsal_largura} onChange={(e) => setEvalFormData({ ...evalFormData, dorsal_largura: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Dorsal Espessura (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.dorsal_espessura} onChange={(e) => setEvalFormData({ ...evalFormData, dorsal_espessura: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Cintura (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.cintura} onChange={(e) => setEvalFormData({ ...evalFormData, cintura: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Abdômen (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.abdomen} onChange={(e) => setEvalFormData({ ...evalFormData, abdomen: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Quadril (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.quadril} onChange={(e) => setEvalFormData({ ...evalFormData, quadril: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
                 </div>
               </div>
 
               {/* Membros Superiores */}
               <div className="p-3 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
                 <span className="font-bold text-cyan-400 block">Braços & Antebraços</span>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                  <div>
-                    <label className="block text-slate-400 mb-1">Braço D (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.braco_direito} onChange={(e) => setEvalFormData({ ...evalFormData, braco_direito: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Braço E (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.braco_esquerdo} onChange={(e) => setEvalFormData({ ...evalFormData, braco_esquerdo: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Braço Contraído (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.braco_contraido} onChange={(e) => setEvalFormData({ ...evalFormData, braco_contraido: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Antebraço D (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.antebraco_direito} onChange={(e) => setEvalFormData({ ...evalFormData, antebraco_direito: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Antebraço E (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.antebraco_esquerdo} onChange={(e) => setEvalFormData({ ...evalFormData, antebraco_esquerdo: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div><label className="block text-slate-400 mb-1">Braço D. Relaxado</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.braco_direito} onChange={(e) => setEvalFormData({ ...evalFormData, braco_direito: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-cyan-300 font-bold mb-1">Braço D. Contraído</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.braco_direito_contraido} onChange={(e) => setEvalFormData({ ...evalFormData, braco_direito_contraido: e.target.value, braco_contraido: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white font-bold" /></div>
+                  <div><label className="block text-slate-400 mb-1">Braço E. Relaxado</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.braco_esquerdo} onChange={(e) => setEvalFormData({ ...evalFormData, braco_esquerdo: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-cyan-300 font-bold mb-1">Braço E. Contraído</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.braco_esquerdo_contraido} onChange={(e) => setEvalFormData({ ...evalFormData, braco_esquerdo_contraido: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white font-bold" /></div>
                 </div>
               </div>
 
               {/* Membros Inferiores */}
               <div className="p-3 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
-                <span className="font-bold text-purple-400 block">Pernas & Glúteos</span>
+                <span className="font-bold text-purple-400 block">Pernas & Glúteos (Coxa Medial)</span>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                  <div>
-                    <label className="block text-slate-400 mb-1">Coxa D (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.coxa_direita} onChange={(e) => setEvalFormData({ ...evalFormData, coxa_direita: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Coxa E (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.coxa_esquerda} onChange={(e) => setEvalFormData({ ...evalFormData, coxa_esquerda: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Glúteo (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.gluteo} onChange={(e) => setEvalFormData({ ...evalFormData, gluteo: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Panturrilha D (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.panturrilha_direita} onChange={(e) => setEvalFormData({ ...evalFormData, panturrilha_direita: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Panturrilha E (cm)</label>
-                    <input type="number" step="0.1" value={evalFormData.panturrilha_esquerda} onChange={(e) => setEvalFormData({ ...evalFormData, panturrilha_esquerda: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" />
-                  </div>
+                  <div><label className="block text-slate-400 mb-1">Coxa Medial D</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.coxa_direita} onChange={(e) => setEvalFormData({ ...evalFormData, coxa_direita: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Coxa Medial E</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.coxa_esquerda} onChange={(e) => setEvalFormData({ ...evalFormData, coxa_esquerda: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Glúteo (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.gluteo} onChange={(e) => setEvalFormData({ ...evalFormData, gluteo: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Panturrilha D (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.panturrilha_direita} onChange={(e) => setEvalFormData({ ...evalFormData, panturrilha_direita: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Panturrilha E (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.panturrilha_esquerda} onChange={(e) => setEvalFormData({ ...evalFormData, panturrilha_esquerda: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
                 </div>
               </div>
 
@@ -1630,7 +1656,7 @@ export default function StudentsPage() {
                   disabled={evalSubmitting}
                   className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 shadow-md"
                 >
-                  {evalSubmitting ? 'Salva...' : 'Salvar Avaliação'}
+                  {evalSubmitting ? 'Salvando...' : 'Salvar Avaliação'}
                 </button>
               </div>
             </form>
@@ -1638,839 +1664,1288 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* MODAL: COMPARAÇÃO DE AVALIAÇÕES (SEÇÃO 32) */}
-      {showComparisonModal && studentHistory.evaluations.length >= 2 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
-          <div className="glass-panel w-full max-w-3xl rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                <ArrowLeftRight className="w-5 h-5 text-emerald-400" />
-                Comparação de Avaliações Corporais
-              </h3>
-              <button onClick={() => setShowComparisonModal(false)} className="text-slate-400 hover:text-white">✕</button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <label className="block text-slate-400 mb-1 font-bold">Avaliação Anterior (Base):</label>
-                <select
-                  value={compEvalIndex1}
-                  onChange={(e) => setCompEvalIndex1(parseInt(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                >
-                  {studentHistory.evaluations.map((ev, i) => (
-                    <option key={i} value={i}>
-                      {new Date(ev.data_registro).toLocaleDateString('pt-BR')} ({ev.peso ? `${ev.peso} kg` : 'Sem peso'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-400 mb-1 font-bold">Avaliação Atual / Comparada:</label>
-                <select
-                  value={compEvalIndex2}
-                  onChange={(e) => setCompEvalIndex2(parseInt(e.target.value))}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                >
-                  {studentHistory.evaluations.map((ev, i) => (
-                    <option key={i} value={i}>
-                      {new Date(ev.data_registro).toLocaleDateString('pt-BR')} ({ev.peso ? `${ev.peso} kg` : 'Sem peso'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Comparison Table */}
-            {(() => {
-              const e1 = studentHistory.evaluations[compEvalIndex1];
-              const e2 = studentHistory.evaluations[compEvalIndex2];
-
-              if (!e1 || !e2) return null;
-
-              const metrics = [
-                { key: 'peso', label: 'Peso (kg)' },
-                { key: 'bf_percentual', label: 'BF (%)' },
-                { key: 'braco_direito', label: 'Braço D (cm)' },
-                { key: 'braco_esquerdo', label: 'Braço E (cm)' },
-                { key: 'braco_contraido', label: 'Braço Contraído (cm)' },
-                { key: 'peitoral_torax', label: 'Peitoral (cm)' },
-                { key: 'ombro', label: 'Ombros (cm)' },
-                { key: 'cintura', label: 'Cintura (cm)' },
-                { key: 'abdomen', label: 'Abdômen (cm)' },
-                { key: 'coxa_direita', label: 'Coxa D (cm)' },
-                { key: 'panturrilha_direita', label: 'Panturrilha D (cm)' },
-              ];
-
-              return (
-                <div className="overflow-x-auto rounded-2xl border border-slate-800">
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead className="bg-slate-900 uppercase tracking-wider text-slate-400 font-semibold border-b border-slate-800">
-                      <tr>
-                        <th className="py-3 px-4">Medida</th>
-                        <th className="py-3 px-4 text-right">Anterior ({new Date(e1.data_registro).toLocaleDateString('pt-BR')})</th>
-                        <th className="py-3 px-4 text-right">Atual ({new Date(e2.data_registro).toLocaleDateString('pt-BR')})</th>
-                        <th className="py-3 px-4 text-right">Delta</th>
-                        <th className="py-3 px-4 text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      {metrics.map((m) => {
-                        const val1 = e1[m.key];
-                        const val2 = e2[m.key];
-                        const st = getMeasurementStatus(m.key, val2, val1, viewingStudent.fase_shape || 'Bulking');
-
-                        return (
-                          <tr key={m.key} className="hover:bg-slate-900/40">
-                            <td className="py-2.5 px-4 font-bold text-white">{m.label}</td>
-                            <td className="py-2.5 px-4 text-right">{val1 != null ? val1 : '—'}</td>
-                            <td className="py-2.5 px-4 text-right font-bold text-white">{val2 != null ? val2 : '—'}</td>
-                            <td className="py-2.5 px-4 text-right font-mono font-bold">
-                              {st ? st.diffStr : '—'}
-                            </td>
-                            <td className="py-2.5 px-4 text-center">
-                              {st ? (
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${st.badgeBg}`}>
-                                  {st.icon} {st.label}
-                                </span>
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: CADASTRO / EDIÇÃO DE ALUNO (WIZARD 4 PASSOS) */}
+      {/* MODAL 2: CADASTRO / EDIÇÃO DE ALUNO (WIZARD DE ALTA USABILIDADE) */}
       {showWizardModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-sm">
-          <div className="glass-panel w-full max-w-xl rounded-3xl p-5 sm:p-6 border border-slate-800 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                  <UserPlus className="w-5 h-5 text-emerald-400" />
-                  {editingStudentId ? 'Editar Ficha do Aluno' : 'Cadastrar Aluno (Ficha Completa)'}
-                </h3>
-                <span className="text-xs text-emerald-400 font-semibold block mt-0.5">
-                  Etapa {wizardStep} de 5 &bull; Apenas o Nome é obrigatório!
-                </span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-3xl rounded-3xl border border-slate-800 shadow-2xl space-y-4 max-h-[94vh] overflow-y-auto flex flex-col justify-between">
+            {/* Top Modal Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-extrabold text-white flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-emerald-400" />
+                    {editingStudentId ? 'Editar Ficha do Aluno' : 'Cadastrar Aluno'}
+                  </h3>
+                  <span className="text-xs text-slate-400 block mt-0.5 font-mono">
+                    Atalho: <kbd className="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700 text-emerald-400 font-bold">Ctrl + S</kbd> para salvar em qualquer tela!
+                  </span>
+                </div>
+                <button onClick={() => setShowWizardModal(false)} className="text-slate-400 hover:text-white text-lg font-bold p-1">✕</button>
               </div>
-              <button onClick={() => setShowWizardModal(false)} className="text-slate-400 hover:text-white">✕</button>
-            </div>
 
-            {/* Steps indicator */}
-            <div className="grid grid-cols-5 gap-1.5 text-center">
-              {['1. Perfil', '2. Objetivos', '3. Aferição', '4. Metas', '5. Cobrança'].map((label, index) => {
-                const stepNum = index + 1;
-                return (
+              {/* Draft Restore Notification if Draft Exists */}
+              {hasDraft && (
+                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300">
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                    Rascunho de cadastro encontrado no navegador.
+                  </span>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={restoreDraft} className="px-3 py-1 rounded-lg bg-amber-500 text-slate-950 font-bold hover:bg-amber-400">
+                      Restaurar
+                    </button>
+                    <button type="button" onClick={clearDraft} className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
+                      Descartar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Mode Selector Header (Balcão Rápido vs Ficha Completa) */}
+              {!editingStudentId && (
+                <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-900 rounded-2xl border border-slate-800">
                   <button
-                    key={stepNum}
-                    onClick={() => setWizardStep(stepNum)}
-                    className={`py-2 rounded-xl text-[10px] font-extrabold uppercase transition-all ${
-                      wizardStep === stepNum
-                        ? 'bg-emerald-500 text-slate-950 shadow-md'
-                        : 'bg-slate-900 text-slate-500 border border-slate-800 hover:text-slate-300'
+                    type="button"
+                    onClick={() => setWizardMode('fast')}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      wizardMode === 'fast'
+                        ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    {label}
+                    <Zap className="w-4 h-4" />
+                    <span>⚡ Modo Rápido (Balcão 15s)</span>
                   </button>
-                );
-              })}
+
+                  <button
+                    type="button"
+                    onClick={() => setWizardMode('full')}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      wizardMode === 'full'
+                        ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span>📋 Ficha Completa (5 Etapas)</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Steps Indicator Bar (Full Wizard Mode) */}
+              {wizardMode === 'full' && (
+                <div className="grid grid-cols-5 gap-1.5 text-center">
+                  {['1. Perfil', '2. Saúde & Treino', '3. Aferição', '4. Metas', '5. Cobrança'].map((label, index) => {
+                    const stepNum = index + 1;
+                    return (
+                      <button
+                        key={stepNum}
+                        onClick={() => setWizardStep(stepNum)}
+                        className={`py-2 rounded-xl text-[10px] font-extrabold uppercase transition-all ${
+                          wizardStep === stepNum
+                            ? 'bg-emerald-500 text-slate-950 shadow-md'
+                            : 'bg-slate-900 text-slate-500 border border-slate-800 hover:text-slate-300'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {errorMsg && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmitWizard} className="space-y-4 text-xs">
-              {/* PASSO 1: DADOS DE PERFIL */}
-              {wizardStep === 1 && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Nome * (Obrigatório)</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.first_name}
-                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                        placeholder="Ex: Gabriel"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Sobrenome</label>
-                      <input
-                        type="text"
-                        value={formData.last_name}
-                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                        placeholder="Vilela"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">WhatsApp (DDD + N°)</label>
-                      <input
-                        type="text"
-                        value={formData.whatsapp}
-                        onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                        placeholder="5511999999999"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-pink-400 font-bold">
-                          <Instagram className="w-3.5 h-3.5 text-pink-500 shrink-0" />
-                          Instagram
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-normal">(Opcional • Destaque)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.instagram || ''}
-                        onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                        placeholder="@usuario ou link"
-                        className="w-full bg-slate-900 border border-pink-500/30 focus:border-pink-500 rounded-xl px-3 py-2 text-white placeholder-slate-600 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Idade</label>
-                      <input
-                        type="number"
-                        value={formData.age}
-                        onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                        placeholder="26"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Altura (cm)</label>
-                      <input
-                        type="number"
-                        value={formData.altura || formData.height}
-                        onChange={(e) => setFormData({ ...formData, altura: e.target.value, height: e.target.value })}
-                        placeholder="182"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Peso Inicial (kg)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={formData.current_weight}
-                        onChange={(e) => setFormData({ ...formData, current_weight: e.target.value })}
-                        placeholder="84.5"
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 pt-2">
-                    {formData.photo_base64 ? (
-                      <img
-                        src={formData.photo_base64}
-                        alt="Preview"
-                        className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500"
-                      />
-                    ) : (
-                      <div className="w-14 h-14 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500">
-                        <Camera className="w-6 h-6" />
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1 cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 w-fit">
-                        Escolher Foto de Perfil
-                        <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-                      </label>
-                    </div>
-                  </div>
+            <div className="p-5 sm:p-6 flex-1 space-y-4">
+              {errorMsg && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMsg}</span>
                 </div>
               )}
 
-              {/* PASSO 2: OBJETIVOS E SHAPE */}
-              {wizardStep === 2 && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Fase do Shape</label>
-                      <select
-                        value={formData.fase_shape}
-                        onChange={(e) => setFormData({ ...formData, fase_shape: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      >
-                        {FASE_OPTIONS.map((f) => (
-                          <option key={f} value={f}>{f}</option>
-                        ))}
-                      </select>
+              <form id="wizardForm" onSubmit={handleSubmitWizard} className="space-y-4 text-xs">
+                {/* MODE 1: BALCÃO / RÁPIDO (15s) */}
+                {wizardMode === 'fast' && (
+                  <div className="space-y-4">
+                    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/30">
+                      <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
+                        <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>Modo Balcão — Matrícula Rápida (15 Segundos)</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Cadastre o aluno instantaneamente na recepção. O link para preenchimento da ficha técnica pode ser enviado via WhatsApp ao concluir!
+                      </p>
                     </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Nível de Treino</label>
-                      <select
-                        value={formData.nivel_treino}
-                        onChange={(e) => setFormData({ ...formData, nivel_treino: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      >
-                        {NIVEL_OPTIONS.map((n) => (
-                          <option key={n} value={n}>{n}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Objetivo Principal</label>
-                      <select
-                        value={formData.objetivo_principal}
-                        onChange={(e) => setFormData({ ...formData, objetivo_principal: e.target.value, goal: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      >
-                        {OBJETIVO_OPTIONS.map((o) => (
-                          <option key={o} value={o}>{o}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Divisão de Treino</label>
-                      <select
-                        value={formData.divisao_treino}
-                        onChange={(e) => setFormData({ ...formData, divisao_treino: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      >
-                        {DIVISAO_OPTIONS.map((d) => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-300 mb-1">Frequência Semanal</label>
-                    <input
-                      type="text"
-                      value={formData.frequencia_semanal}
-                      onChange={(e) => setFormData({ ...formData, frequencia_semanal: e.target.value, training_days: e.target.value })}
-                      placeholder="Ex: 5x por semana (Seg a Sex)"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-300 mb-1">Pontos Fracos do Shape (Multi-seleção)</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 p-3 bg-slate-900 rounded-xl border border-slate-800 max-h-36 overflow-y-auto">
-                      {PONTOS_FRACOS_OPTIONS.map((pf) => {
-                        const isSelected = Array.isArray(formData.pontos_fracos) && formData.pontos_fracos.includes(pf);
-                        return (
-                          <label key={pf} className={`flex items-center gap-1.5 text-[11px] p-1.5 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40' : 'text-slate-400 hover:text-white'}`}>
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const currentArr = Array.isArray(formData.pontos_fracos) ? [...formData.pontos_fracos] : [];
-                                if (e.target.checked) {
-                                  setFormData({ ...formData, pontos_fracos: [...currentArr, pf] });
-                                } else {
-                                  setFormData({ ...formData, pontos_fracos: currentArr.filter((item) => item !== pf) });
-                                }
-                              }}
-                              className="w-3.5 h-3.5 rounded text-emerald-500 bg-slate-950 border-slate-700"
-                            />
-                            <span>{pf}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-amber-300 mb-1 flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5" /> Lesões / Restrições (Gera alerta no modal)
-                    </label>
-                    <textarea
-                      rows="2"
-                      value={formData.lesoes_restricoes}
-                      onChange={(e) => setFormData({ ...formData, lesoes_restricoes: e.target.value })}
-                      placeholder="Ex: Condromalácia no joelho direito. Evitar agachamento profundo pesado."
-                      className="w-full bg-slate-900 border border-amber-500/30 rounded-xl px-3 py-2 text-white focus:border-amber-400 placeholder-slate-600"
-                    ></textarea>
-                  </div>
-                </div>
-              )}
-
-              {/* PASSO 3: AFERIÇÃO CORPORAL INICIAL (OPCIONAL) */}
-              {wizardStep === 3 && (
-                <div className="space-y-4">
-                  <div className="p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 space-y-1">
-                    <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-xs uppercase tracking-wider">
-                      <Activity className="w-4 h-4 text-cyan-400 shrink-0" />
-                      <span>Nova Aferição Corporal para {formData.first_name || 'Aluno'} (Opcional)</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      Cadastre as medidas corporais e o percentual de gordura do aluno nesta etapa inicial (100% opcional).
-                    </p>
-                  </div>
-
-                  {/* Datas & Dados Principais */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Data da Avaliação *</label>
-                      <input
-                        type="date"
-                        value={formData.initial_evaluation?.data_registro || new Date().toISOString().split('T')[0]}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          initial_evaluation: { ...formData.initial_evaluation, data_registro: e.target.value }
-                        })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Peso (kg)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        placeholder="84.5"
-                        value={formData.initial_evaluation?.peso || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setFormData({
-                            ...formData,
-                            current_weight: val || formData.current_weight,
-                            initial_evaluation: { ...formData.initial_evaluation, peso: val }
-                          });
-                        }}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500 font-bold text-emerald-400"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">BF (% Gordura)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        placeholder="13.0"
-                        value={formData.initial_evaluation?.bf_percentual || ''}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          initial_evaluation: { ...formData.initial_evaluation, bf_percentual: e.target.value }
-                        })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Seção 1: Tronco & Proporção */}
-                  <div className="space-y-2 pt-2 border-t border-slate-800">
-                    <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
-                      <Dumbbell className="w-3.5 h-3.5 text-cyan-400" />
-                      Tronco & Proporção
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Pescoço (cm)</label>
+                        <label className="block font-semibold text-slate-300 mb-1">Nome * (Obrigatório)</label>
                         <input
-                          type="number" step="0.1" placeholder="40.0"
-                          value={formData.initial_evaluation?.pescoco || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, pescoco: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                          type="text"
+                          required
+                          value={formData.first_name}
+                          onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                          placeholder="Ex: Gabriel"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:border-emerald-500 text-sm font-bold"
                         />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Ombros (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="125.0"
-                          value={formData.initial_evaluation?.ombro || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, ombro: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Peitoral (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="110.0"
-                          value={formData.initial_evaluation?.peitoral_torax || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, peitoral_torax: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Dorsal Largura (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="118.0"
-                          value={formData.initial_evaluation?.dorsal_largura || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, dorsal_largura: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Dorsal Espessura (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="42.0"
-                          value={formData.initial_evaluation?.dorsal_espessura || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, dorsal_espessura: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Cintura (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="82.0"
-                          value={formData.initial_evaluation?.cintura || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, cintura: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Abdômen (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="85.0"
-                          value={formData.initial_evaluation?.abdomen || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, abdomen: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Quadril (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="100.0"
-                          value={formData.initial_evaluation?.quadril || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, quadril: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Seção 2: Braços & Antebraços */}
-                  <div className="space-y-2 pt-2 border-t border-slate-800">
-                    <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
-                      <Activity className="w-3.5 h-3.5 text-cyan-400" />
-                      Braços & Antebraços
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Braço D (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="38.5"
-                          value={formData.initial_evaluation?.braco_direito || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_direito: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Braço E (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="38.5"
-                          value={formData.initial_evaluation?.braco_esquerdo || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_esquerdo: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Braço Contraído (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="41.0"
-                          value={formData.initial_evaluation?.braco_contraido || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_contraido: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white font-bold text-cyan-300"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Antebraço D (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="32.0"
-                          value={formData.initial_evaluation?.antebraco_direito || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, antebraco_direito: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Antebraço E (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="32.0"
-                          value={formData.initial_evaluation?.antebraco_esquerdo || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, antebraco_esquerdo: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Seção 3: Pernas & Glúteos */}
-                  <div className="space-y-2 pt-2 border-t border-slate-800">
-                    <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
-                      <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
-                      Pernas & Glúteos
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Coxa D (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="60.0"
-                          value={formData.initial_evaluation?.coxa_direita || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, coxa_direita: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Coxa E (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="60.0"
-                          value={formData.initial_evaluation?.coxa_esquerda || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, coxa_esquerda: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Glúteo (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="102.0"
-                          value={formData.initial_evaluation?.gluteo || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, gluteo: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Panturrilha D (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="39.0"
-                          value={formData.initial_evaluation?.panturrilha_direita || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, panturrilha_direita: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Panturrilha E (cm)</label>
-                        <input
-                          type="number" step="0.1" placeholder="39.0"
-                          value={formData.initial_evaluation?.panturrilha_esquerda || ''}
-                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, panturrilha_esquerda: e.target.value } })}
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Observações da Avaliação */}
-                  <div className="pt-2 border-t border-slate-800">
-                    <label className="block font-semibold text-slate-300 mb-1">Observações da Avaliação</label>
-                    <textarea
-                      rows="2"
-                      placeholder="Anotações gerais sobre assimetria, postura ou evolução..."
-                      value={formData.initial_evaluation?.observacoes || ''}
-                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, observacoes: e.target.value } })}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600"
-                    ></textarea>
-                  </div>
-                </div>
-              )}
-
-              {/* PASSO 4: METAS CORPORAIS (OPCIONAL) */}
-              {wizardStep === 4 && (
-                <div className="space-y-4">
-                  <p className="text-[11px] text-slate-400">Defina as metas corporais do aluno (todas opcionais). As metas gerarão barras de progresso animadas no perfil.</p>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Peso Meta (kg)</label>
-                      <input type="number" step="0.1" value={formData.peso_meta} onChange={(e) => setFormData({ ...formData, peso_meta: e.target.value })} placeholder="90.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">BF Meta (%)</label>
-                      <input type="number" step="0.1" value={formData.bf_meta} onChange={(e) => setFormData({ ...formData, bf_meta: e.target.value })} placeholder="10.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Braço Meta (cm)</label>
-                      <input type="number" step="0.1" value={formData.braco_meta} onChange={(e) => setFormData({ ...formData, braco_meta: e.target.value })} placeholder="43.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Ombro Meta (cm)</label>
-                      <input type="number" step="0.1" value={formData.ombro_meta} onChange={(e) => setFormData({ ...formData, ombro_meta: e.target.value })} placeholder="130.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Peitoral Meta (cm)</label>
-                      <input type="number" step="0.1" value={formData.peitoral_meta} onChange={(e) => setFormData({ ...formData, peitoral_meta: e.target.value })} placeholder="115.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Cintura Meta (cm)</label>
-                      <input type="number" step="0.1" value={formData.cintura_meta} onChange={(e) => setFormData({ ...formData, cintura_meta: e.target.value })} placeholder="80.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Coxa Meta (cm)</label>
-                      <input type="number" step="0.1" value={formData.coxa_meta} onChange={(e) => setFormData({ ...formData, coxa_meta: e.target.value })} placeholder="65.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Glúteo Meta (cm)</label>
-                      <input type="number" step="0.1" value={formData.gluteo_meta} onChange={(e) => setFormData({ ...formData, gluteo_meta: e.target.value })} placeholder="105.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Panturrilha Meta (cm)</label>
-                      <input type="number" step="0.1" value={formData.panturrilha_meta} onChange={(e) => setFormData({ ...formData, panturrilha_meta: e.target.value })} placeholder="42.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-300 mb-1">Observações do Treinador</label>
-                    <textarea
-                      rows="2"
-                      value={formData.observacoes_treinador}
-                      onChange={(e) => setFormData({ ...formData, observacoes_treinador: e.target.value })}
-                      placeholder="Observações técnicas, estilo de treino ou foco específico."
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                    ></textarea>
-                  </div>
-                </div>
-              )}
-
-              {/* PASSO 5: PRIMEIRA COBRANÇA (OPCIONAL) */}
-              {wizardStep === 5 && (
-                <div className="space-y-4">
-                  <label className="flex items-center gap-3 p-3.5 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
-                    <input
-                      type="checkbox"
-                      checked={formData.create_first_billing}
-                      onChange={(e) => setFormData({ ...formData, create_first_billing: e.target.checked })}
-                      className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
-                    />
-                    <div>
-                      <span className="font-bold text-white block text-xs">☐ Criar primeira cobrança para este aluno</span>
-                      <span className="text-[10px] text-slate-400 block">
-                        Se desmarcado, o aluno será cadastrado sem cobrança (exibindo o alerta 🔴 Sem cobrança).
-                      </span>
-                    </div>
-                  </label>
-
-                  {formData.create_first_billing && (
-                    <div className="space-y-4 pt-2 border-t border-slate-800">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block font-semibold text-slate-300 mb-1">Valor da Mensalidade (R$) *</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            required={formData.create_first_billing}
-                            value={formData.billing_amount}
-                            onChange={(e) => setFormData({ ...formData, billing_amount: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-emerald-400 font-bold focus:border-emerald-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block font-semibold text-slate-300 mb-1">1º Vencimento *</label>
-                          <input
-                            type="date"
-                            required={formData.create_first_billing}
-                            value={formData.billing_due_date}
-                            onChange={(e) => setFormData({ ...formData, billing_due_date: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                          />
-                        </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block font-semibold text-slate-300 mb-1">Forma de Pagamento</label>
-                          <select
-                            value={formData.billing_payment_method}
-                            onChange={(e) => setFormData({ ...formData, billing_payment_method: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                          >
-                            <option value="Pix">Pix</option>
-                            <option value="Cartão de Crédito">Cartão de Crédito</option>
-                            <option value="Dinheiro">Dinheiro</option>
-                            <option value="Boleto">Boleto</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block font-semibold text-slate-300 mb-1">Descrição</label>
-                          <input
-                            type="text"
-                            value={formData.billing_notes}
-                            onChange={(e) => setFormData({ ...formData, billing_notes: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                            placeholder="Mensalidade"
-                          />
-                        </div>
+                      <div>
+                        <label className="block font-semibold text-slate-300 mb-1">Sobrenome</label>
+                        <input
+                          type="text"
+                          value={formData.last_name}
+                          onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                          placeholder="Vilela"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:border-emerald-500 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                          <span>WhatsApp (DDD + N°)</span>
+                          {formData.create_first_billing && <span className="text-[9px] text-amber-400 font-extrabold">* Obr. p/ Cobrança</span>}
+                        </label>
+                        <input
+                          type="tel"
+                          inputMode="tel"
+                          value={formData.whatsapp}
+                          onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                          placeholder="5511999999999"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:border-emerald-500 text-sm"
+                        />
                       </div>
 
-                      <label className="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
+                      <div>
+                        <label className="block font-semibold text-slate-300 mb-1">Instagram (Opcional)</label>
+                        <input
+                          type="text"
+                          value={formData.instagram || ''}
+                          onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                          placeholder="@usuario"
+                          className="w-full bg-slate-900 border border-pink-500/30 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-white text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quick Billing Checkbox */}
+                    <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-3">
+                      <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={formData.is_recurring}
-                          onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
+                          checked={formData.create_first_billing}
+                          onChange={(e) => setFormData({ ...formData, create_first_billing: e.target.checked })}
                           className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
                         />
                         <div>
-                          <span className="font-bold text-white block text-xs">Cobrança recorrente (12 Meses)</span>
-                          <span className="text-[10px] text-slate-400 block">
-                            Criar mensalidades automaticamente a cada mês por 12 meses.
-                          </span>
+                          <span className="font-bold text-white block text-xs">Criar 1ª cobrança de mensalidade agora</span>
+                          <span className="text-[10px] text-slate-400 block">Gerar mensalidade automática com vencimento inicial.</span>
                         </div>
                       </label>
-                    </div>
-                  )}
-                </div>
-              )}
 
-              <div className="flex justify-between items-center pt-4 border-t border-slate-800">
-                {wizardStep > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => setWizardStep((s) => s - 1)}
-                    className="px-4 py-2 rounded-xl font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 flex items-center gap-1 cursor-pointer transition-all"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span>Anterior</span>
-                  </button>
-                ) : (
-                  <div></div>
+                      {formData.create_first_billing && (
+                        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 text-xs">Valor (R$) *</label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              step="0.01"
+                              value={formData.billing_amount}
+                              onChange={(e) => setFormData({ ...formData, billing_amount: e.target.value })}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-emerald-400 font-bold text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 text-xs">1º Vencimento *</label>
+                            <input
+                              type="date"
+                              value={formData.billing_due_date}
+                              onChange={(e) => setFormData({ ...formData, billing_due_date: e.target.value })}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
 
-                <div className="flex items-center gap-2">
-                  {wizardStep < 5 && (
-                    <button
-                      type="button"
-                      onClick={() => setWizardStep((s) => s + 1)}
-                      className="px-5 py-2 rounded-xl font-extrabold text-slate-950 bg-emerald-400 hover:bg-emerald-300 flex items-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer transition-all"
-                    >
-                      <span>Próximo</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  )}
+                {/* MODE 2: WIZARD FULL (5 ETAPAS) */}
+                {wizardMode === 'full' && (
+                  <>
+                    {/* PASSO 1: DADOS DE PERFIL */}
+                    {wizardStep === 1 && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Nome * (Obrigatório)</label>
+                            <input
+                              type="text"
+                              required
+                              value={formData.first_name}
+                              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                              placeholder="Ex: Gabriel"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Sobrenome</label>
+                            <input
+                              type="text"
+                              value={formData.last_name}
+                              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                              placeholder="Vilela"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+                        </div>
 
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                              <span>WhatsApp (DDD + N°)</span>
+                              {formData.create_first_billing && (
+                                <span className="text-[9px] text-amber-400 font-extrabold">* Obr. p/ Cobrança</span>
+                              )}
+                            </label>
+                            <input
+                              type="tel"
+                              inputMode="tel"
+                              value={formData.whatsapp}
+                              onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                              placeholder="5511999999999"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                              <span className="flex items-center gap-1.5 text-pink-400 font-bold">
+                                <Instagram className="w-3.5 h-3.5 text-pink-500 shrink-0" />
+                                Instagram
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-normal">(Opcional • Destaque)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.instagram || ''}
+                              onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                              placeholder="@usuario ou link"
+                              className="w-full bg-slate-900 border border-pink-500/30 focus:border-pink-500 rounded-xl px-3 py-2 text-white placeholder-slate-600 transition-colors"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                              <span>Data de Nascimento</span>
+                              {formData.data_nascimento && calculateAge(formData.data_nascimento) !== null && (
+                                <span className="text-[10px] text-emerald-400 font-bold">
+                                  🎉 {calculateAge(formData.data_nascimento)} anos
+                                </span>
+                              )}
+                            </label>
+                            <input
+                              type="date"
+                              value={formData.data_nascimento || ''}
+                              onChange={(e) => {
+                                const dStr = e.target.value;
+                                const computed = calculateAge(dStr);
+                                setFormData({
+                                  ...formData,
+                                  data_nascimento: dStr,
+                                  birth_date: dStr,
+                                  age: computed !== null ? String(computed) : formData.age
+                                });
+                              }}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Altura (cm)</label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              value={formData.altura || formData.height}
+                              onChange={(e) => setFormData({ ...formData, altura: e.target.value, height: e.target.value })}
+                              placeholder="182"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                              <span>Peso Inicial (kg)</span>
+                              <span className="text-[9px] text-emerald-400 font-mono">⚡ Sync</span>
+                            </label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              step="0.1"
+                              value={formData.current_weight}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData({
+                                  ...formData,
+                                  current_weight: val,
+                                  initial_evaluation: { ...formData.initial_evaluation, peso: val }
+                                });
+                              }}
+                              placeholder="84.5"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500 font-bold text-emerald-400"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 pt-2">
+                          {formData.photo_base64 ? (
+                            <img
+                              src={formData.photo_base64}
+                              alt="Preview"
+                              className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500">
+                              <Camera className="w-6 h-6" />
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            <label className="block text-xs font-semibold text-slate-300 cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-xl border border-slate-700">
+                              📷 Tirar Foto Agora
+                              <input type="file" accept="image/*" capture="user" onChange={handlePhotoUpload} className="hidden" />
+                            </label>
+                            <label className="block text-xs font-semibold text-slate-300 cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-xl border border-slate-700">
+                              🖼️ Da Galeria
+                              <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PASSO 2: SAÚDE CLÍNICA, SEGURANÇA E CONTEXTO DE TREINO */}
+                    {wizardStep === 2 && (
+                      <div className="space-y-4">
+                        {/* 1. Alertas Críticos (Badges em Destaque) */}
+                        <div className="p-3.5 rounded-2xl bg-rose-950/20 border border-rose-500/30 space-y-3">
+                          <div className="flex items-center gap-2 text-rose-400 font-extrabold text-xs uppercase tracking-wider">
+                            <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
+                            <span>1. Alertas Críticos & Segurança (Badges em Destaque)</span>
+                          </div>
+
+                          {/* Restrições Articulares */}
+                          <div>
+                            <label className="block font-bold text-amber-300 mb-1 text-[11px]">
+                              Restrições Articulares & Coluna (Tag Vermelha/Laranja no Perfil)
+                            </label>
+                            <div className="flex flex-wrap gap-1.5 p-2 bg-slate-900/90 rounded-xl border border-slate-800">
+                              {RESTRICOES_ARTICULARES_OPTIONS.map((item) => {
+                                const isSelected = Array.isArray(formData.restricoes_articulares) && formData.restricoes_articulares.includes(item);
+                                return (
+                                  <button
+                                    type="button"
+                                    key={item}
+                                    onClick={() => {
+                                      const currentArr = Array.isArray(formData.restricoes_articulares) ? [...formData.restricoes_articulares] : [];
+                                      if (isSelected) {
+                                        setFormData({ ...formData, restricoes_articulares: currentArr.filter(i => i !== item) });
+                                      } else {
+                                        setFormData({ ...formData, restricoes_articulares: [...currentArr, item] });
+                                      }
+                                    }}
+                                    className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer border ${
+                                      isSelected
+                                        ? 'bg-rose-500 text-white border-rose-400 shadow-md shadow-rose-500/20 scale-105'
+                                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                                    }`}
+                                  >
+                                    {isSelected ? '✓ ' : '+ '} {item}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Condições Cardiovasculares & Metabólicas */}
+                          <div>
+                            <label className="block font-bold text-rose-400 mb-1 text-[11px]">
+                              Condições Cardiovasculares & Metabólicas (Alerta de Risco Alto)
+                            </label>
+                            <div className="flex flex-wrap gap-1.5 p-2 bg-slate-900/90 rounded-xl border border-slate-800">
+                              {CONDICOES_CARDIO_OPTIONS.map((item) => {
+                                const isSelected = Array.isArray(formData.condicoes_cardio_metabolicas) && formData.condicoes_cardio_metabolicas.includes(item);
+                                return (
+                                  <button
+                                    type="button"
+                                    key={item}
+                                    onClick={() => {
+                                      const currentArr = Array.isArray(formData.condicoes_cardio_metabolicas) ? [...formData.condicoes_cardio_metabolicas] : [];
+                                      if (isSelected) {
+                                        setFormData({ ...formData, condicoes_cardio_metabolicas: currentArr.filter(i => i !== item) });
+                                      } else {
+                                        setFormData({ ...formData, condicoes_cardio_metabolicas: [...currentArr, item] });
+                                      }
+                                    }}
+                                    className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer border ${
+                                      isSelected
+                                        ? 'bg-red-600 text-white border-red-400 shadow-md shadow-red-500/30 scale-105'
+                                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                                    }`}
+                                  >
+                                    {isSelected ? '✓ ' : '+ '} {item}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Cirurgias Recentes & Atestado Médico */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <div>
+                              <label className="block font-semibold text-purple-300 mb-1">Cirurgias Recentes / Pós-Reabilitação</label>
+                              <input
+                                type="text"
+                                value={formData.cirurgias_reabilitacao}
+                                onChange={(e) => setFormData({ ...formData, cirurgias_reabilitacao: e.target.value })}
+                                placeholder="Ex: LCA joelho esquerdo (6 meses), Cesárea..."
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Atestado Médico / Liberação</label>
+                              <div className="flex flex-wrap gap-1.5 pt-1">
+                                {[
+                                  { val: 'Liberado Total', label: '🟢 Liberado Total', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' },
+                                  { val: 'Liberado com Restrições', label: '🟡 c/ Restrições', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40' },
+                                  { val: 'Pendente', label: '🔴 Pendente', bg: 'bg-rose-500/20 text-rose-300 border-rose-500/40' }
+                                ].map((opt) => (
+                                  <button
+                                    type="button"
+                                    key={opt.val}
+                                    onClick={() => setFormData({ ...formData, status_atestado: opt.val })}
+                                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all border cursor-pointer ${
+                                      formData.status_atestado === opt.val
+                                        ? `${opt.bg} shadow-md scale-105`
+                                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                    }`}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                ))}
+                                <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700 font-bold text-[10px]">
+                                  {formData.atested_file_base64 ? '✓ Anexado' : 'Upload'}
+                                  <input type="file" accept="image/*,.pdf" onChange={handleAtestadoUpload} className="hidden" />
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 2. Informações Úteis para Montagem de Treino */}
+                        <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+                          <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-xs uppercase tracking-wider">
+                            <Activity className="w-4 h-4 text-cyan-400 shrink-0" />
+                            <span>2. Contexto Fisiológico & Prescrição Técnica</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Medicamentos de Uso Contínuo</label>
+                              <input
+                                type="text"
+                                value={formData.medicamentos_uso_continuo}
+                                onChange={(e) => setFormData({ ...formData, medicamentos_uso_continuo: e.target.value })}
+                                placeholder="Ex: Betabloqueadores, Estatinas..."
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Recursos Ergogênicos / Terapias</label>
+                              <input
+                                type="text"
+                                value={formData.recursos_ergogenicos}
+                                onChange={(e) => setFormData({ ...formData, recursos_ergogenicos: e.target.value })}
+                                placeholder="Ex: TRT, Estimulantes pré-treino..."
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Dor Crônica (EVA 0-10)</label>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min="0" max="10"
+                                value={formData.dor_cronica_nivel}
+                                onChange={(e) => setFormData({ ...formData, dor_cronica_nivel: e.target.value })}
+                                placeholder="0"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Região da Dor</label>
+                              <input
+                                type="text"
+                                value={formData.dor_cronica_regiao}
+                                onChange={(e) => setFormData({ ...formData, dor_cronica_regiao: e.target.value })}
+                                placeholder="Ex: Lombar, Ombro D"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Média Sono (hs/noite)</label>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={formData.horas_sono_media}
+                                onChange={(e) => setFormData({ ...formData, horas_sono_media: e.target.value })}
+                                placeholder="Ex: 7.5h"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Nível Estresse (1-5)</label>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min="1" max="5"
+                                value={formData.qualidade_sono_estresse}
+                                onChange={(e) => setFormData({ ...formData, qualidade_sono_estresse: e.target.value })}
+                                placeholder="1 a 5"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 3. Contato de Emergência (Indispensável) */}
+                        <div className="p-3.5 rounded-2xl bg-amber-950/20 border border-amber-500/30 space-y-3">
+                          <div className="flex items-center gap-2 text-amber-400 font-extrabold text-xs uppercase tracking-wider">
+                            <Heart className="w-4 h-4 text-amber-400 shrink-0" />
+                            <span>3. Contato de Emergência (Indispensável)</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Nome do Contato</label>
+                              <input
+                                type="text"
+                                value={formData.contato_emergencia_nome}
+                                onChange={(e) => setFormData({ ...formData, contato_emergencia_nome: e.target.value })}
+                                placeholder="Ex: Maria Vilela"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Parentesco</label>
+                              <input
+                                type="text"
+                                value={formData.contato_emergencia_parentesco}
+                                onChange={(e) => setFormData({ ...formData, contato_emergencia_parentesco: e.target.value })}
+                                placeholder="Ex: Mãe, Esposa"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Telefone / WhatsApp</label>
+                              <input
+                                type="tel"
+                                inputMode="tel"
+                                value={formData.contato_emergencia_telefone}
+                                onChange={(e) => setFormData({ ...formData, contato_emergencia_telefone: e.target.value })}
+                                placeholder="(11) 99999-9999"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 4. Periodização & Metodologia de Treino (Pills Selectors) */}
+                        <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+                          <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
+                            <Dumbbell className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>4. Periodização & Metodologia de Treino</span>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Fase do Shape</label>
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {FASE_OPTIONS.map((f) => (
+                                <button
+                                  type="button"
+                                  key={f}
+                                  onClick={() => setFormData({ ...formData, fase_shape: f })}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                    formData.fase_shape === f
+                                      ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md scale-105'
+                                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                  }`}
+                                >
+                                  {f}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Nível de Treino</label>
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {NIVEL_OPTIONS.map((n) => (
+                                <button
+                                  type="button"
+                                  key={n}
+                                  onClick={() => setFormData({ ...formData, nivel_treino: n })}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                    formData.nivel_treino === n
+                                      ? 'bg-purple-500 text-white border-purple-400 shadow-md scale-105'
+                                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                  }`}
+                                >
+                                  {n}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Objetivo Principal</label>
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {OBJETIVO_OPTIONS.map((o) => (
+                                <button
+                                  type="button"
+                                  key={o}
+                                  onClick={() => setFormData({ ...formData, objetivo_principal: o, goal: o })}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                    formData.objetivo_principal === o
+                                      ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md scale-105'
+                                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                  }`}
+                                >
+                                  {o}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Frequência Semanal</label>
+                            <input
+                              type="text"
+                              value={formData.frequencia_semanal}
+                              onChange={(e) => setFormData({ ...formData, frequencia_semanal: e.target.value, training_days: e.target.value })}
+                              placeholder="Ex: 5x por semana"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Pontos Fracos do Shape (Multi-seleção)</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 p-3 bg-slate-950 rounded-xl border border-slate-800 max-h-36 overflow-y-auto">
+                              {PONTOS_FRACOS_OPTIONS.map((pf) => {
+                                const isSelected = Array.isArray(formData.pontos_fracos) && formData.pontos_fracos.includes(pf);
+                                return (
+                                  <label key={pf} className={`flex items-center gap-1.5 text-[11px] p-1.5 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40' : 'text-slate-400 hover:text-white'}`}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        const currentArr = Array.isArray(formData.pontos_fracos) ? [...formData.pontos_fracos] : [];
+                                        if (e.target.checked) {
+                                          setFormData({ ...formData, pontos_fracos: [...currentArr, pf] });
+                                        } else {
+                                          setFormData({ ...formData, pontos_fracos: currentArr.filter((item) => item !== pf) });
+                                        }
+                                      }}
+                                      className="w-3.5 h-3.5 rounded text-emerald-500 bg-slate-950 border-slate-700"
+                                    />
+                                    <span>{pf}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PASSO 3: AFERIÇÃO CORPORAL INICIAL (OPCIONAL & RECOLHIDO POR PADRÃO) */}
+                    {wizardStep === 3 && (
+                      <div className="space-y-4">
+                        <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-xs uppercase tracking-wider">
+                              <Activity className="w-4 h-4 text-cyan-400 shrink-0" />
+                              <span>Avaliação Física Inicial (Fita Métrica)</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-1">
+                              Deseja realizar a avaliação física completa agora? Atalho: Pressione Enter nos campos para navegar automaticamente!
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowEvalAccordion(!showEvalAccordion)}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
+                              showEvalAccordion
+                                ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md'
+                                : 'bg-slate-800 text-cyan-300 border-cyan-500/40 hover:bg-cyan-950/40'
+                            }`}
+                          >
+                            <span>{showEvalAccordion ? '▲ Recolher Avaliação' : '▼ Preencher Avaliação Agora'}</span>
+                          </button>
+                        </div>
+
+                        {/* Sincronização de Peso com Etapa 1 */}
+                        <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Scale className="w-4 h-4 text-emerald-400" />
+                            <span className="text-xs text-slate-300 font-semibold">Peso Inicial do Perfil:</span>
+                            <span className="text-sm font-black text-emerald-400">{formData.current_weight ? `${formData.current_weight} kg` : 'Não informado'}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-mono">⚡ Sincronizado automaticamente</span>
+                        </div>
+
+                        {!showEvalAccordion ? (
+                          <div className="p-6 rounded-2xl border border-slate-800/80 bg-slate-900/40 text-center space-y-2">
+                            <Scale className="w-8 h-8 text-slate-600 mx-auto" />
+                            <p className="text-xs text-slate-300 font-bold">Avaliação física recolhida por padrão.</p>
+                            <p className="text-[10px] text-slate-500">
+                              Clique no botão acima para expandir os campos da fita métrica ou realize a avaliação a qualquer momento na ficha do aluno.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 pt-2 border-t border-slate-800">
+                            {/* Split Screen Anatomical Body Diagram on Desktop */}
+                            <div className="hidden md:block md:col-span-4 p-4 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-3 shrink-0">
+                              <span className="text-xs font-bold text-cyan-400 block uppercase tracking-wider">Silhueta Anatômica</span>
+                              <div className="w-full h-56 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col items-center justify-center p-4 text-slate-600 space-y-2">
+                                <User className="w-24 h-24 text-cyan-500/40 animate-pulse" />
+                                <span className="text-[10px] text-cyan-300/80 font-mono font-bold uppercase">Painel de Referência Padrão ISAK</span>
+                              </div>
+                              <p className="text-[10px] text-slate-500 italic">
+                                Tecla Enter pula automaticamente para a próxima medida.
+                              </p>
+                            </div>
+
+                            {/* Measurement Input Fields Column */}
+                            <div className="md:col-span-8 space-y-4">
+                              {/* Datas & Dados Principais */}
+                              <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                  <label className="block font-semibold text-slate-300 mb-1">Data da Avaliação *</label>
+                                  <input
+                                    type="date"
+                                    value={formData.initial_evaluation?.data_registro || new Date().toISOString().split('T')[0]}
+                                    onChange={(e) => setFormData({
+                                      ...formData,
+                                      initial_evaluation: { ...formData.initial_evaluation, data_registro: e.target.value }
+                                    })}
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block font-semibold text-slate-300 mb-1">Peso (kg)</label>
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.1"
+                                    onKeyDown={handleMeasurementKeyDown}
+                                    placeholder="84.5"
+                                    value={formData.initial_evaluation?.peso || formData.current_weight || ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setFormData({
+                                        ...formData,
+                                        current_weight: val,
+                                        initial_evaluation: { ...formData.initial_evaluation, peso: val }
+                                      });
+                                    }}
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500 font-bold text-emerald-400 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block font-semibold text-slate-300 mb-1">BF (% Gordura)</label>
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.1"
+                                    onKeyDown={handleMeasurementKeyDown}
+                                    placeholder="13.0"
+                                    value={formData.initial_evaluation?.bf_percentual || ''}
+                                    onChange={(e) => setFormData({
+                                      ...formData,
+                                      initial_evaluation: { ...formData.initial_evaluation, bf_percentual: e.target.value }
+                                    })}
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500 text-xs"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Tronco & Proporção */}
+                              <div className="space-y-2 pt-2 border-t border-slate-800">
+                                <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+                                  <Dumbbell className="w-3.5 h-3.5 text-cyan-400" />
+                                  Tronco & Proporção
+                                </h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Pescoço (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="40.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.pescoco || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, pescoco: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Ombros (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="125.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.ombro || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, ombro: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Peitoral (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="110.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.peitoral_torax || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, peitoral_torax: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Dorsal Largura (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="118.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.dorsal_largura || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, dorsal_largura: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Dorsal Espessura (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="42.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.dorsal_espessura || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, dorsal_espessura: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Cintura (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="82.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.cintura || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, cintura: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Abdômen (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="85.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.abdomen || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, abdomen: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Quadril (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="100.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.quadril || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, quadril: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Braços & Antebraços */}
+                              <div className="space-y-2 pt-2 border-t border-slate-800">
+                                <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+                                  <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                                  Braços & Antebraços (Relaxados vs. Contraídos)
+                                </h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Braço D. Relaxado (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="38.5" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.braco_direito || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_direito: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-cyan-400 font-bold mb-1">Braço D. Contraído (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="41.5" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.braco_direito_contraido || formData.initial_evaluation?.braco_contraido || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_direito_contraido: e.target.value, braco_contraido: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-cyan-500/40 rounded-xl px-2.5 py-1.5 text-white font-bold text-cyan-300"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Braço E. Relaxado (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="38.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.braco_esquerdo || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_esquerdo: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-cyan-400 font-bold mb-1">Braço E. Contraído (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="41.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.braco_esquerdo_contraido || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_esquerdo_contraido: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-cyan-500/40 rounded-xl px-2.5 py-1.5 text-white font-bold text-cyan-300"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2.5 text-xs pt-1">
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Antebraço D (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="32.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.antebraco_direito || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, antebraco_direito: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Antebraço E (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="32.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.antebraco_esquerdo || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, antebraco_esquerdo: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Pernas & Glúteos */}
+                              <div className="space-y-2 pt-2 border-t border-slate-800">
+                                <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+                                  <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
+                                  Pernas & Glúteos (Coxa Medial / Padrão ISAK)
+                                </h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-xs">
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Coxa Medial D (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="60.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.coxa_direita || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, coxa_direita: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Coxa Medial E (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="60.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.coxa_esquerda || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, coxa_esquerda: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Glúteo (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="102.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.gluteo || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, gluteo: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Panturrilha D (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="39.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.panturrilha_direita || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, panturrilha_direita: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Panturrilha E (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="39.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.panturrilha_esquerda || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, panturrilha_esquerda: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* PASSO 4: METAS CORPORAIS & CONTEXTO TEMPORAL */}
+                    {wizardStep === 4 && (
+                      <div className="space-y-4">
+                        <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
+                          <label className="block font-bold text-emerald-400 text-xs uppercase tracking-wide">
+                            ⏱️ Prazo / Data Alvo da Meta (Contexto Temporal)
+                          </label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['30 dias (1 mês)', '60 dias (2 meses)', '90 dias (3 meses)', '180 dias (6 meses)', '1 ano (12 meses)'].map((p) => (
+                              <button
+                                type="button"
+                                key={p}
+                                onClick={() => setFormData({ ...formData, prazo_meta: p })}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                  formData.prazo_meta === p
+                                    ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md scale-105'
+                                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Peso Meta (kg)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.peso_meta} onChange={(e) => setFormData({ ...formData, peso_meta: e.target.value })} placeholder="90.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">BF Meta (%)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.bf_meta} onChange={(e) => setFormData({ ...formData, bf_meta: e.target.value })} placeholder="10.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Braço Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.braco_meta} onChange={(e) => setFormData({ ...formData, braco_meta: e.target.value })} placeholder="43.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Ombro Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.ombro_meta} onChange={(e) => setFormData({ ...formData, ombro_meta: e.target.value })} placeholder="130.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Peitoral Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.peitoral_meta} onChange={(e) => setFormData({ ...formData, peitoral_meta: e.target.value })} placeholder="115.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Cintura Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.cintura_meta} onChange={(e) => setFormData({ ...formData, cintura_meta: e.target.value })} placeholder="80.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Coxa Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.coxa_meta} onChange={(e) => setFormData({ ...formData, coxa_meta: e.target.value })} placeholder="65.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Glúteo Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.gluteo_meta} onChange={(e) => setFormData({ ...formData, gluteo_meta: e.target.value })} placeholder="105.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Panturrilha Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.panturrilha_meta} onChange={(e) => setFormData({ ...formData, panturrilha_meta: e.target.value })} placeholder="42.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-slate-300 mb-1">Observações do Treinador</label>
+                          <textarea
+                            rows="2"
+                            value={formData.observacoes_treinador}
+                            onChange={(e) => setFormData({ ...formData, observacoes_treinador: e.target.value })}
+                            placeholder="Observações técnicas, estilo de treino ou foco específico."
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                          ></textarea>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PASSO 5: PRIMEIRA COBRANÇA (OPCIONAL) */}
+                    {wizardStep === 5 && (
+                      <div className="space-y-4">
+                        <label className="flex items-center gap-3 p-3.5 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
+                          <input
+                            type="checkbox"
+                            checked={formData.create_first_billing}
+                            onChange={(e) => setFormData({ ...formData, create_first_billing: e.target.checked })}
+                            className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
+                          />
+                          <div>
+                            <span className="font-bold text-white block text-xs">☐ Criar primeira cobrança para este aluno</span>
+                            <span className="text-[10px] text-slate-400 block">
+                              Se desmarcado, o aluno será cadastrado sem cobrança (exibindo o alerta 🔴 Sem cobrança).
+                            </span>
+                          </div>
+                        </label>
+
+                        {formData.create_first_billing && (
+                          <div className="space-y-4 pt-2 border-t border-slate-800">
+                            {!formData.whatsapp && (
+                              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2 font-bold">
+                                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                                <span>O número de WhatsApp (Etapa 1) é OBRIGATÓRIO quando a primeira cobrança está ativada.</span>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block font-semibold text-slate-300 mb-1">Valor da Mensalidade (R$) *</label>
+                                <input
+                                  type="number"
+                                  inputMode="decimal"
+                                  step="0.01"
+                                  required={formData.create_first_billing}
+                                  value={formData.billing_amount}
+                                  onChange={(e) => setFormData({ ...formData, billing_amount: e.target.value })}
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-emerald-400 font-bold focus:border-emerald-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block font-semibold text-slate-300 mb-1">1º Vencimento *</label>
+                                <input
+                                  type="date"
+                                  required={formData.create_first_billing}
+                                  value={formData.billing_due_date}
+                                  onChange={(e) => setFormData({ ...formData, billing_due_date: e.target.value })}
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block font-semibold text-slate-300 mb-1">Dia Vencimento Recorrente Padrão</label>
+                              <div className="flex flex-wrap gap-1.5">
+                                {[1, 5, 10, 15, 20, 25, 30].map((day) => (
+                                  <button
+                                    type="button"
+                                    key={day}
+                                    onClick={() => setFormData({ ...formData, dia_vencimento_recorrente: day })}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                      (formData.dia_vencimento_recorrente || 5) === day
+                                        ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md scale-105'
+                                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                    }`}
+                                  >
+                                    Dia {String(day).padStart(2, '0')}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.is_recurring}
+                                  onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
+                                  className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
+                                />
+                                <div>
+                                  <span className="font-bold text-white block text-xs">Cobrança recorrente (12 Meses)</span>
+                                  <span className="text-[10px] text-slate-400 block">
+                                    Criar mensalidades automaticamente a cada mês por 12 meses.
+                                  </span>
+                                </div>
+                              </label>
+                            </div>
+
+                            <div className="p-3 bg-emerald-950/20 rounded-xl border border-emerald-500/30">
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.send_whatsapp_now || false}
+                                  onChange={(e) => setFormData({ ...formData, send_whatsapp_now: e.target.checked })}
+                                  className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
+                                />
+                                <div>
+                                  <span className="font-bold text-emerald-400 block text-xs flex items-center gap-1">
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                    Disparar cobrança/chave Pix imediatamente via WhatsApp ao concluir
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 block">
+                                    Abre o WhatsApp com a mensagem pronta de cobrança assim que você clicar em "Salvar e Concluir".
+                                  </span>
+                                </div>
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </form>
+            </div>
+
+            {/* STICKY BOTTOM ACTION BAR (Touch target 48px+ for Mobile) */}
+            <div className="sticky bottom-0 z-20 bg-slate-900/95 backdrop-blur-md p-4 border-t border-slate-800 flex justify-between items-center gap-3 shrink-0 rounded-b-3xl">
+              {wizardMode === 'full' && wizardStep > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setWizardStep((s) => s - 1)}
+                  className="px-4 py-3 rounded-xl font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 flex items-center gap-1.5 cursor-pointer transition-all text-xs min-h-[44px]"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Anterior</span>
+                </button>
+              ) : (
+                <div></div>
+              )}
+
+              <div className="flex items-center gap-2">
+                {wizardMode === 'full' && wizardStep < 5 && (
                   <button
                     type="button"
-                    onClick={handleSubmitWizard}
-                    disabled={submitting}
-                    className={`px-5 py-2 rounded-xl font-bold transition-all cursor-pointer ${
-                      wizardStep === 5
-                        ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30'
-                        : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                    }`}
+                    onClick={() => setWizardStep((s) => s + 1)}
+                    className="px-5 py-3 rounded-xl font-extrabold text-slate-950 bg-emerald-400 hover:bg-emerald-300 flex items-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer transition-all text-xs min-h-[44px]"
                   >
-                    {submitting ? 'Salvando...' : editingStudentId ? 'Salvar Alterações' : 'Concluir Cadastro'}
+                    <span>Próximo</span>
+                    <ChevronRight className="w-4 h-4" />
                   </button>
-                </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSubmitWizard}
+                  disabled={submitting}
+                  className={`px-6 py-3 rounded-xl font-black transition-all cursor-pointer text-xs flex items-center gap-2 min-h-[44px] ${
+                    wizardMode === 'fast'
+                      ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/30 text-sm'
+                      : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30'
+                  }`}
+                >
+                  {wizardMode === 'fast' ? <Zap className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <span>
+                    {submitting 
+                      ? 'Salvando...' 
+                      : wizardMode === 'fast' 
+                      ? '⚡ Concluir Cadastro em 15s' 
+                      : editingStudentId 
+                      ? 'Salvar Alterações (Ctrl+S)' 
+                      : 'Salvar e Concluir (Ctrl+S)'}
+                  </span>
+                </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
@@ -2502,6 +2977,7 @@ export default function StudentsPage() {
                   <label className="block font-semibold text-slate-300 mb-1">Valor (R$) *</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     step="0.01"
                     required
                     value={renewBillingData.amount}
@@ -2509,9 +2985,8 @@ export default function StudentsPage() {
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-bold text-emerald-400 focus:border-emerald-500"
                   />
                 </div>
-
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Data de Vencimento *</label>
+                  <label className="block font-semibold text-slate-300 mb-1">Vencimento *</label>
                   <input
                     type="date"
                     required
@@ -2522,29 +2997,30 @@ export default function StudentsPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Descrição / Observação</label>
-                <input
-                  type="text"
-                  value={renewBillingData.notes}
-                  onChange={(e) => setRenewBillingData({ ...renewBillingData, notes: e.target.value })}
-                  placeholder="Mensalidade"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Forma de Pagamento</label>
-                <select
-                  value={renewBillingData.payment_method}
-                  onChange={(e) => setRenewBillingData({ ...renewBillingData, payment_method: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                >
-                  <option value="Pix">Pix</option>
-                  <option value="Cartão de Crédito">Cartão de Crédito</option>
-                  <option value="Dinheiro">Dinheiro</option>
-                  <option value="Boleto">Boleto</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Forma de Pagamento</label>
+                  <select
+                    value={renewBillingData.payment_method}
+                    onChange={(e) => setRenewBillingData({ ...renewBillingData, payment_method: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                  >
+                    <option value="Pix">Pix</option>
+                    <option value="Cartão de Crédito">Cartão de Crédito</option>
+                    <option value="Dinheiro">Dinheiro</option>
+                    <option value="Boleto">Boleto</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Descrição</label>
+                  <input
+                    type="text"
+                    value={renewBillingData.notes}
+                    onChange={(e) => setRenewBillingData({ ...renewBillingData, notes: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                    placeholder="Mensalidade"
+                  />
+                </div>
               </div>
 
               <label className="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
@@ -2552,17 +3028,17 @@ export default function StudentsPage() {
                   type="checkbox"
                   checked={renewBillingData.is_recurring}
                   onChange={(e) => setRenewBillingData({ ...renewBillingData, is_recurring: e.target.checked })}
-                  className="w-4 h-4 rounded text-[#D4AF37] focus:ring-[#D4AF37] bg-slate-950 border-slate-700"
+                  className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
                 />
                 <div>
                   <span className="font-bold text-white block text-xs">Cobrança recorrente (12 Meses)</span>
                   <span className="text-[10px] text-slate-400 block">
-                    Gerar mensalidades mensalmente por 12 meses no mesmo dia.
+                    Criar mensalidades automaticamente a cada mês por 12 meses.
                   </span>
                 </div>
               </label>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowRenewModal(false)}
@@ -2573,9 +3049,9 @@ export default function StudentsPage() {
                 <button
                   type="submit"
                   disabled={renewing}
-                  className="px-5 py-2 rounded-xl font-bold text-black bg-[#D4AF37] hover:bg-[#C5A059] shadow-lg shadow-[#D4AF37]/20 cursor-pointer"
+                  className="px-5 py-2 rounded-xl font-bold text-black bg-[#D4AF37] hover:bg-[#C5A059] shadow-md cursor-pointer"
                 >
-                  {renewing ? 'Gerando...' : 'Confirmar Nova Cobrança'}
+                  {renewing ? 'Gerando...' : 'Gerar Cobrança'}
                 </button>
               </div>
             </form>
