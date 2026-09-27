@@ -828,6 +828,89 @@ export default function FinancialPage() {
               <span className="text-[10px] text-slate-400 block mt-1">Alunos de R$ 150/mês para cobrir o custo fixo</span>
             </div>
           </div>
+
+          {/* GRÁFICO VISUAL DE EVOLUÇÃO E LUCRO MENSAL */}
+          <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-6 shadow-2xl bg-gradient-to-b from-slate-900/90 to-slate-950">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  <span>Evolução Financeira & Lucro Mensal (Últimos 6 Meses)</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Comparativo visual de Entradas (Receitas), Saídas (Despesas) e Lucro Líquido.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4 text-xs font-bold">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span>
+                  <span className="text-slate-300">Receitas</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-rose-500 inline-block"></span>
+                  <span className="text-slate-300">Despesas</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-cyan-400 inline-block"></span>
+                  <span className="text-slate-300">Lucro Líquido</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bars container */}
+            <div className="space-y-4 pt-2">
+              {cashflow.history && cashflow.history.length > 0 ? (
+                (() => {
+                  const maxVal = Math.max(
+                    ...cashflow.history.map(h => Math.max(h.receitas_total || 0, h.despesas_total || 0, Math.abs(h.lucro_projetado || 0), 100))
+                  );
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 sm:gap-4 items-end min-h-[220px] pt-4">
+                      {cashflow.history.map((item, idx) => {
+                        const recHeight = Math.max(12, Math.round(((item.receitas_total || 0) / maxVal) * 160));
+                        const expHeight = Math.max(12, Math.round(((item.despesas_total || 0) / maxVal) * 160));
+                        const lucroVal = item.lucro_pago !== 0 ? item.lucro_pago : item.lucro_projetado;
+                        const isProfitable = lucroVal >= 0;
+
+                        return (
+                          <div key={idx} className="flex flex-col items-center gap-2 group">
+                            <div className="text-[10px] font-mono text-cyan-300 font-bold opacity-80 group-hover:opacity-100 transition-opacity text-center">
+                              R$ {lucroVal.toFixed(0)}
+                            </div>
+
+                            <div className="w-full flex items-end justify-center gap-1.5 h-[160px] bg-slate-950/60 rounded-xl p-1 border border-slate-800/80 group-hover:border-slate-700 transition-all">
+                              <div
+                                style={{ height: `${recHeight}px` }}
+                                className="w-1/2 bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-lg transition-all shadow-md shadow-emerald-500/10 group-hover:brightness-110"
+                                title={`Receitas: R$ ${(item.receitas_total || 0).toFixed(2)}`}
+                              />
+                              <div
+                                style={{ height: `${expHeight}px` }}
+                                className="w-1/2 bg-gradient-to-t from-rose-600 to-rose-400 rounded-lg transition-all shadow-md shadow-rose-500/10 group-hover:brightness-110"
+                                title={`Despesas: R$ ${(item.despesas_total || 0).toFixed(2)}`}
+                              />
+                            </div>
+
+                            <span className="text-[11px] font-bold text-slate-300 group-hover:text-white transition-colors">
+                              {item.label}
+                            </span>
+                            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${isProfitable ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'}`}>
+                              {isProfitable ? `+R$ ${lucroVal.toFixed(0)}` : `-R$ ${Math.abs(lucroVal).toFixed(0)}`}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="text-center py-8 text-slate-500 text-xs">
+                  Carregando histórico do gráfico...
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

@@ -1837,6 +1837,70 @@ export async function deleteExpense(id, { delete_recurrence = false } = {}) {
   return true;
 }
 
+export async function getMonthlyProfitHistory(monthsCount = 6) {
+  await initDbSchema();
+  const history = [];
+  const now = new Date();
+
+  for (let i = monthsCount - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const yearStr = d.getFullYear();
+    const monthStr = String(d.getMonth() + 1).padStart(2, '0');
+    const monthKey = `${yearStr}-${monthStr}`;
+
+    await ensureExpensesGenerated(monthKey);
+    await ensureStudentBillingsGenerated(monthKey);
+
+    const revPaidRes = await query(`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM gym_billing
+      WHERE status = 'paid' AND due_date::text LIKE $1
+    `, [`${monthKey}%`]);
+
+    const expPaidRes = await query(`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM gym_expenses
+      WHERE status = 'PAID' AND due_date::text LIKE $1
+    `, [`${monthKey}%`]);
+
+    const revTotalRes = await query(`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM gym_billing
+      WHERE due_date::text LIKE $1
+    `, [`${monthKey}%`]);
+
+    const expTotalRes = await query(`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM gym_expenses
+      WHERE due_date::text LIKE $1
+    `, [`${monthKey}%`]);
+
+    const receitasPago = parseFloat(revPaidRes.rows[0].total || 0);
+    const despesasPago = parseFloat(expPaidRes.rows[0].total || 0);
+    const receitasTotal = parseFloat(revTotalRes.rows[0].total || 0);
+    const despesasTotal = parseFloat(expTotalRes.rows[0].total || 0);
+
+    const lucroPago = receitasPago - despesasPago;
+    const lucroProjetado = receitasTotal - despesasTotal;
+
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const label = `${monthNames[d.getMonth()]} ${yearStr.toString().slice(-2)}`;
+
+    history.push({
+      month_key: monthKey,
+      label,
+      receitas_pago: receitasPago,
+      despesas_pago: despesasPago,
+      lucro_pago: lucroPago,
+      receitas_total: receitasTotal,
+      despesas_total: despesasTotal,
+      lucro_projetado: lucroProjetado,
+    });
+  }
+
+  return history;
+}
+
 export async function getCashFlowSummary({ month_year } = {}) {
   await ensureExpensesGenerated(month_year);
   await ensureStudentBillingsGenerated(month_year);
@@ -1868,6 +1932,7 @@ export async function getCashFlowSummary({ month_year } = {}) {
   
   const mensalidadeMedia = 150;
   const alunosPontoEquilibrio = custoFixo > 0 ? Math.ceil(custoFixo / mensalidadeMedia) : 0;
+  const history = await getMonthlyProfitHistory(6);
 
   return {
     receitas,
@@ -1875,6 +1940,8 @@ export async function getCashFlowSummary({ month_year } = {}) {
     lucro_liquido: lucroLiquido,
     custo_fixo: custoFixo,
     alunos_ponto_equilibrio: alunosPontoEquilibrio,
-    mensalidade_media: mensalidadeMedia
+    mensalidade_media: mensalidadeMedia,
+    history
   };
 }
+
