@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Users, UserPlus, Search, MessageCircle, Edit3, Trash2, ArrowUpRight, Camera, Key, Check, 
-  AlertCircle, ChevronRight, ChevronLeft, Heart, Dumbbell, Calendar, CreditCard, Droplet, Target, Scale, User, FileText, CheckCircle2, Clock
+  AlertCircle, ChevronRight, ChevronLeft, Heart, Dumbbell, Calendar, CreditCard, Droplet, Target, Scale, User, FileText, CheckCircle2, Clock, Eye
 } from 'lucide-react';
 
 export default function StudentsPage() {
@@ -50,7 +50,17 @@ export default function StudentsPage() {
     try {
       const res = await fetch(`/api/students?search=${encodeURIComponent(search)}`);
       const data = await res.json();
-      setStudents(data.students || []);
+      const loadedStudents = data.students || [];
+      setStudents(loadedStudents);
+
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetId = urlParams.get('id') || urlParams.get('studentId');
+        if (targetId) {
+          const found = loadedStudents.find((s) => String(s.id) === String(targetId));
+          if (found) setViewingStudent(found);
+        }
+      }
     } catch (err) {
       console.error('Error fetching students:', err);
     } finally {
@@ -307,6 +317,14 @@ export default function StudentsPage() {
                       </td>
 
                       <td className="py-3.5 px-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => setViewingStudent(student)}
+                          title="Ver Ficha Completa do Aluno"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Ver Ficha</span>
+                        </button>
                         <Link
                           href={`/dashboard/students/${student.id}/history`}
                           title="Ver Histórico de Treinos"

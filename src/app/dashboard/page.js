@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Users, Dumbbell, FileText, Plus, MessageCircle, ArrowUpRight, Search, Activity, UserPlus, CheckCircle2 } from 'lucide-react';
+import { Users, Dumbbell, FileText, Plus, MessageCircle, ArrowUpRight, Search, Activity, UserPlus, CheckCircle2, Eye } from 'lucide-react';
 
 export default function DashboardPage() {
   const [students, setStudents] = useState([]);
@@ -237,6 +237,13 @@ export default function DashboardPage() {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-right space-x-2">
+                        <Link
+                          href={`/dashboard/students?id=${student.id}`}
+                          className="inline-flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg border border-emerald-500/20 font-bold transition-all"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Ver Ficha</span>
+                        </Link>
                         <Link
                           href={`/dashboard/students/${student.id}/history`}
                           className="inline-flex items-center gap-1 text-xs text-slate-300 hover:text-emerald-400 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 hover:border-emerald-500/40 transition-all"
