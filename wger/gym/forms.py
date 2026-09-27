@@ -79,6 +79,7 @@ class GymUserAddForm(GymUserPermissionForm, UserPersonalInformationForm):
     """
 
     birthdate = forms.DateField(required=False)
+    whatsapp = forms.CharField(required=False, label=_('WhatsApp'), help_text=_('Apenas números, ex: 5511999999999'))
     photo_upload = forms.ImageField(required=False, label=_('Photo (Optional)'), help_text=_('Low resolution photo of the member.'))
 
     class Meta:

@@ -145,6 +145,14 @@ class UserProfile(models.Model):
         help_text=_('Low-res base64 encoded photo for the member profile.')
     )
 
+    whatsapp = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name=_('WhatsApp'),
+        help_text=_('Format: 5511999999999')
+    )
+
     #
     # User preferences
     #

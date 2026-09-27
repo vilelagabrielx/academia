@@ -38,10 +38,27 @@
         {{current_user.obj.pk}}
     </td>
     <td>
-        <a href="{% url 'core:user:overview' current_user.obj.pk %}">{{current_user.obj}}</a>
+        {{current_user.obj}}
     </td>
     <td>
-        {{current_user.obj.get_full_name}}
+        <div class="d-flex align-items-center">
+            <a href="{% url 'core:user:overview' current_user.obj.pk %}" class="me-2">{{current_user.obj.get_full_name}}</a>
+            
+            {% if current_user.obj.userprofile.whatsapp %}
+                <a href="https://wa.me/{{ current_user.obj.userprofile.whatsapp|urlencode }}" target="_blank" class="btn btn-sm btn-success py-0 px-1 me-2" title="WhatsApp">
+                    <i class="fab fa-whatsapp"></i>
+                </a>
+            {% endif %}
+
+            {% if perms.gym.gym_trainer %}
+                <form method="post" action="{% url 'core:user:trainer-login' current_user.obj.pk %}" class="d-inline m-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-primary py-0 px-2" title="Acessar Ficha (Painel do Aluno)">
+                        <i class="fas fa-sign-in-alt"></i> Acessar Ficha
+                    </button>
+                </form>
+            {% endif %}
+        </div>
     </td>
     <td data-order="{{current_user.last_log|date:'U'}}">
         {{current_user.last_log|default:'-/-'}}

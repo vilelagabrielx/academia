@@ -439,6 +439,7 @@ class GymAddUserView(
         # Update profile
         user.userprofile.gym = gym
         user.userprofile.birthdate = form.cleaned_data['birthdate']
+        user.userprofile.whatsapp = form.cleaned_data.get('whatsapp')
         
         photo = form.cleaned_data.get('photo_upload')
         if photo:
