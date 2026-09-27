@@ -1,30 +1,8 @@
-# Arquivos de ambiente virtual
+# Cache & env
 .venv/
 venv/
-env/
-
-# Pastas relacionadas ao Node/Frontend que não precisam ir para o servidor Python
-node_modules/
-package.json
-package-lock.json
-
-# Arquivos de versionamento e docs
-.git/
-.github/
-docs/
-extras/
-AUTHORS.md
-CHANGELOG.md
-
-# Lockfiles para forçar a Vercel a usar o pyproject.toml atualizado
-uv.lock
-poetry.lock
-extras/
-AUTHORS.md
-CHANGELOG.md
-
-# Caches
 __pycache__/
 *.pyc
-.pytest_cache/
-.ruff_cache/
+.env.local
+.gemini/
+.agents/
