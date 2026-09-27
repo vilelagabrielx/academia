@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { 
   CreditCard, Plus, CheckCircle2, AlertCircle, Clock, MessageCircle, FileText, Download, Eye, 
-  Trash2, Search, DollarSign, Send, Filter, Printer, BellRing, Upload, Calendar, Check
+  Trash2, Search, DollarSign, Send, Filter, Printer, BellRing, Upload, Calendar, Check, Repeat
 } from 'lucide-react';
 
 export default function BillingsPage() {
@@ -24,6 +24,12 @@ export default function BillingsPage() {
     notes: '',
   });
   const [creating, setCreating] = useState(false);
+
+  // Transform to Monthly Modal
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [selectedConvertBilling, setSelectedConvertBilling] = useState(null);
+  const [createNextMonthOption, setCreateNextMonthOption] = useState(true);
+  const [converting, setConverting] = useState(false);
 
   // WhatsApp Reminder Modal
   const [showWaModal, setShowWaModal] = useState(false);
@@ -164,6 +170,30 @@ export default function BillingsPage() {
       alert(err.message);
     } finally {
       setSavingPaid(false);
+    }
+  };
+
+  const handleConvertSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedConvertBilling) return;
+
+    setConverting(true);
+    try {
+      const res = await fetch(`/api/billings/${selectedConvertBilling.id}/convert-monthly`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ createNextMonth: createNextMonthOption }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao converter cobrança em mensalidade');
+
+      setShowConvertModal(false);
+      setSelectedConvertBilling(null);
+      loadData();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setConverting(false);
     }
   };
 
@@ -520,6 +550,18 @@ export default function BillingsPage() {
                           </button>
                         </>
                       )}
+
+                      <button
+                        onClick={() => {
+                          setSelectedConvertBilling(b);
+                          setCreateNextMonthOption(true);
+                          setShowConvertModal(true);
+                        }}
+                        title="Transformar em Mensalidade Recorrente"
+                        className="p-1.5 rounded-lg text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 transition-all"
+                      >
+                        <Repeat className="w-4 h-4" />
+                      </button>
 
                       {b.status === 'paid' && (
                         <button
@@ -957,6 +999,80 @@ export default function BillingsPage() {
                 <span>Imprimir / Salvar PDF</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 7: TRANSFORM BILLING INTO MONTHLY SUBSCRIPTION */}
+      {showConvertModal && selectedConvertBilling && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Repeat className="w-5 h-5 text-purple-400" />
+                Transformar Cobrança em Mensalidade
+              </h3>
+              <button onClick={() => setShowConvertModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleConvertSubmit} className="space-y-4 text-xs">
+              <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Aluno:</span>
+                  <span className="font-bold text-white">{selectedConvertBilling.first_name} {selectedConvertBilling.last_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Valor Atual:</span>
+                  <span className="font-extrabold text-emerald-400">R$ {parseFloat(selectedConvertBilling.amount).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Vencimento Atual:</span>
+                  <span className="font-semibold text-slate-200">{new Date(selectedConvertBilling.due_date).toLocaleDateString('pt-BR')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Descrição Atual:</span>
+                  <span className="italic text-slate-300">{selectedConvertBilling.notes || 'Sem descrição'}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl space-y-2 text-purple-200">
+                <p className="font-semibold">
+                  Ao confirmar, esta cobrança será atualizada para o status de <strong className="text-white font-bold">"Mensalidade"</strong> oficial.
+                </p>
+              </div>
+
+              <label className="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
+                <input
+                  type="checkbox"
+                  checked={createNextMonthOption}
+                  onChange={(e) => setCreateNextMonthOption(e.target.checked)}
+                  className="w-4 h-4 rounded text-purple-500 focus:ring-purple-400 bg-slate-950 border-slate-700"
+                />
+                <div>
+                  <span className="font-bold text-white block">Gerar Próxima Mensalidade (+30 dias)</span>
+                  <span className="text-[11px] text-slate-400 block">
+                    Cria automaticamente a mensalidade do mês seguinte para manter o aluno no ciclo mensal.
+                  </span>
+                </div>
+              </label>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowConvertModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={converting}
+                  className="px-5 py-2 rounded-xl font-bold text-white bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/20 cursor-pointer"
+                >
+                  {converting ? 'Convertendo...' : 'Confirmar Mensalidade'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
