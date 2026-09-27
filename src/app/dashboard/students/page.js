@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Users, UserPlus, Search, MessageCircle, Edit3, Trash2, ArrowUpRight, Camera, Key, Check, 
-  AlertCircle, ChevronRight, ChevronLeft, Heart, Dumbbell, Calendar, CreditCard, Droplet, Target, Scale, User, FileText, CheckCircle2, Clock, Eye
+  AlertCircle, ChevronRight, ChevronLeft, Heart, Dumbbell, Calendar, CreditCard, Droplet, Target, Scale, User, FileText, CheckCircle2, Clock, Eye, Repeat, AlertTriangle, RefreshCw, Plus
 } from 'lucide-react';
 
 export default function StudentsPage() {
@@ -12,7 +12,7 @@ export default function StudentsPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Student Profile Detail View Modal State (Ao clicar no aluno)
+  // Student Profile Detail View Modal State
   const [viewingStudent, setViewingStudent] = useState(null);
 
   // Multi-step Registration Wizard Modal State
@@ -31,12 +31,29 @@ export default function StudentsPage() {
     age: '',
     height: '',
     current_weight: '',
-    blood_type: '',
+    blood_type: 'O+',
     goal: 'Hipertrofia',
-    training_days: 'Seg, Quar, Sex',
-    initial_amount: '150.00',
-    due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    training_days: 'Segunda, Quarta, Sexta',
+    create_first_billing: false,
+    billing_amount: '150.00',
+    billing_due_date: new Date().toISOString().split('T')[0],
+    billing_notes: 'Mensalidade',
+    billing_payment_method: 'Pix',
+    is_recurring: false,
   });
+
+  // Renew / Create Billing Modal State
+  const [showRenewModal, setShowRenewModal] = useState(false);
+  const [renewBillingData, setRenewBillingData] = useState({
+    user_id: '',
+    student_name: '',
+    amount: '150.00',
+    due_date: new Date().toISOString().split('T')[0],
+    payment_method: 'Pix',
+    notes: 'Mensalidade',
+    is_recurring: false,
+  });
+  const [renewing, setRenewing] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -86,8 +103,12 @@ export default function StudentsPage() {
       blood_type: 'O+',
       goal: 'Hipertrofia',
       training_days: 'Segunda, Quarta, Sexta',
-      initial_amount: '150.00',
-      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      create_first_billing: false,
+      billing_amount: '150.00',
+      billing_due_date: new Date().toISOString().split('T')[0],
+      billing_notes: 'Mensalidade',
+      billing_payment_method: 'Pix',
+      is_recurring: false,
     });
     setShowWizardModal(true);
   };
@@ -110,11 +131,95 @@ export default function StudentsPage() {
       blood_type: student.blood_type || 'O+',
       goal: student.goal || 'Hipertrofia',
       training_days: student.training_days || 'Segunda, Quarta, Sexta',
-      initial_amount: student.latest_billing_amount || '150.00',
-      due_date: student.latest_billing_due_date ? new Date(student.latest_billing_due_date).toISOString().split('T')[0] : '',
+      create_first_billing: false,
+      billing_amount: student.latest_billing_amount || '150.00',
+      billing_due_date: student.latest_billing_due_date ? new Date(student.latest_billing_due_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      billing_notes: 'Mensalidade',
+      billing_payment_method: 'Pix',
+      is_recurring: false,
     });
     setViewingStudent(null);
     setShowWizardModal(true);
+  };
+
+  const handleOpenRenewModal = (student) => {
+    const today = new Date().toISOString().split('T')[0];
+    let suggestedDate = today;
+
+    if (student.latest_billing_due_date) {
+      const baseStr = String(student.latest_billing_due_date).split('T')[0];
+      const parts = baseStr.split('-');
+      const baseYear = parseInt(parts[0], 10);
+      const baseMonth = parseInt(parts[1], 10) - 1;
+      const baseDay = parseInt(parts[2], 10);
+      
+      const targetDate = new Date(baseYear, baseMonth + 1, 1);
+      const maxDays = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate();
+      const safeDay = Math.min(baseDay, maxDays);
+      suggestedDate = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+    }
+
+    setRenewBillingData({
+      user_id: student.id,
+      student_name: `${student.first_name || ''} ${student.last_name || ''}`.trim() || student.username,
+      amount: student.last_paid_amount || student.latest_billing_amount || '150.00',
+      due_date: suggestedDate,
+      payment_method: 'Pix',
+      notes: 'Mensalidade',
+      is_recurring: false,
+    });
+    setShowRenewModal(true);
+  };
+
+  const handleSubmitRenewBilling = async (e) => {
+    e.preventDefault();
+    setRenewing(true);
+
+    try {
+      const res = await fetch('/api/billings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(renewBillingData),
+      });
+      const data = await res.json();
+
+      if (res.status === 409 || data.duplicate) {
+        alert(data.error || 'Já existe uma cobrança vinculada a este aluno para este período!');
+        setShowRenewModal(false);
+        loadStudents();
+        return;
+      }
+
+      if (!res.ok) throw new Error(data.error || 'Erro ao criar cobrança');
+
+      alert('Cobrança gerada com sucesso!');
+      setShowRenewModal(false);
+      loadStudents();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setRenewing(false);
+    }
+  };
+
+  const openWhatsAppForBilling = (student) => {
+    const rawPhone = student.whatsapp?.replace(/\D/g, '');
+    if (!rawPhone) return alert('Aluno não possui WhatsApp cadastrado!');
+
+    const name = student.first_name || student.username;
+    const amountVal = student.current_billing?.amount || student.latest_billing_amount || '150.00';
+    const amountStr = parseFloat(amountVal).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const dueDateVal = student.current_billing?.due_date || student.latest_billing_due_date || new Date().toISOString();
+    const dueDateStr = new Date(dueDateVal).toLocaleDateString('pt-BR');
+    const statusText = student.billing_status === 'atrasada' ? 'está em atraso' : 'está pendente';
+
+    const defaultMsg = `Olá, ${name}! Sua mensalidade de R$ ${amountStr}, com vencimento em ${dueDateStr}, ${statusText}. Caso já tenha realizado o pagamento, por favor envie o comprovante.`;
+
+    const formattedPhone = rawPhone.startsWith('55') ? rawPhone : `55${rawPhone}`;
+    const encodedText = encodeURIComponent(defaultMsg);
+    const waUrl = `https://wa.me/${formattedPhone}?text=${encodedText}`;
+
+    window.open(waUrl, '_blank');
   };
 
   const handlePhotoUpload = (e) => {
@@ -204,23 +309,6 @@ export default function StudentsPage() {
     }
   };
 
-  const handleRenewEnrollment = async (studentId, studentName) => {
-    if (!confirm(`Deseja RENOVAR A MATRÍCULA de ${studentName} por mais 1 ano (gerando 12 mensalidades)?`)) return;
-    try {
-      const res = await fetch(`/api/students/${studentId}/renew-enrollment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: 60.00 }),
-      });
-      if (!res.ok) throw new Error('Erro ao renovar matrícula');
-      alert('Matrícula renovada por 1 ano com sucesso! 12 novas mensalidades geradas.');
-      setViewingStudent(null);
-      loadStudents();
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -230,7 +318,7 @@ export default function StudentsPage() {
             <Users className="w-6 h-6 text-emerald-400" />
             Gestão de Alunos
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Clique no aluno para ver o perfil completo ou cadastre um novo aluno em poucos segundos.</p>
+          <p className="text-xs text-slate-400 mt-1">Alunos sem cobrança válida no mês atual aparecem em destaque no topo da lista.</p>
         </div>
         <button
           onClick={handleOpenCreateWizard}
@@ -270,10 +358,10 @@ export default function StudentsPage() {
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-900/90 uppercase tracking-wider text-slate-400 font-semibold border-b border-slate-800">
                 <tr>
-                  <th className="py-3.5 px-4">Aluno (Clique para Detalhes)</th>
+                  <th className="py-3.5 px-4">Aluno</th>
                   <th className="py-3.5 px-4">Objetivo</th>
                   <th className="py-3.5 px-4">WhatsApp</th>
-                  <th className="py-3.5 px-4 text-center">Mensalidade</th>
+                  <th className="py-3.5 px-4 text-center">Situação da Cobrança</th>
                   <th className="py-3.5 px-4 text-right">Ações</th>
                 </tr>
               </thead>
@@ -281,11 +369,20 @@ export default function StudentsPage() {
                 {students.map((student) => {
                   const phone = student.whatsapp?.replace(/\D/g, '');
                   const waUrl = phone ? `https://wa.me/${phone.startsWith('55') ? phone : `55${phone}`}` : null;
+                  const status = student.billing_status;
 
                   return (
                     <tr
                       key={student.id}
-                      className="hover:bg-slate-800/50 transition-all cursor-pointer group"
+                      className={`transition-all cursor-pointer group ${
+                        status === 'sem_cobranca'
+                          ? 'bg-rose-950/20 hover:bg-rose-950/30 border-l-4 border-l-rose-500'
+                          : status === 'atrasada'
+                          ? 'bg-rose-950/10 hover:bg-rose-950/20 border-l-4 border-l-rose-400'
+                          : status === 'pendente'
+                          ? 'bg-amber-950/10 hover:bg-amber-950/20 border-l-4 border-l-amber-400'
+                          : 'hover:bg-slate-800/50'
+                      }`}
                       onClick={() => setViewingStudent(student)}
                     >
                       <td className="py-3.5 px-4 font-semibold text-white flex items-center gap-3">
@@ -330,45 +427,77 @@ export default function StudentsPage() {
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4 text-center">
-                        {student.latest_billing_amount ? (
-                          <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] ${
-                            student.latest_billing_status === 'paid'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : student.latest_billing_status === 'overdue'
-                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          }`}>
-                            R$ {parseFloat(student.latest_billing_amount).toFixed(2)}
+                      {/* Status da Cobrança do Mês Atual (4 Situações) */}
+                      <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        {status === 'sem_cobranca' && (
+                          <div className="group relative inline-block">
+                            <span className="px-2.5 py-1 rounded-full font-extrabold text-[11px] bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-flex items-center gap-1 cursor-help shadow-sm">
+                              🔴 Sem cobrança vinculada
+                            </span>
+                            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 bg-slate-900 text-slate-200 text-[10px] rounded-lg shadow-xl border border-slate-700 z-50 text-center">
+                              Este aluno não possui uma cobrança válida para o mês atual.
+                            </div>
+                          </div>
+                        )}
+
+                        {status === 'atrasada' && (
+                          <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 inline-flex items-center gap-1">
+                            🔴 Atrasada (R$ {parseFloat(student.current_billing?.amount || student.latest_billing_amount).toFixed(2)})
                           </span>
-                        ) : (
-                          <span className="text-slate-600 italic">Sem mensalidade</span>
+                        )}
+
+                        {status === 'pendente' && (
+                          <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
+                            🟡 Pendente (R$ {parseFloat(student.current_billing?.amount || student.latest_billing_amount).toFixed(2)})
+                          </span>
+                        )}
+
+                        {status === 'em_dia' && (
+                          <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+                            🟢 Em dia
+                          </span>
                         )}
                       </td>
 
                       <td className="py-3.5 px-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
+                        {(status === 'sem_cobranca' || status === 'em_dia') && (
+                          <button
+                            onClick={() => handleOpenRenewModal(student)}
+                            title="Renovar ou Criar Cobrança para o Aluno"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-black bg-[#D4AF37] hover:bg-[#C5A059] transition-all cursor-pointer shadow-md"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span>Renovar cobrança</span>
+                          </button>
+                        )}
+
+                        {(status === 'pendente' || status === 'atrasada') && (
+                          <button
+                            onClick={() => openWhatsAppForBilling(student)}
+                            title="Enviar Lembrete por WhatsApp"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-all cursor-pointer shadow-md"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>WhatsApp</span>
+                          </button>
+                        )}
+
                         <button
                           onClick={() => setViewingStudent(student)}
-                          title="Ver Ficha Completa do Aluno"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all cursor-pointer"
+                          title="Ver Ficha Completa"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          <span>Ver Ficha</span>
                         </button>
-                        <Link
-                          href={`/dashboard/students/${student.id}/history`}
-                          title="Ver Histórico de Treinos"
-                          className="inline-flex items-center gap-1 text-xs text-slate-300 hover:text-emerald-400 bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-700 transition-all"
-                        >
-                          <ArrowUpRight className="w-3.5 h-3.5" />
-                        </Link>
+
                         <button
                           onClick={() => handleOpenEditWizard(student)}
-                          title="Editar Aluno"
+                          title="Editar Cadastro"
                           className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
+
                         <button
                           onClick={() => handleDelete(student.id, student.first_name || student.username)}
                           title="Excluir Aluno"
@@ -386,11 +515,10 @@ export default function StudentsPage() {
         )}
       </div>
 
-      {/* MODAL 1: STUDENT PROFILE DETAILS (AO CLICAR NO ALUNO) */}
+      {/* MODAL 1: STUDENT PROFILE DETAILS */}
       {viewingStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="glass-panel w-full max-w-2xl rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <User className="w-5 h-5 text-emerald-400" />
@@ -404,7 +532,6 @@ export default function StudentsPage() {
               </button>
             </div>
 
-            {/* Main Profile Header with Photo */}
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/30 p-6 rounded-2xl border border-slate-800">
               {viewingStudent.photo_base64 ? (
                 <img
@@ -424,19 +551,19 @@ export default function StudentsPage() {
                     <h2 className="text-2xl font-extrabold text-white">
                       {viewingStudent.first_name} {viewingStudent.last_name}
                     </h2>
-                    {viewingStudent.enrollment_status === 'renewal_needed' && (
-                      <span className="px-2.5 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37] text-[#D4AF37] font-bold text-[10px] uppercase tracking-wider animate-pulse">
-                        ⚠️ Renovação Obrigatória (1 Ano)
+                    {viewingStudent.billing_status === 'sem_cobranca' && (
+                      <span className="px-2.5 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 font-extrabold text-[10px] uppercase tracking-wider">
+                        🔴 Sem cobrança vinculada
                       </span>
                     )}
-                    {viewingStudent.enrollment_status === 'cancelled' && (
-                      <span className="px-2.5 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-400 font-bold text-[10px] uppercase tracking-wider">
-                        Matrícula Cancelada
+                    {viewingStudent.billing_status === 'atrasada' && (
+                      <span className="px-2.5 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-400 font-extrabold text-[10px] uppercase tracking-wider">
+                        🔴 Cobrança Atrasada
                       </span>
                     )}
-                    {viewingStudent.enrollment_status === 'active' && (
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-[10px] uppercase tracking-wider">
-                        Matrícula Ativa (1 Ano)
+                    {viewingStudent.billing_status === 'em_dia' && (
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-extrabold text-[10px] uppercase tracking-wider">
+                        🟢 Cobrança Em Dia
                       </span>
                     )}
                   </div>
@@ -457,9 +584,7 @@ export default function StudentsPage() {
               </div>
             </div>
 
-            {/* Grid Information Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
-              {/* Physical & Health */}
               <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-1">
                 <span className="text-slate-500 font-semibold flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-emerald-400" /> Idade:
@@ -506,35 +631,6 @@ export default function StudentsPage() {
               </div>
             </div>
 
-            {/* Financial History Card */}
-            <div className="glass-panel p-5 rounded-xl border border-slate-800 space-y-3 bg-slate-900/70">
-              <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-emerald-400" />
-                Situação Financeira & Pagamentos
-              </h4>
-
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                  <span className="text-slate-500 block">Mensalidade Atual:</span>
-                  <span className="text-base font-extrabold text-white">
-                    {viewingStudent.latest_billing_amount
-                      ? `R$ ${parseFloat(viewingStudent.latest_billing_amount).toFixed(2)}`
-                      : 'Nenhuma criada'}
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-slate-500 block">Último Pagamento Realizado:</span>
-                  <span className="text-sm font-bold text-emerald-400 block">
-                    {viewingStudent.last_paid_amount
-                      ? `R$ ${parseFloat(viewingStudent.last_paid_amount).toFixed(2)} (${new Date(viewingStudent.last_paid_date).toLocaleDateString('pt-BR')})`
-                      : 'Sem registro recente'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Actions */}
             <div className="flex flex-wrap justify-between items-center gap-3 pt-4 border-t border-slate-800">
               <div className="flex gap-2">
                 <button
@@ -552,14 +648,16 @@ export default function StudentsPage() {
               </div>
 
               <div className="flex gap-2">
-                {(viewingStudent.enrollment_status === 'renewal_needed' || viewingStudent.enrollment_status === 'cancelled') && (
-                  <button
-                    onClick={() => handleRenewEnrollment(viewingStudent.id, viewingStudent.first_name)}
-                    className="px-4 py-2 rounded-xl text-xs font-black text-black bg-[#D4AF37] hover:bg-[#C5A059] shadow-lg shadow-[#D4AF37]/20 cursor-pointer"
-                  >
-                    Renovar Matrícula (+12 Meses)
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    const st = viewingStudent;
+                    setViewingStudent(null);
+                    handleOpenRenewModal(st);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-black text-black bg-[#D4AF37] hover:bg-[#C5A059] shadow-lg shadow-[#D4AF37]/20 cursor-pointer"
+                >
+                  Renovar cobrança
+                </button>
                 <button
                   onClick={() => handleOpenEditWizard(viewingStudent)}
                   className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700"
@@ -572,11 +670,10 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* MODAL 2: STEP-BY-STEP CADASTRO/EDIÇÃO DE ALUNO (WIZARD) */}
+      {/* MODAL 2: CADASTRO/EDIÇÃO DE ALUNO (WIZARD COM PRIMEIRA COBRANÇA OPCIONAL) */}
       {showWizardModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="glass-panel w-full max-w-lg rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-6">
-            {/* Header with Step Progress */}
+          <div className="glass-panel w-full max-w-lg rounded-2xl p-4 sm:p-6 border border-slate-800 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -590,7 +687,6 @@ export default function StudentsPage() {
               <button onClick={() => setShowWizardModal(false)} className="text-slate-400 hover:text-white">✕</button>
             </div>
 
-            {/* Step Indicators Bar */}
             <div className="grid grid-cols-4 gap-2 text-center">
               {[1, 2, 3, 4].map((step) => (
                 <button
@@ -614,9 +710,7 @@ export default function StudentsPage() {
               </div>
             )}
 
-            {/* Form Step Contents */}
             <form onSubmit={handleSubmitWizard} className="space-y-4 text-xs">
-              {/* STEP 1: DADOS BÁSICOS */}
               {wizardStep === 1 && (
                 <div className="space-y-4">
                   <div>
@@ -661,7 +755,7 @@ export default function StudentsPage() {
                         type="text"
                         value={formData.username}
                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        placeholder="Deixe em branco para gerar automático"
+                        placeholder="Gerar automático"
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
                       />
                     </div>
@@ -671,7 +765,7 @@ export default function StudentsPage() {
                         type="password"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        placeholder="Deixe em branco para 123456"
+                        placeholder="Padrão: 123456"
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
                       />
                     </div>
@@ -679,7 +773,6 @@ export default function StudentsPage() {
                 </div>
               )}
 
-              {/* STEP 2: DADOS FÍSICOS & SAÚDE */}
               {wizardStep === 2 && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
@@ -738,7 +831,6 @@ export default function StudentsPage() {
                 </div>
               )}
 
-              {/* STEP 3: TREINO & FOTO */}
               {wizardStep === 3 && (
                 <div className="space-y-4">
                   <div>
@@ -784,40 +876,100 @@ export default function StudentsPage() {
                         Escolher Foto de Perfil
                         <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
                       </label>
-                      <span className="text-[10px] text-slate-500 block mt-1">Imagens em baixa resolução são aceitas</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* STEP 4: FINANCEIRO INICIAL */}
+              {/* STEP 4: PRIMEIRA COBRANÇA (OPCIONAL) */}
               {wizardStep === 4 && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <label className="flex items-center gap-3 p-3.5 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
+                    <input
+                      type="checkbox"
+                      checked={formData.create_first_billing}
+                      onChange={(e) => setFormData({ ...formData, create_first_billing: e.target.checked })}
+                      className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
+                    />
                     <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Valor Mensalidade (R$)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={formData.initial_amount}
-                        onChange={(e) => setFormData({ ...formData, initial_amount: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-emerald-400 font-bold focus:border-emerald-500"
-                      />
+                      <span className="font-bold text-white block text-xs">☐ Criar primeira cobrança para este aluno</span>
+                      <span className="text-[10px] text-slate-400 block">
+                        Se desmarcado, o aluno será cadastrado sem cobrança (exibindo o alerta 🔴 Sem cobrança).
+                      </span>
                     </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">1º Vencimento</label>
-                      <input
-                        type="date"
-                        value={formData.due_date}
-                        onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      />
+                  </label>
+
+                  {formData.create_first_billing && (
+                    <div className="space-y-4 pt-2 border-t border-slate-800">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block font-semibold text-slate-300 mb-1">Valor da Mensalidade (R$) *</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            required={formData.create_first_billing}
+                            value={formData.billing_amount}
+                            onChange={(e) => setFormData({ ...formData, billing_amount: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-emerald-400 font-bold focus:border-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-300 mb-1">1º Vencimento *</label>
+                          <input
+                            type="date"
+                            required={formData.create_first_billing}
+                            value={formData.billing_due_date}
+                            onChange={(e) => setFormData({ ...formData, billing_due_date: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block font-semibold text-slate-300 mb-1">Forma de Pagamento</label>
+                          <select
+                            value={formData.billing_payment_method}
+                            onChange={(e) => setFormData({ ...formData, billing_payment_method: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                          >
+                            <option value="Pix">Pix</option>
+                            <option value="Cartão de Crédito">Cartão de Crédito</option>
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Boleto">Boleto</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block font-semibold text-slate-300 mb-1">Descrição</label>
+                          <input
+                            type="text"
+                            value={formData.billing_notes}
+                            onChange={(e) => setFormData({ ...formData, billing_notes: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            placeholder="Mensalidade"
+                          />
+                        </div>
+                      </div>
+
+                      <label className="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_recurring}
+                          onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
+                          className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
+                        />
+                        <div>
+                          <span className="font-bold text-white block text-xs">Cobrança recorrente (12 Meses)</span>
+                          <span className="text-[10px] text-slate-400 block">
+                            Criar mensalidades automaticamente a cada mês por 12 meses.
+                          </span>
+                        </div>
+                      </label>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
-              {/* Step Controls */}
               <div className="flex justify-between items-center pt-4 border-t border-slate-800">
                 {wizardStep > 1 ? (
                   <button
@@ -853,6 +1005,114 @@ export default function StudentsPage() {
                     {submitting ? 'Salvando...' : editingStudentId ? 'Salvar Alterações' : 'Concluir Cadastro'}
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: RENOVAR COBRANÇA */}
+      {showRenewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-4 sm:p-6 border border-slate-800 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <RefreshCw className="w-5 h-5 text-[#D4AF37]" />
+                Renovar Cobrança de Mensalidade
+              </h3>
+              <button onClick={() => setShowRenewModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleSubmitRenewBilling} className="space-y-4 text-xs">
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                <span className="font-semibold text-white block">
+                  Aluno: {renewBillingData.student_name}
+                </span>
+                <span className="text-[#D4AF37] text-[11px] block font-semibold">
+                  Sugerido a partir do último registro
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Valor (R$) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={renewBillingData.amount}
+                    onChange={(e) => setRenewBillingData({ ...renewBillingData, amount: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-bold text-emerald-400 focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Data de Vencimento *</label>
+                  <input
+                    type="date"
+                    required
+                    value={renewBillingData.due_date}
+                    onChange={(e) => setRenewBillingData({ ...renewBillingData, due_date: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Descrição / Observação</label>
+                <input
+                  type="text"
+                  value={renewBillingData.notes}
+                  onChange={(e) => setRenewBillingData({ ...renewBillingData, notes: e.target.value })}
+                  placeholder="Mensalidade"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Forma de Pagamento</label>
+                <select
+                  value={renewBillingData.payment_method}
+                  onChange={(e) => setRenewBillingData({ ...renewBillingData, payment_method: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                >
+                  <option value="Pix">Pix</option>
+                  <option value="Cartão de Crédito">Cartão de Crédito</option>
+                  <option value="Dinheiro">Dinheiro</option>
+                  <option value="Boleto">Boleto</option>
+                </select>
+              </div>
+
+              <label className="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
+                <input
+                  type="checkbox"
+                  checked={renewBillingData.is_recurring}
+                  onChange={(e) => setRenewBillingData({ ...renewBillingData, is_recurring: e.target.checked })}
+                  className="w-4 h-4 rounded text-[#D4AF37] focus:ring-[#D4AF37] bg-slate-950 border-slate-700"
+                />
+                <div>
+                  <span className="font-bold text-white block text-xs">Cobrança recorrente (12 Meses)</span>
+                  <span className="text-[10px] text-slate-400 block">
+                    Gerar mensalidades mensalmente por 12 meses no mesmo dia.
+                  </span>
+                </div>
+              </label>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowRenewModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={renewing}
+                  className="px-5 py-2 rounded-xl font-bold text-black bg-[#D4AF37] hover:bg-[#C5A059] shadow-lg shadow-[#D4AF37]/20 cursor-pointer"
+                >
+                  {renewing ? 'Gerando...' : 'Confirmar Nova Cobrança'}
+                </button>
               </div>
             </form>
           </div>

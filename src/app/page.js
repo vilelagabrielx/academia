@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Dumbbell, UserCheck, ShieldCheck, ArrowRight, Lock, User, AlertCircle, 
@@ -13,7 +13,27 @@ export default function LandingAndLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.user) {
+          if (data.user.is_staff || data.user.is_superuser) {
+            router.push('/dashboard');
+          } else {
+            router.push('/student');
+          }
+        } else {
+          setCheckingAuth(false);
+        }
+      })
+      .catch(() => {
+        setCheckingAuth(false);
+      });
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,6 +66,14 @@ export default function LandingAndLoginPage() {
 
   const whatsappUrl = 'https://wa.me/5521966239956?text=Ol%C3%A1!%20Vim%20pelo%20site%20e%20quero%20me%20matricular%20na%20Iron%20Solder%20Gym.';
   const instagramUrl = 'https://instagram.com/iron_soldergym';
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center text-[#D4AF37]">
+        <div className="w-8 h-8 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col justify-between selection:bg-[#D4AF37] selection:text-black">
@@ -89,18 +117,18 @@ export default function LandingAndLoginPage() {
 
       {/* Main Hero Banner */}
       <main className="flex-1 space-y-16 py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <section className="text-center relative py-12 px-6 rounded-3xl glass-panel-gold border border-[#D4AF37]/30 overflow-hidden space-y-8 bg-gradient-to-b from-[#1F1F1F] via-[#121212] to-[#0D0D0D]">
+        <section className="text-center relative py-8 sm:py-12 px-4 sm:px-6 rounded-3xl glass-panel-gold border border-[#D4AF37]/30 overflow-hidden space-y-6 sm:space-y-8 bg-gradient-to-b from-[#1F1F1F] via-[#121212] to-[#0D0D0D]">
           
           {/* Logo Centralizada */}
           <div className="flex justify-center">
-            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl bg-[#121212] border-2 border-[#D4AF37] p-2 flex items-center justify-center shadow-2xl shadow-black/80">
+            <div className="w-24 h-24 sm:w-36 sm:h-36 rounded-2xl bg-[#121212] border-2 border-[#D4AF37] p-2 flex items-center justify-center shadow-2xl shadow-black/80">
               <img src="/logo.png" alt="Iron Solder Gym" className="w-full h-full object-contain" />
             </div>
           </div>
 
           {/* Chamada de Impacto */}
           <div className="space-y-4 max-w-3xl mx-auto">
-            <h1 className="font-bebas text-5xl sm:text-7xl font-extrabold tracking-wider text-white uppercase leading-none">
+            <h1 className="font-bebas text-4xl sm:text-7xl font-extrabold tracking-wider text-white uppercase leading-none">
               OS MELHORES PLANOS ESTÃO AQUI
             </h1>
             <p className="text-[#A6A6A6] text-sm sm:text-base font-montserrat max-w-xl mx-auto">
@@ -111,7 +139,7 @@ export default function LandingAndLoginPage() {
             <div className="inline-block bg-[#1F1F1F] border border-[#D4AF37]/50 px-6 py-3 rounded-2xl shadow-xl">
               <span className="text-xs text-[#A6A6A6] uppercase tracking-widest block font-bold">Mensalidades acessíveis</span>
               <span className="font-bebas text-3xl sm:text-4xl text-[#D4AF37] tracking-wide block">
-                A PARTIR DE R$ 60,00 / MÊS
+                A PARTIR DE R$ XX,XX / MÊS
               </span>
             </div>
           </div>
@@ -193,13 +221,13 @@ export default function LandingAndLoginPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Plano Mensal */}
-            <div className="glass-panel p-8 rounded-3xl border border-[#D4AF37]/30 hover:border-[#D4AF37] transition-all flex flex-col justify-between space-y-6 bg-[#1F1F1F]">
+            <div className="glass-panel p-5 sm:p-8 rounded-3xl border border-[#D4AF37]/30 hover:border-[#D4AF37] transition-all flex flex-col justify-between space-y-6 bg-[#1F1F1F]">
               <div className="space-y-4">
                 <span className="px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold uppercase tracking-wider">
                   Plano Mensal
                 </span>
                 <div>
-                  <span className="font-bebas text-5xl text-white tracking-tight">R$ 60,00</span>
+                  <span className="font-bebas text-5xl text-white tracking-tight">R$ XX,XX</span>
                   <span className="text-xs text-[#A6A6A6] block">/ mês sem fidelidade</span>
                 </div>
                 <ul className="space-y-2 text-xs text-[#A6A6A6]">
@@ -225,7 +253,7 @@ export default function LandingAndLoginPage() {
             </div>
 
             {/* Plano VIP Recorrente (Destaque) */}
-            <div className="glass-panel p-8 rounded-3xl border-2 border-[#D4AF37] shadow-2xl shadow-[#D4AF37]/15 flex flex-col justify-between space-y-6 bg-gradient-to-b from-[#2A2A2A] to-[#1F1F1F] relative">
+            <div className="glass-panel p-5 sm:p-8 rounded-3xl border-2 border-[#D4AF37] shadow-2xl shadow-[#D4AF37]/15 flex flex-col justify-between space-y-6 bg-gradient-to-b from-[#2A2A2A] to-[#1F1F1F] relative">
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#D4AF37] text-black font-extrabold px-4 py-1 rounded-full text-[10px] uppercase tracking-widest shadow-md">
                 MAIS RECOMENDADO
               </div>
@@ -234,7 +262,7 @@ export default function LandingAndLoginPage() {
                   Mensalidade VIP Recorrente
                 </span>
                 <div>
-                  <span className="font-bebas text-5xl text-[#D4AF37] tracking-tight">R$ 60,00</span>
+                  <span className="font-bebas text-5xl text-[#D4AF37] tracking-tight">R$ XX,XX</span>
                   <span className="text-xs text-white block">/ mês no débito automático / Pix</span>
                 </div>
                 <ul className="space-y-2 text-xs text-white">
@@ -263,13 +291,13 @@ export default function LandingAndLoginPage() {
             </div>
 
             {/* Plano Trimestral */}
-            <div className="glass-panel p-8 rounded-3xl border border-[#D4AF37]/30 hover:border-[#D4AF37] transition-all flex flex-col justify-between space-y-6 bg-[#1F1F1F]">
+            <div className="glass-panel p-5 sm:p-8 rounded-3xl border border-[#D4AF37]/30 hover:border-[#D4AF37] transition-all flex flex-col justify-between space-y-6 bg-[#1F1F1F]">
               <div className="space-y-4">
                 <span className="px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold uppercase tracking-wider">
                   Plano Trimestral
                 </span>
                 <div>
-                  <span className="font-bebas text-5xl text-white tracking-tight">R$ 55,00</span>
+                  <span className="font-bebas text-5xl text-white tracking-tight">R$ XX,XX</span>
                   <span className="text-xs text-[#A6A6A6] block">/ mês (plano de 3 meses)</span>
                 </div>
                 <ul className="space-y-2 text-xs text-[#A6A6A6]">
@@ -297,8 +325,8 @@ export default function LandingAndLoginPage() {
         </section>
 
         {/* Portal de Login de Membros (Professor / Aluno) */}
-        <section id="login" className="pt-8">
-          <div className="max-w-md mx-auto glass-panel p-8 rounded-3xl border-2 border-[#D4AF37]/40 bg-[#121212] shadow-2xl space-y-6">
+        <section id="login" className="pt-4 sm:pt-8">
+          <div className="max-w-md mx-auto glass-panel p-5 sm:p-8 rounded-3xl border-2 border-[#D4AF37]/40 bg-[#121212] shadow-2xl space-y-6">
             <div className="text-center space-y-2">
               <div className="w-16 h-16 rounded-2xl bg-[#1F1F1F] border border-[#D4AF37] p-1 mx-auto flex items-center justify-center">
                 <img src="/logo.png" alt="Iron Solder Gym" className="w-full h-full object-contain" />
@@ -335,63 +363,77 @@ export default function LandingAndLoginPage() {
               </button>
             </div>
 
-            {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-[#A6A6A6] uppercase tracking-wider mb-2">
-                  Usuário ou E-mail
-                </label>
-                <div className="relative">
-                  <User className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder={role === 'trainer' ? 'admin' : 'usuario_aluno'}
-                    className="w-full bg-[#1F1F1F] border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#D4AF37] transition-all"
-                  />
+            {role === 'student' ? (
+              <div className="py-8 text-center space-y-3 bg-[#1F1F1F]/60 rounded-2xl border border-slate-800 p-6">
+                <div className="w-12 h-12 rounded-full bg-slate-800/80 border border-slate-700 mx-auto flex items-center justify-center text-slate-500">
+                  <UserCheck className="w-6 h-6 opacity-60" />
                 </div>
+                <h4 className="font-bold text-slate-300 text-sm">Área do Aluno</h4>
+                <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto font-medium">
+                  No futuro o aluno acessaria por aqui e teria acesso a treinos dietas conteudos ETC
+                </p>
               </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#A6A6A6] uppercase tracking-wider mb-2">
-                  Senha
-                </label>
-                <div className="relative">
-                  <Lock className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-[#1F1F1F] border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#D4AF37] transition-all"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-2 bg-[#D4AF37] hover:bg-[#C5A059] text-black font-extrabold py-3.5 px-4 rounded-xl shadow-lg shadow-[#D4AF37]/20 flex items-center justify-center gap-2 transition-all uppercase tracking-wider cursor-pointer"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>Entrar no Sistema</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
+            ) : (
+              <>
+                {error && (
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
                 )}
-              </button>
-            </form>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-[#A6A6A6] uppercase tracking-wider mb-2">
+                      Usuário ou E-mail
+                    </label>
+                    <div className="relative">
+                      <User className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input
+                        type="text"
+                        required
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="admin"
+                        className="w-full bg-[#1F1F1F] border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#D4AF37] transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#A6A6A6] uppercase tracking-wider mb-2">
+                      Senha
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input
+                        type="password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full bg-[#1F1F1F] border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#D4AF37] transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full mt-2 bg-[#D4AF37] hover:bg-[#C5A059] text-black font-extrabold py-3.5 px-4 rounded-xl shadow-lg shadow-[#D4AF37]/20 flex items-center justify-center gap-2 transition-all uppercase tracking-wider cursor-pointer"
+                  >
+                    {loading ? (
+                      <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span>Entrar no Sistema</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         </section>
       </main>

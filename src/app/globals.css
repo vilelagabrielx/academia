@@ -3,14 +3,22 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: dark;
   --foreground-rgb: 255, 255, 255;
   --background-start-rgb: 13, 13, 13;
   --background-end-rgb: 18, 18, 18;
 }
 
+html {
+  background-color: #0D0D0D !important;
+  color-scheme: dark;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   color: #FFFFFF;
-  background-color: #0D0D0D;
+  background-color: #0D0D0D !important;
+  color-scheme: dark;
   font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
 }

@@ -38,17 +38,17 @@ export default function DashboardLayout({ children }) {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0D0D0D]">
+    <div className="min-h-screen flex flex-col bg-[#0D0D0D] overflow-x-hidden">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 bg-[#121212]/90 backdrop-blur-md border-b border-[#D4AF37]/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 rounded-xl bg-[#1F1F1F] border border-[#D4AF37]/30 p-1 flex items-center justify-center shadow-lg shadow-black/50 group-hover:border-[#D4AF37] transition-all">
+      <header className="sticky top-0 z-40 bg-[#121212]/95 backdrop-blur-md border-b border-[#D4AF37]/20">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-2.5 sm:gap-3 group">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#1F1F1F] border border-[#D4AF37]/30 p-1 flex items-center justify-center shadow-lg shadow-black/50 group-hover:border-[#D4AF37] transition-all">
               <img src="/logo.png" alt="Iron Solder Gym" className="w-full h-full object-contain" />
             </div>
             <div>
-              <span className="font-bebas text-2xl tracking-wider text-white block leading-none">IRON SOLDER GYM</span>
-              <span className="text-[10px] text-[#D4AF37] uppercase tracking-widest font-bold">Painel de Gestão</span>
+              <span className="font-bebas text-xl sm:text-2xl tracking-wider text-white block leading-none">IRON SOLDER GYM</span>
+              <span className="text-[9px] sm:text-[10px] text-[#D4AF37] uppercase tracking-widest font-bold">Painel de Gestão</span>
             </div>
           </Link>
 
@@ -94,7 +94,7 @@ export default function DashboardLayout({ children }) {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-[#1F1F1F]"
+            className="md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-[#1F1F1F] active:bg-[#2A2A2A]"
           >
             {mobileMenuOpen ? <X className="w-6 h-6 text-[#D4AF37]" /> : <Menu className="w-6 h-6 text-[#D4AF37]" />}
           </button>
@@ -134,7 +134,7 @@ export default function DashboardLayout({ children }) {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3.5 sm:p-6 lg:p-8">
         {children}
       </main>
     </div>

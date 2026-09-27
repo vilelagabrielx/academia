@@ -57,18 +57,66 @@ export async function authenticateUser(usernameOrEmail, password) {
   return user;
 }
 
+// Schema Helper & Safe Monthly Date Generator
+export async function initDbSchema() {
+  try {
+    await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;`);
+    await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS recurrence_id VARCHAR(64);`);
+  } catch (err) {
+    // Column might already exist
+  }
+}
+
+export function getSafeMonthlyDate(baseDateStr, monthOffset) {
+  if (!baseDateStr) return new Date().toISOString().split('T')[0];
+  const parts = String(baseDateStr).split('T')[0].split('-');
+  const baseYear = parseInt(parts[0], 10);
+  const baseMonth = parseInt(parts[1], 10) - 1; // 0-indexed
+  const baseDay = parseInt(parts[2], 10);
+
+  const targetDate = new Date(baseYear, baseMonth + monthOffset, 1);
+  const targetYear = targetDate.getFullYear();
+  const targetMonth = targetDate.getMonth();
+
+  const maxDays = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const safeDay = Math.min(baseDay, maxDays);
+
+  const safeMonthStr = String(targetMonth + 1).padStart(2, '0');
+  const safeDayStr = String(safeDay).padStart(2, '0');
+
+  return `${targetYear}-${safeMonthStr}-${safeDayStr}`;
+}
+
+export async function checkExistingBilling(userId, dueDateStr) {
+  await initDbSchema();
+  const dateStr = String(dueDateStr).split('T')[0];
+  const yearMonth = dateStr.slice(0, 7); // 'YYYY-MM'
+  
+  const res = await query(
+    `SELECT b.*, u.first_name, u.last_name, u.username 
+     FROM gym_billing b
+     JOIN auth_user u ON u.id = b.user_id
+     WHERE b.user_id = $1 
+       AND b.status != 'cancelled'
+       AND TO_CHAR(b.due_date, 'YYYY-MM') = $2
+     LIMIT 1`,
+    [userId, yearMonth]
+  );
+  return res.rows[0] || null;
+}
+
 // Students CRUD
 export async function getStudents(search = '') {
+  await initDbSchema();
+  await query(
+    `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status IN ('pending', 'charged')`
+  );
+
   let sql = `
     SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.is_staff, u.date_joined,
            p.whatsapp, p.photo_base64, p.gym_id, p.age, p.height, p.goal, p.blood_type, p.training_days, p.current_weight,
            COALESCE(p.enrollment_status, 'active') as enrollment_status, p.membership_expires_at,
-           (SELECT COUNT(*) FROM manager_routine r WHERE r.user_id = u.id) as routine_count,
-           (SELECT b.amount FROM gym_billing b WHERE b.user_id = u.id ORDER BY b.due_date DESC LIMIT 1) as latest_billing_amount,
-           (SELECT b.status FROM gym_billing b WHERE b.user_id = u.id ORDER BY b.due_date DESC LIMIT 1) as latest_billing_status,
-           (SELECT b.due_date FROM gym_billing b WHERE b.user_id = u.id ORDER BY b.due_date DESC LIMIT 1) as latest_billing_due_date,
-           (SELECT b.amount FROM gym_billing b WHERE b.user_id = u.id AND b.status = 'paid' ORDER BY b.paid_date DESC LIMIT 1) as last_paid_amount,
-           (SELECT b.paid_date FROM gym_billing b WHERE b.user_id = u.id AND b.status = 'paid' ORDER BY b.paid_date DESC LIMIT 1) as last_paid_date
+           (SELECT COUNT(*) FROM manager_routine r WHERE r.user_id = u.id) as routine_count
     FROM auth_user u
     LEFT JOIN core_userprofile p ON p.user_id = u.id
     WHERE u.is_staff = false AND u.is_superuser = false
@@ -80,17 +128,76 @@ export async function getStudents(search = '') {
   }
   sql += ` ORDER BY u.date_joined DESC`;
   const res = await query(sql, params);
+  const students = res.rows;
   
-  // Auto-flag students whose 1-year membership has expired and need renewal
-  const today = new Date().toISOString().split('T')[0];
-  for (const s of res.rows) {
-    if (s.enrollment_status === 'active' && s.membership_expires_at && s.membership_expires_at < today) {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const currentMonthStr = todayStr.slice(0, 7); // 'YYYY-MM'
+
+  for (const s of students) {
+    if (s.enrollment_status === 'active' && s.membership_expires_at && s.membership_expires_at < todayStr) {
       s.enrollment_status = 'renewal_needed';
       await query(`UPDATE core_userprofile SET enrollment_status = 'renewal_needed' WHERE user_id = $1`, [s.id]);
     }
+
+    // Get all non-cancelled billings
+    const bRes = await query(
+      `SELECT * FROM gym_billing 
+       WHERE user_id = $1 AND status != 'cancelled' 
+       ORDER BY due_date DESC, id DESC`,
+      [s.id]
+    );
+    const allBillings = bRes.rows;
+
+    // Billing for current calendar month
+    const currentMonthBilling = allBillings.find(
+      (b) => b.due_date && b.due_date.toISOString().split('T')[0].slice(0, 7) === currentMonthStr
+    );
+
+    const latestBilling = allBillings[0] || null;
+    s.latest_billing_amount = latestBilling ? latestBilling.amount : null;
+    s.latest_billing_status = latestBilling ? latestBilling.status : null;
+    s.latest_billing_due_date = latestBilling ? latestBilling.due_date : null;
+    s.latest_billing = latestBilling;
+
+    const paidBilling = allBillings.find((b) => b.status === 'paid');
+    s.last_paid_amount = paidBilling ? paidBilling.amount : null;
+    s.last_paid_date = paidBilling ? paidBilling.paid_date : null;
+
+    // Status classification:
+    // 1: sem_cobranca (⚠️ Sem cobrança vinculada ao mês atual)
+    // 2: atrasada (🔴 Cobrança atrasada)
+    // 3: pendente (🟡 Cobrança pendente)
+    // 4: em_dia (🟢 Cobrança em dia / paga)
+    if (!currentMonthBilling) {
+      s.billing_status = 'sem_cobranca';
+      s.billing_status_rank = 1;
+      s.current_billing = null;
+    } else if (currentMonthBilling.status === 'paid') {
+      s.billing_status = 'em_dia';
+      s.billing_status_rank = 4;
+      s.current_billing = currentMonthBilling;
+    } else if (currentMonthBilling.status === 'overdue' || currentMonthBilling.due_date.toISOString().split('T')[0] < todayStr) {
+      s.billing_status = 'atrasada';
+      s.billing_status_rank = 2;
+      s.current_billing = currentMonthBilling;
+    } else {
+      s.billing_status = 'pendente';
+      s.billing_status_rank = 3;
+      s.current_billing = currentMonthBilling;
+    }
   }
 
-  return res.rows;
+  // Priority Sort: 1 (sem_cobranca) -> 2 (atrasada) -> 3 (pendente) -> 4 (em_dia)
+  students.sort((a, b) => {
+    if (a.billing_status_rank !== b.billing_status_rank) {
+      return a.billing_status_rank - b.billing_status_rank;
+    }
+    const dateA = a.current_billing?.due_date || a.latest_billing_due_date || a.date_joined || '';
+    const dateB = b.current_billing?.due_date || b.latest_billing_due_date || b.date_joined || '';
+    return String(dateA).localeCompare(String(dateB));
+  });
+
+  return students;
 }
 
 export async function createStudent({
@@ -107,14 +214,19 @@ export async function createStudent({
   blood_type = '',
   goal = '',
   training_days = '',
-  initial_amount = null,
-  due_date = null,
+  create_first_billing = false,
+  billing_amount = null,
+  billing_due_date = null,
+  billing_notes = '',
+  billing_payment_method = 'Pix',
+  is_recurring = false,
+  initial_amount = null, // fallback legacy parameter
+  due_date = null,       // fallback legacy parameter
 }) {
   const cleanFirstName = (first_name || 'Aluno').trim();
   let finalUsername = (username || cleanFirstName.toLowerCase().replace(/[^a-z0-9]/g, '')).trim();
   if (!finalUsername) finalUsername = `aluno_${Date.now().toString().slice(-4)}`;
 
-  // Ensure unique username
   const checkUser = await query(`SELECT id FROM auth_user WHERE username = $1`, [finalUsername]);
   if (checkUser.rows.length > 0) {
     finalUsername = `${finalUsername}_${Math.floor(100 + Math.random() * 900)}`;
@@ -134,8 +246,8 @@ export async function createStudent({
 
   await query(
     `INSERT INTO core_userprofile 
-     (user_id, is_temporary, workout_reminder_active, workout_reminder, workout_duration, notification_language_id, weight_unit, num_days_weight_reminder, can_add_user, trophies_enabled, time_zone, whatsapp, photo_base64, age, height, current_weight, blood_type, goal, training_days)
-     VALUES ($1, false, false, 14, 12, 2, 'kg', 0, false, true, '', $2, $3, $4, $5, $6, $7, $8, $9)`,
+     (user_id, is_temporary, workout_reminder_active, workout_reminder, workout_duration, notification_language_id, weight_unit, num_days_weight_reminder, can_add_user, trophies_enabled, time_zone, whatsapp, photo_base64, age, height, current_weight, blood_type, goal, training_days, enrollment_status)
+     VALUES ($1, false, false, 14, 12, 2, 'kg', 0, false, true, '', $2, $3, $4, $5, $6, $7, $8, $9, 'active')`,
     [
       userId,
       whatsapp || '',
@@ -149,30 +261,21 @@ export async function createStudent({
     ]
   );
 
-  // Create 12 months of recurring billings if initial_amount and due_date are provided
-  if (initial_amount && due_date) {
-    const baseDate = new Date(due_date);
-    const todayStr = new Date().toISOString().split('T')[0];
-    let lastDueDateStr = due_date;
+  // Check if first billing creation requested
+  const shouldCreateBilling = create_first_billing || Boolean(initial_amount && due_date);
+  const amountToUse = billing_amount || initial_amount;
+  const dateToUse = billing_due_date || due_date;
 
-    for (let i = 1; i <= 12; i++) {
-      const nextDueDate = new Date(baseDate);
-      nextDueDate.setMonth(nextDueDate.getMonth() + (i - 1));
-      const dueDateStr = nextDueDate.toISOString().split('T')[0];
-      lastDueDateStr = dueDateStr;
-      const status = dueDateStr < todayStr ? 'overdue' : 'pending';
-
-      await query(
-        `INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes)
-         VALUES ($1, $2, $3, 'Pix', $4, $5)`,
-        [userId, parseFloat(initial_amount), dueDateStr, status, `Mensalidade (${i}/12)`]
-      );
-    }
-
-    await query(
-      `UPDATE core_userprofile SET enrollment_status = 'active', membership_expires_at = $1 WHERE user_id = $2`,
-      [lastDueDateStr, userId]
-    );
+  if (shouldCreateBilling && amountToUse && dateToUse) {
+    await createBilling({
+      user_id: userId,
+      amount: amountToUse,
+      due_date: dateToUse,
+      payment_method: billing_payment_method || 'Pix',
+      notes: billing_notes || 'Primeira Mensalidade',
+      is_recurring: Boolean(is_recurring || (initial_amount && due_date)),
+      force_duplicate: true,
+    });
   }
 
   return userRes.rows[0];
@@ -537,15 +640,89 @@ export async function getBillings({ status, user_id, search } = {}) {
   return res.rows;
 }
 
-export async function createBilling({ user_id, amount, due_date, payment_method = 'Pix', notes = '' }) {
-  const status = new Date(due_date) < new Date(new Date().setHours(0,0,0,0)) ? 'overdue' : 'pending';
-  const res = await query(
-    `INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
-    [user_id, parseFloat(amount), due_date, payment_method, status, notes]
-  );
-  return res.rows[0];
+export async function createBilling({
+  user_id,
+  amount,
+  due_date,
+  payment_method = 'Pix',
+  notes = '',
+  is_recurring = false,
+  force_duplicate = false,
+}) {
+  await initDbSchema();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  if (is_recurring) {
+    const recurrenceId = `rec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const createdBillings = [];
+    let duplicateFound = null;
+
+    for (let i = 0; i < 12; i++) {
+      const currentDueDate = getSafeMonthlyDate(due_date, i);
+      
+      if (!force_duplicate) {
+        const existing = await checkExistingBilling(user_id, currentDueDate);
+        if (existing) {
+          if (i === 0) {
+            duplicateFound = existing;
+            break;
+          }
+          continue; // skip duplicate month in series
+        }
+      }
+
+      const status = currentDueDate < todayStr ? 'overdue' : 'pending';
+      const monthNotes = notes
+        ? (notes.includes('/') ? notes : `${notes} (${i + 1}/12)`)
+        : `Mensalidade (${i + 1}/12)`;
+
+      const res = await query(
+        `INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes, is_recurring, recurrence_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING *`,
+        [user_id, parseFloat(amount), currentDueDate, payment_method, status, monthNotes, true, recurrenceId]
+      );
+      createdBillings.push(res.rows[0]);
+    }
+
+    if (duplicateFound && createdBillings.length === 0) {
+      return {
+        duplicate: true,
+        existingBilling: duplicateFound,
+        error: `Já existe uma cobrança para este aluno no período (${due_date.slice(0, 7)}).`,
+      };
+    }
+
+    return {
+      success: true,
+      is_recurring: true,
+      recurrence_id: recurrenceId,
+      totalCreated: createdBillings.length,
+      billing: createdBillings[0] || null,
+      createdBillings,
+    };
+  } else {
+    // Single billing duplicate check
+    if (!force_duplicate) {
+      const existing = await checkExistingBilling(user_id, due_date);
+      if (existing) {
+        return {
+          duplicate: true,
+          existingBilling: existing,
+          error: `Já existe uma cobrança para este aluno no período (${due_date.slice(0, 7)}).`,
+        };
+      }
+    }
+
+    const status = due_date < todayStr ? 'overdue' : 'pending';
+    const res = await query(
+      `INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes, is_recurring)
+       VALUES ($1, $2, $3, $4, $5, $6, false)
+       RETURNING *`,
+      [user_id, parseFloat(amount), due_date, payment_method, status, notes]
+    );
+    return { success: true, billing: res.rows[0] };
+  }
 }
 
 export async function markBillingAsCharged(id, { remind_days = 3, remind_at = null, charge_notes = '' }) {
@@ -597,6 +774,84 @@ export async function updateBillingStatus(id, { status, paid_date, receipt_gener
   sql += ` WHERE id = $${params.length} RETURNING *`;
   const res = await query(sql, params);
   return res.rows[0];
+}
+
+export async function updateBillingWithScope(id, { amount, due_date, payment_method, notes, status, scope = 'single' }) {
+  await initDbSchema();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const origRes = await query(`SELECT * FROM gym_billing WHERE id = $1`, [id]);
+  if (origRes.rows.length === 0) {
+    throw new Error('Cobrança não encontrada');
+  }
+  const target = origRes.rows[0];
+
+  let affectedBillings = [target];
+  if (target.recurrence_id) {
+    if (scope === 'all') {
+      const recRes = await query(
+        `SELECT * FROM gym_billing WHERE recurrence_id = $1 ORDER BY due_date ASC, id ASC`,
+        [target.recurrence_id]
+      );
+      affectedBillings = recRes.rows;
+    } else if (scope === 'future') {
+      const recRes = await query(
+        `SELECT * FROM gym_billing WHERE recurrence_id = $1 AND due_date >= $2 ORDER BY due_date ASC, id ASC`,
+        [target.recurrence_id, target.due_date]
+      );
+      affectedBillings = recRes.rows;
+    }
+  }
+
+  const dateChanged = due_date && String(due_date).split('T')[0] !== String(target.due_date).split('T')[0];
+  const newDay = dateChanged ? parseInt(String(due_date).split('T')[0].split('-')[2], 10) : null;
+
+  const updatedResults = [];
+
+  for (const b of affectedBillings) {
+    let bDueDate = String(b.due_date).split('T')[0];
+
+    if (dateChanged) {
+      if (scope === 'single') {
+        bDueDate = String(due_date).split('T')[0];
+      } else {
+        const parts = bDueDate.split('-');
+        const bYear = parseInt(parts[0], 10);
+        const bMonth = parseInt(parts[1], 10) - 1; // 0-indexed
+        
+        const maxDays = new Date(bYear, bMonth + 1, 0).getDate();
+        const safeDay = Math.min(newDay, maxDays);
+        const safeMonthStr = String(bMonth + 1).padStart(2, '0');
+        const safeDayStr = String(safeDay).padStart(2, '0');
+        bDueDate = `${bYear}-${safeMonthStr}-${safeDayStr}`;
+      }
+    }
+
+    let bStatus = status !== undefined ? status : b.status;
+    if (bStatus === 'pending' || bStatus === 'overdue') {
+      bStatus = bDueDate < todayStr ? 'overdue' : 'pending';
+    }
+
+    const newAmount = amount !== undefined ? parseFloat(amount) : b.amount;
+    const newPaymentMethod = payment_method !== undefined ? payment_method : b.payment_method;
+    const newNotes = notes !== undefined ? notes : b.notes;
+
+    const res = await query(
+      `UPDATE gym_billing 
+       SET amount = $1, due_date = $2, payment_method = $3, notes = $4, status = $5
+       WHERE id = $6
+       RETURNING *`,
+      [newAmount, bDueDate, newPaymentMethod, newNotes, bStatus, b.id]
+    );
+
+    updatedResults.push(res.rows[0]);
+  }
+
+  return {
+    success: true,
+    totalUpdated: updatedResults.length,
+    updatedBillings: updatedResults,
+  };
 }
 
 export async function uploadBillingProof(id, { proof_base64, proof_filename }) {

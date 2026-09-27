@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateBillingStatus, deleteBilling } from '@/lib/db';
+import { updateBillingStatus, updateBillingWithScope, deleteBilling } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
 export async function PUT(request, { params }) {
@@ -11,11 +11,18 @@ export async function PUT(request, { params }) {
 
     const { id } = params;
     const data = await request.json();
-    const updated = await updateBillingStatus(id, data);
-    return NextResponse.json({ success: true, updated });
+    
+    // If scope or billing form fields are present, use updateBillingWithScope
+    if (data.scope || data.amount !== undefined || data.due_date !== undefined || data.payment_method !== undefined) {
+      const result = await updateBillingWithScope(id, data);
+      return NextResponse.json(result);
+    } else {
+      const updated = await updateBillingStatus(id, data);
+      return NextResponse.json({ success: true, updated });
+    }
   } catch (error) {
     console.error('Error updating billing:', error);
-    return NextResponse.json({ error: 'Erro ao atualizar cobrança' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Erro ao atualizar cobrança' }, { status: 500 });
   }
 }
 

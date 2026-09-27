@@ -38,8 +38,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Aluno, valor e data de vencimento são obrigatórios' }, { status: 400 });
     }
 
-    const billing = await createBilling(data);
-    return NextResponse.json({ success: true, billing });
+    const result = await createBilling(data);
+    if (result.duplicate) {
+      return NextResponse.json({
+        duplicate: true,
+        existingBilling: result.existingBilling,
+        error: result.error || 'Já existe uma cobrança para este aluno no período informado.',
+      }, { status: 409 });
+    }
+
+    return NextResponse.json({ success: true, ...result });
   } catch (error) {
     console.error('Error creating billing:', error);
     return NextResponse.json({ error: 'Erro ao cadastrar cobrança' }, { status: 500 });

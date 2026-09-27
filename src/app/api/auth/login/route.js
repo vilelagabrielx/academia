@@ -19,8 +19,9 @@ export async function POST(request) {
 
     response.cookies.set('gym_session', token, {
       httpOnly: true,
-      secure: process.env.NODE_NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365, // 365 days
       path: '/',
     });
 

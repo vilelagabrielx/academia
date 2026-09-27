@@ -17,7 +17,7 @@ export function signToken(user) {
       whatsapp: user.whatsapp,
     },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '365d' }
   );
 }
 
