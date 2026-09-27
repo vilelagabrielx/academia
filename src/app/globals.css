@@ -5,24 +5,87 @@
 :root {
   color-scheme: dark;
   --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 13, 13, 13;
-  --background-end-rgb: 18, 18, 18;
+  --background-start-rgb: 0, 0, 0;
+  --background-end-rgb: 10, 10, 10;
 }
 
 html {
   background-color: #000000 !important;
   color-scheme: dark;
   -webkit-tap-highlight-color: transparent;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
 }
 
 body {
   color: #FFFFFF;
   background-color: #000000 !important;
   color-scheme: dark;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography Hierarchy Utilities (Apple HIG Standard) */
+.hig-title-large {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 1.75rem; /* 28px */
+  line-height: 2.125rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #FFFFFF;
+}
+
+.hig-title {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 1.25rem; /* 20px */
+  line-height: 1.625rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #FFFFFF;
+}
+
+.hig-subheading {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 0.9375rem; /* 15px */
+  line-height: 1.375rem;
+  font-weight: 600;
+  color: #E4E4E7;
+}
+
+.hig-body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem;
+  font-weight: 400;
+  color: #A1A1AA;
+}
+
+.hig-caption {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 0.75rem; /* 12px */
+  line-height: 1rem;
+  font-weight: 500;
+  color: #71717A;
+}
+
+/* Font Family Utility Overrides */
+.font-bebas {
+  font-family: 'Bebas Neue', cursive, sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.font-montserrat {
+  font-family: 'Montserrat', 'Inter', sans-serif;
+}
+
+.font-sans {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+}
+
+.font-mono {
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  letter-spacing: -0.02em;
 }
 
 /* Apple HIG Translucent Glass Materials */
@@ -75,20 +138,6 @@ body {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
-.font-bebas {
-  font-family: 'Bebas Neue', cursive, sans-serif;
-  letter-spacing: 0.05em;
-}
-
-.font-teko {
-  font-family: 'Teko', sans-serif;
-  letter-spacing: 0.03em;
-}
-
-.font-montserrat {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-}
-
 /* Smooth custom iOS scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -104,3 +153,4 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(212, 175, 55, 0.6);
 }
+
