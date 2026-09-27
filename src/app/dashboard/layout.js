@@ -44,10 +44,10 @@ export default function DashboardLayout({ children }) {
         <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2.5 sm:gap-3 group">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#1F1F1F] border border-[#D4AF37]/30 p-1 flex items-center justify-center shadow-lg shadow-black/50 group-hover:border-[#D4AF37] transition-all">
-              <img src="/logo.png" alt="Iron Solder Gym" className="w-full h-full object-contain" />
+              <img src="/logo.png" alt="IRON SOLDIER GYM" className="w-full h-full object-contain" />
             </div>
             <div>
-              <span className="font-bebas text-xl sm:text-2xl tracking-wider text-white block leading-none">IRON SOLDER GYM</span>
+              <span className="font-bebas text-xl sm:text-2xl tracking-wider text-white block leading-none">IRON SOLDIER GYM</span>
               <span className="text-[9px] sm:text-[10px] text-[#D4AF37] uppercase tracking-widest font-bold">Painel de Gestão</span>
             </div>
           </Link>
@@ -61,11 +61,10 @@ export default function DashboardLayout({ children }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-                    isActive
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${isActive
                       ? 'bg-[#D4AF37] text-black font-extrabold shadow-lg shadow-[#D4AF37]/20'
                       : 'text-slate-300 hover:text-white hover:bg-[#1F1F1F] hover:border hover:border-[#D4AF37]/30'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{item.label}</span>
@@ -111,11 +110,10 @@ export default function DashboardLayout({ children }) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                    isActive
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${isActive
                       ? 'bg-[#D4AF37] text-black font-extrabold'
                       : 'text-slate-300 hover:text-white hover:bg-[#1F1F1F]'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.label}</span>

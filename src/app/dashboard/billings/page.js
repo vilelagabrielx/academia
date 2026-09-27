@@ -906,6 +906,192 @@ export default function FinancialPage() {
           </div>
         </div>
       )}
+      {/* MODAL DAR BAIXA EM MENSALIDADE DO ALUNO */}
+      {showPaidBillingModal && selectedPaidBilling && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-md rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>Confirmar Baixa de Mensalidade</span>
+              </h3>
+              <button onClick={() => setShowPaidBillingModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+            
+            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+              <span className="text-xs text-slate-400 block font-semibold">Aluno:</span>
+              <span className="text-sm font-bold text-white block">
+                {selectedPaidBilling.first_name ? `${selectedPaidBilling.first_name} ${selectedPaidBilling.last_name || ''}` : selectedPaidBilling.username}
+              </span>
+              <div className="flex justify-between items-center pt-1 border-t border-slate-800 text-xs">
+                <span className="text-slate-400">Valor a Dar Baixa:</span>
+                <span className="font-extrabold text-emerald-400 text-sm">R$ {parseFloat(selectedPaidBilling.amount).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handlePaidBillingSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Comprovante de Pagamento (Opcional)</label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => handleFileUpload(e, setPaidBillingProofBase64, setPaidBillingProofFilename)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 text-xs file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-emerald-400 hover:file:bg-slate-700"
+                  />
+                </div>
+                {paidBillingProofFilename && (
+                  <span className="text-[10px] text-emerald-400 block mt-1">✓ Anexado: {paidBillingProofFilename}</span>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Observações / Anotações (Opcional)</label>
+                <textarea
+                  rows={2}
+                  value={paidBillingNotes}
+                  onChange={(e) => setPaidBillingNotes(e.target.value)}
+                  placeholder="Ex: Recebido em dinheiro na recepção..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowPaidBillingModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPaidBilling}
+                  className="px-5 py-2 rounded-xl font-black text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-all flex items-center gap-1.5 shadow-md"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{savingPaidBilling ? 'Confirmando...' : 'Confirmar Pagamento'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL WHATSAPP / NOTIFICAÇÃO DE COBRANÇA */}
+      {showWaModal && selectedWaBilling && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-md rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-emerald-400" />
+                <span>Enviar Lembrete por WhatsApp</span>
+              </h3>
+              <button onClick={() => setShowWaModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                <span className="text-slate-400 font-semibold block">Aluno:</span>
+                <span className="font-bold text-white text-sm">
+                  {selectedWaBilling.first_name ? `${selectedWaBilling.first_name} ${selectedWaBilling.last_name || ''}` : selectedWaBilling.username}
+                </span>
+                <span className="text-emerald-400 font-mono text-xs block mt-0.5">
+                  📱 WhatsApp: {selectedWaBilling.whatsapp || 'Não informado no cadastro'}
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Mensagem a enviar:</label>
+                <textarea
+                  rows={4}
+                  value={waMessage}
+                  onChange={(e) => setWaMessage(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowWaModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 font-bold"
+                >
+                  Cancelar
+                </button>
+                <a
+                  href={`https://wa.me/${String(selectedWaBilling.whatsapp || '').replace(/\D/g, '')}?text=${encodeURIComponent(waMessage)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setShowWaModal(false)}
+                  className="px-5 py-2 rounded-xl font-black text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Abrir no WhatsApp</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DAR BAIXA EM DESPESA (SAÍDA) */}
+      {showPayExpenseModal && selectedPayExpense && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-md rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-rose-400" />
+                <span>Confirmar Baixa de Despesa</span>
+              </h3>
+              <button onClick={() => setShowPayExpenseModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+              <span className="text-xs text-slate-400 block font-semibold">Despesa:</span>
+              <span className="text-sm font-bold text-white block">{selectedPayExpense.description}</span>
+              <div className="flex justify-between items-center pt-1 border-t border-slate-800 text-xs">
+                <span className="text-slate-400">Valor Pago:</span>
+                <span className="font-extrabold text-rose-400 text-sm">R$ {parseFloat(selectedPayExpense.amount).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handlePayExpenseSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Comprovante de Pagamento (Opcional)</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => handleFileUpload(e, setPayExpenseProofBase64, setPayExpenseProofFilename)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 text-xs file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-rose-400 hover:file:bg-slate-700"
+                />
+                {payExpenseProofFilename && (
+                  <span className="text-[10px] text-rose-400 block mt-1">✓ Anexado: {payExpenseProofFilename}</span>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowPayExpenseModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={payingExpense}
+                  className="px-5 py-2 rounded-xl font-black text-slate-950 bg-rose-500 hover:bg-rose-400 transition-all flex items-center gap-1.5 shadow-md"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{payingExpense ? 'Confirmando...' : 'Confirmar Pagamento'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODAL FICHA / PERFIL RÁPIDO DO ALUNO */}
       {viewingStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">

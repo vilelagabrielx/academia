@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Iron Solder Gym - Sistema de Academia & Gestão de Treinos',
+  title: 'IRON SOLDIER GYM - Sistema de Academia & Gestão de Treinos',
   description: 'Os melhores planos estão aqui. Treine com foco, disciplina e superação.',
 };
 
