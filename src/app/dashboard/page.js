@@ -386,144 +386,241 @@ export default function DashboardPage() {
         {loading ? (
           <div className="py-12 text-center text-slate-500 text-sm">Carregando dados dos alunos...</div>
         ) : filteredStudents.length === 0 ? (
-          <div className="py-12 text-center text-slate-500 text-sm">Nenhum aluno encontrado.</div>
+          <div className="py-12 text-center text-slate-[#8E8E93] text-sm">Nenhum aluno encontrado.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-900/80 uppercase tracking-wider text-slate-400 font-semibold border-b border-slate-800">
-                <tr>
-                  <th className="py-3 px-4">Aluno</th>
-                  <th className="py-3 px-4">WhatsApp</th>
-                  <th className="py-3 px-4 text-center">Situação da Cobrança</th>
-                  <th className="py-3 px-4 text-right">Ações Rápidas</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {filteredStudents.map((student) => {
-                  const phone = student.whatsapp?.replace(/\D/g, '');
-                  const waUrl = phone ? `https://wa.me/${phone.startsWith('55') ? phone : `55${phone}`}` : null;
-                  const status = student.billing_status;
+          <>
+            {/* Mobile Touch Cards View (HIG Style) */}
+            <div className="block md:hidden space-y-3">
+              {filteredStudents.map((student) => {
+                const phone = student.whatsapp?.replace(/\D/g, '');
+                const waUrl = phone ? `https://wa.me/${phone.startsWith('55') ? phone : `55${phone}`}` : null;
+                const status = student.billing_status;
 
-                  return (
-                    <tr
-                      key={student.id}
-                      className={`transition-all cursor-pointer group ${
-                        status === 'sem_cobranca'
-                          ? 'bg-rose-950/20 hover:bg-rose-950/30 border-l-4 border-l-rose-500'
-                          : status === 'atrasada'
-                          ? 'bg-rose-950/10 hover:bg-rose-950/20 border-l-4 border-l-rose-400'
-                          : status === 'pendente'
-                          ? 'bg-amber-950/10 hover:bg-amber-950/20 border-l-4 border-l-amber-400'
-                          : 'hover:bg-slate-800/50'
-                      }`}
-                      onClick={() => setViewingStudent(student)}
-                    >
-                      <td className="py-3.5 px-4 font-semibold text-white flex items-center gap-3">
+                return (
+                  <div
+                    key={student.id}
+                    onClick={() => setViewingStudent(student)}
+                    className="p-4 rounded-2xl bg-[#1C1C1E]/80 border border-white/10 shadow-lg active:scale-[0.99] transition-all space-y-3 cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
                         {student.photo_base64 ? (
                           <img
                             src={student.photo_base64}
                             alt={student.username}
-                            className="w-9 h-9 rounded-full object-cover border border-emerald-500/40 group-hover:border-emerald-400"
+                            className="w-11 h-11 rounded-full object-cover border-2 border-[#D4AF37]/50 shadow-md"
                           />
                         ) : (
-                          <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400">
+                          <div className="w-11 h-11 rounded-full bg-[#2C2C2E] border border-white/10 flex items-center justify-center font-bold text-[#D4AF37] text-base">
                             {student.first_name?.[0] || student.username[0]?.toUpperCase()}
                           </div>
                         )}
                         <div>
-                          <span className="block font-bold text-sm text-white group-hover:text-emerald-400 transition-colors">
+                          <span className="block font-bold text-sm text-white">
                             {student.first_name} {student.last_name}
                           </span>
-                          <span className="text-[10px] text-slate-400 block font-mono">@{student.username}</span>
+                          <span className="text-[11px] text-slate-400 font-mono">@{student.username}</span>
                         </div>
-                      </td>
+                      </div>
 
-                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                        {waUrl ? (
-                          <a
-                            href={waUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-[11px] font-medium"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            <span>{student.whatsapp}</span>
-                          </a>
-                        ) : (
-                          <span className="text-slate-600 italic">Não informado</span>
-                        )}
-                      </td>
-
-                      {/* 4 Student Billing Status Badges */}
-                      <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      {/* Billing Status Badge */}
+                      <div>
                         {status === 'sem_cobranca' && (
-                          <div className="group relative inline-block">
-                            <span className="px-2.5 py-1 rounded-full font-extrabold text-[11px] bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-flex items-center gap-1 cursor-help shadow-sm">
-                              🔴 Sem cobrança vinculada
-                            </span>
-                            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2 bg-slate-900 text-slate-200 text-[10px] rounded-lg shadow-xl border border-slate-700 z-50 text-center">
-                              Este aluno não possui uma cobrança válida para o mês atual.
-                            </div>
-                          </div>
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                            🔴 Sem cobrança
+                          </span>
                         )}
-
                         {status === 'atrasada' && (
-                          <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 inline-flex items-center gap-1">
-                            🔴 Atrasada (R$ {parseFloat(student.current_billing?.amount || student.latest_billing_amount).toFixed(2)})
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                            🔴 Atrasada
                           </span>
                         )}
-
                         {status === 'pendente' && (
-                          <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
-                            🟡 Pendente (R$ {parseFloat(student.current_billing?.amount || student.latest_billing_amount).toFixed(2)})
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                            🟡 Pendente
                           </span>
                         )}
-
                         {status === 'em_dia' && (
-                          <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                             🟢 Em dia
                           </span>
                         )}
-                      </td>
+                      </div>
+                    </div>
 
-                      <td className="py-3.5 px-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                        {(status === 'sem_cobranca' || status === 'em_dia') && (
-                          <button
-                            onClick={() => handleOpenRenewModal(student)}
-                            title="Renovar ou Criar Cobrança"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-black bg-[#D4AF37] hover:bg-[#C5A059] transition-all cursor-pointer shadow-md"
-                          >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            <span>Renovar cobrança</span>
-                          </button>
-                        )}
-
-                        {(status === 'pendente' || status === 'atrasada') && (
-                          <button
-                            onClick={() => openWhatsAppForBilling(student)}
-                            title="Enviar Lembrete por WhatsApp"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-all cursor-pointer shadow-md"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            <span>WhatsApp</span>
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => setViewingStudent(student)}
-                          title="Ver Ficha Completa"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all cursor-pointer"
+                    {/* Action buttons bar */}
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5" onClick={(e) => e.stopPropagation()}>
+                      {waUrl ? (
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-semibold active:scale-95 transition-all"
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Ver Ficha</span>
+                          <MessageCircle className="w-4 h-4" />
+                          <span>WhatsApp</span>
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-500 italic">Sem WhatsApp</span>
+                      )}
+
+                      {(status === 'sem_cobranca' || status === 'em_dia') && (
+                        <button
+                          onClick={() => handleOpenRenewModal(student)}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#D4AF37] text-black font-extrabold text-xs active:scale-95 transition-all shadow-md"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Renovar</span>
                         </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      )}
+
+                      <button
+                        onClick={() => setViewingStudent(student)}
+                        className="py-2 px-3 rounded-xl bg-white/10 text-white border border-white/10 text-xs font-semibold active:scale-95 transition-all"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-[#1C1C1E] uppercase tracking-wider text-slate-400 font-semibold border-b border-white/10">
+                  <tr>
+                    <th className="py-3 px-4">Aluno</th>
+                    <th className="py-3 px-4">WhatsApp</th>
+                    <th className="py-3 px-4 text-center">Situação da Cobrança</th>
+                    <th className="py-3 px-4 text-right">Ações Rápidas</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredStudents.map((student) => {
+                    const phone = student.whatsapp?.replace(/\D/g, '');
+                    const waUrl = phone ? `https://wa.me/${phone.startsWith('55') ? phone : `55${phone}`}` : null;
+                    const status = student.billing_status;
+
+                    return (
+                      <tr
+                        key={student.id}
+                        className={`transition-all cursor-pointer group ${
+                          status === 'sem_cobranca'
+                            ? 'bg-rose-950/20 hover:bg-rose-950/30 border-l-4 border-l-rose-500'
+                            : status === 'atrasada'
+                            ? 'bg-rose-950/10 hover:bg-rose-950/20 border-l-4 border-l-rose-400'
+                            : status === 'pendente'
+                            ? 'bg-amber-950/10 hover:bg-amber-950/20 border-l-4 border-l-amber-400'
+                            : 'hover:bg-white/5'
+                        }`}
+                        onClick={() => setViewingStudent(student)}
+                      >
+                        <td className="py-3.5 px-4 font-semibold text-white flex items-center gap-3">
+                          {student.photo_base64 ? (
+                            <img
+                              src={student.photo_base64}
+                              alt={student.username}
+                              className="w-9 h-9 rounded-full object-cover border border-[#D4AF37]/40 group-hover:border-[#D4AF37]"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-full bg-[#2C2C2E] border border-white/10 flex items-center justify-center font-bold text-[#D4AF37]">
+                              {student.first_name?.[0] || student.username[0]?.toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <span className="block font-bold text-sm text-white group-hover:text-[#D4AF37] transition-colors">
+                              {student.first_name} {student.last_name}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block font-mono">@{student.username}</span>
+                          </div>
+                        </td>
+
+                        <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                          {waUrl ? (
+                            <a
+                              href={waUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-[11px] font-medium"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                              <span>{student.whatsapp}</span>
+                            </a>
+                          ) : (
+                            <span className="text-slate-600 italic">Não informado</span>
+                          )}
+                        </td>
+
+                        {/* Student Billing Status Badges */}
+                        <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          {status === 'sem_cobranca' && (
+                            <div className="group relative inline-block">
+                              <span className="px-2.5 py-1 rounded-full font-extrabold text-[11px] bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-flex items-center gap-1 cursor-help shadow-sm">
+                                🔴 Sem cobrança vinculada
+                              </span>
+                            </div>
+                          )}
+
+                          {status === 'atrasada' && (
+                            <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 inline-flex items-center gap-1">
+                              🔴 Atrasada (R$ {parseFloat(student.current_billing?.amount || student.latest_billing_amount).toFixed(2)})
+                            </span>
+                          )}
+
+                          {status === 'pendente' && (
+                            <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
+                              🟡 Pendente (R$ {parseFloat(student.current_billing?.amount || student.latest_billing_amount).toFixed(2)})
+                            </span>
+                          )}
+
+                          {status === 'em_dia' && (
+                            <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+                              🟢 Em dia
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
+                          {(status === 'sem_cobranca' || status === 'em_dia') && (
+                            <button
+                              onClick={() => handleOpenRenewModal(student)}
+                              title="Renovar ou Criar Cobrança"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-black bg-[#D4AF37] hover:bg-[#C5A059] transition-all cursor-pointer shadow-md"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              <span>Renovar cobrança</span>
+                            </button>
+                          )}
+
+                          {(status === 'pendente' || status === 'atrasada') && (
+                            <button
+                              onClick={() => openWhatsAppForBilling(student)}
+                              title="Enviar Lembrete por WhatsApp"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-all cursor-pointer shadow-md"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                              <span>WhatsApp</span>
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => setViewingStudent(student)}
+                            title="Ver Ficha Completa"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Ver Ficha</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

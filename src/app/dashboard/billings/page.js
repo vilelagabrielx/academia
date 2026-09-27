@@ -377,68 +377,68 @@ export default function FinancialPage() {
   const overdueBillings = billings.filter((b) => b.status === 'overdue');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page Master Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <CreditCard className="w-6 h-6 text-emerald-400" />
-            Módulo Financeiro Central & Fluxo de Caixa
+          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <CreditCard className="w-6 h-6 text-emerald-400 shrink-0" />
+            <span>Módulo Financeiro Central & Fluxo de Caixa</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-400 mt-1 leading-relaxed">
             Gestão unificada de mensalidades de alunos (Entradas), despesas operacionais (Saídas) e fluxo de caixa.
           </p>
         </div>
 
         {/* Master Quick Action Buttons */}
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
           <button
             onClick={() => setActiveTab('fluxo')}
-            className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black px-3.5 py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 flex items-center gap-2 transition-all text-xs cursor-pointer border border-cyan-300"
+            className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black px-3.5 py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 transition-all text-xs cursor-pointer border border-cyan-300"
             title="Abrir o gráfico de lucro mensal e fluxo de caixa"
           >
-            <TrendingUp className="w-4 h-4 text-slate-950" />
-            <span>📊 Ver Gráfico de Lucro</span>
+            <TrendingUp className="w-4 h-4 text-slate-950 shrink-0" />
+            <span>📊 Gráfico de Lucro</span>
           </button>
 
           <button
             onClick={() => setShowCreateBillingModal(true)}
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-3.5 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all text-xs cursor-pointer"
+            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3.5 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all text-xs cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            <span>+ Cobrança de Aluno</span>
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>+ Cobrança Aluno</span>
           </button>
 
           <button
             onClick={() => setShowCreateExpenseModal(true)}
-            className="bg-rose-500 hover:bg-rose-400 text-slate-950 font-extrabold px-3.5 py-2.5 rounded-xl shadow-lg shadow-rose-500/20 flex items-center gap-2 transition-all text-xs cursor-pointer"
+            className="w-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-black px-3.5 py-2.5 rounded-xl shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 transition-all text-xs cursor-pointer"
           >
-            <TrendingDown className="w-4 h-4" />
-            <span>+ Cadastrar Despesa</span>
+            <TrendingDown className="w-4 h-4 shrink-0" />
+            <span>+ Nova Despesa</span>
           </button>
         </div>
       </div>
 
       {/* Month / Temporal Navigation Bar (Filtro Global do Mês) */}
-      <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shrink-0">
             <Calendar className="w-5 h-5" />
           </div>
           <div>
             <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Período Financeiro Ativo</span>
-            <span className="text-sm font-extrabold text-white flex items-center gap-2">
+            <span className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
               {formatMonthLabel(monthFilter)}
             </span>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+        <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 flex-1 sm:flex-initial justify-between">
             <button
               onClick={() => changeMonthBy(-1)}
               disabled={monthFilter === 'all'}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer transition-all"
+              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer transition-all"
               title="Mês Anterior"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -448,13 +448,13 @@ export default function FinancialPage() {
               type="month"
               value={monthFilter === 'all' ? '' : monthFilter}
               onChange={(e) => setMonthFilter(e.target.value || 'all')}
-              className="bg-transparent border-0 text-xs font-bold text-white px-2 py-1 focus:outline-none cursor-pointer"
+              className="bg-transparent border-0 text-xs font-bold text-white px-2 py-1 focus:outline-none cursor-pointer text-center"
             />
 
             <button
               onClick={() => changeMonthBy(1)}
               disabled={monthFilter === 'all'}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer transition-all"
+              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer transition-all"
               title="Próximo Mês"
             >
               <ChevronRight className="w-4 h-4" />
@@ -463,130 +463,131 @@ export default function FinancialPage() {
 
           <button
             onClick={() => setMonthFilter(monthFilter === 'all' ? getCurrentMonthStr() : 'all')}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer shrink-0 ${
               monthFilter === 'all'
                 ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md'
                 : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
             }`}
           >
-            {monthFilter === 'all' ? '🗓️ Mês Atual' : '🌐 Visão Geral (Todos)'}
+            {monthFilter === 'all' ? '🗓️ Mês Atual' : '🌐 Todos'}
           </button>
         </div>
       </div>
 
-      {/* MASTER FINANCIAL OVERVIEW CARDS (Sempre Visíveis no Topo) */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      {/* MASTER FINANCIAL OVERVIEW CARDS (2 colunas no Mobile, 4 no Desktop) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* Card 1: Total Recebido */}
-        <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex items-center gap-3 bg-emerald-950/10">
-          <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-            <CheckCircle2 className="w-5 h-5" />
+        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-800 flex items-center gap-2.5 bg-emerald-950/10">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Total Recebido (Entradas)</span>
-            <span className="text-lg font-extrabold text-emerald-400">
+          <div className="min-w-0">
+            <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold block truncate">Total Recebido</span>
+            <span className="text-sm sm:text-lg font-extrabold text-emerald-400 block truncate">
               R$ {parseFloat(summary.total_paid || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </div>
 
         {/* Card 2: Total a Receber */}
-        <div className="glass-panel p-4 rounded-2xl border border-cyan-500/40 flex items-center gap-3 bg-cyan-950/20 shadow-md">
-          <div className="p-3 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0">
-            <DollarSign className="w-5 h-5" />
+        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-cyan-500/40 flex items-center gap-2.5 bg-cyan-950/20 shadow-md">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0">
+            <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <span className="text-[10px] text-cyan-300 uppercase tracking-wider font-bold block">Total a Receber</span>
-            <span className="text-lg font-black text-cyan-300">
+          <div className="min-w-0">
+            <span className="text-[9px] sm:text-[10px] text-cyan-300 uppercase tracking-wider font-bold block truncate">Total a Receber</span>
+            <span className="text-sm sm:text-lg font-black text-cyan-300 block truncate">
               R$ {parseFloat(summary.total_receber || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </div>
 
         {/* Card 3: Total de Despesas */}
-        <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex items-center gap-3 bg-rose-950/10">
-          <div className="p-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
-            <TrendingDown className="w-5 h-5" />
+        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-800 flex items-center gap-2.5 bg-rose-950/10">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
+            <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Despesas Pagas (Saídas)</span>
-            <span className="text-lg font-extrabold text-rose-400">
+          <div className="min-w-0">
+            <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold block truncate">Despesas Pagas</span>
+            <span className="text-sm sm:text-lg font-extrabold text-rose-400 block truncate">
               R$ {parseFloat(expenseSummary.total_paid || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </div>
 
         {/* Card 4: Lucro Parcial Mensal */}
-        <div className={`glass-panel p-4 rounded-2xl border flex items-center gap-3 ${
+        <div className={`glass-panel p-3.5 sm:p-4 rounded-2xl border flex items-center gap-2.5 ${
           cashflow.lucro_liquido >= 0 ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-rose-500/40 bg-rose-950/20'
         }`}>
-          <div className={`p-3 rounded-xl border shrink-0 ${
+          <div className={`p-2.5 sm:p-3 rounded-xl border shrink-0 ${
             cashflow.lucro_liquido >= 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
           }`}>
-            <TrendingUp className="w-5 h-5" />
+            <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <div>
-            <span className="text-[10px] uppercase tracking-wider font-bold block text-emerald-300">Lucro Parcial Mensal</span>
-            <span className={`text-lg font-black ${cashflow.lucro_liquido >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+          <div className="min-w-0">
+            <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-bold block text-emerald-300 truncate">Lucro Efetivo</span>
+            <span className={`text-sm sm:text-lg font-black block truncate ${cashflow.lucro_liquido >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
               R$ {parseFloat(cashflow.lucro_liquido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </div>
       </div>
 
-      {/* SUB-TABS NAVIGATION BAR (iOS Segmented Controls Style) */}
-      <div className="grid grid-cols-3 gap-1.5 p-1.5 bg-slate-900/90 rounded-2xl border border-slate-800 backdrop-blur-md">
+      {/* SUB-TABS NAVIGATION BAR (Segmented Control Touch-Optimized) */}
+      <div className="grid grid-cols-3 gap-1 p-1 bg-slate-900/90 rounded-2xl border border-slate-800 backdrop-blur-md sticky top-20 z-30 shadow-xl">
         <button
           onClick={() => setActiveTab('entradas')}
-          className={`py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2.5 px-2 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             activeTab === 'entradas'
               ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <CreditCard className="w-4 h-4" />
-          <span>💳 Mensalidades & Entradas ({billings.length})</span>
+          <CreditCard className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">💳 Entradas ({billings.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('saidas')}
-          className={`py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2.5 px-2 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             activeTab === 'saidas'
               ? 'bg-rose-500 text-slate-950 shadow-md shadow-rose-500/20'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <TrendingDown className="w-4 h-4" />
-          <span>🔻 Despesas & Saídas ({expenses.length})</span>
+          <TrendingDown className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">🔻 Saídas ({expenses.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('fluxo')}
-          className={`py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2.5 px-2 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             activeTab === 'fluxo'
               ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <Layers className="w-4 h-4" />
-          <span>📊 Fluxo de Caixa & Destaques</span>
+          <Layers className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">📊 Fluxo & Lucro</span>
         </button>
       </div>
 
       {/* TAB 1: MENSALIDADES & ENTRADAS (COBRANÇAS DE ALUNOS) */}
       {activeTab === 'entradas' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Overdue Section */}
           {overdueBillings.length > 0 && (
-            <div className="glass-panel rounded-2xl border border-rose-500/40 p-5 space-y-3 bg-rose-950/10 shadow-lg">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-extrabold text-rose-400 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-rose-400" />
-                  🔴 Cobranças de Alunos Atrasadas ({overdueBillings.length})
+            <div className="glass-panel rounded-2xl border border-rose-500/40 p-4 sm:p-5 space-y-3 bg-rose-950/10 shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <h2 className="text-sm sm:text-base font-extrabold text-rose-400 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400 shrink-0" />
+                  <span>🔴 Cobranças Atrasadas ({overdueBillings.length})</span>
                 </h2>
-                <span className="text-xs text-slate-400">Notifique os alunos via WhatsApp em 1 clique</span>
+                <span className="text-[10px] sm:text-xs text-slate-400">Notifique via WhatsApp em 1 clique</span>
               </div>
 
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-xs text-slate-300">
                   <thead className="bg-rose-950/30 uppercase text-[10px] text-rose-300 font-semibold border-b border-rose-500/20">
                     <tr>
@@ -654,12 +655,73 @@ export default function FinancialPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile Touch Cards View */}
+              <div className="block md:hidden space-y-2.5 pt-1">
+                {overdueBillings.map((b) => (
+                  <div key={b.id} className="p-3 rounded-xl bg-slate-950/80 border border-rose-500/30 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div 
+                        className="flex items-center gap-2.5 cursor-pointer group"
+                        onClick={() => openStudentProfile(b)}
+                      >
+                        {b.photo_base64 ? (
+                          <img
+                            src={b.photo_base64}
+                            alt={b.first_name || b.username}
+                            className="w-9 h-9 rounded-full object-cover border border-rose-500/40 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-xs shrink-0">
+                            {b.first_name?.[0] || b.username?.[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-white text-xs truncate">{b.first_name ? `${b.first_name} ${b.last_name || ''}` : b.username}</span>
+                          <span className="text-[9px] text-slate-400 font-mono">@{b.username}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-black text-rose-400 block">R$ {parseFloat(b.amount).toFixed(2)}</span>
+                        <span className="text-[9px] text-slate-400 font-mono block">Venc: {String(b.due_date).split('T')[0]}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-rose-500/20">
+                      <button
+                        onClick={() => {
+                          setSelectedPaidBilling(b);
+                          setShowPaidBillingModal(true);
+                        }}
+                        className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-slate-950 shrink-0" />
+                        <span>Dar Baixa</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setSelectedWaBilling(b);
+                          setWaMessage(`Olá ${b.first_name || 'Aluno'}! Constamos uma pendência de R$ ${parseFloat(b.amount).toFixed(2)} referente à mensalidade com vencimento em ${String(b.due_date).split('T')[0]}.`);
+                          setShowWaModal(true);
+                        }}
+                        className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold rounded-xl text-xs shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>WhatsApp</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Billings Table */}
+          {/* Billings Container */}
           <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
-            <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-3">
+            {/* Search & Filter Header */}
+            <div className="p-3.5 sm:p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-2.5">
               <div className="relative w-full sm:w-64">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
@@ -667,14 +729,14 @@ export default function FinancialPage() {
                   placeholder="Buscar aluno ou WhatsApp..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white w-full focus:border-emerald-500"
+                  className="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white w-full focus:border-emerald-500"
                 />
               </div>
 
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:border-emerald-500"
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white w-full sm:w-auto focus:border-emerald-500"
               >
                 <option value="">Todos os Status de Cobrança</option>
                 <option value="pending">🟡 Pendentes</option>
@@ -684,7 +746,8 @@ export default function FinancialPage() {
               </select>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-300">
                 <thead className="bg-slate-900 uppercase text-[10px] text-slate-400 font-semibold border-b border-slate-800">
                   <tr>
@@ -749,15 +812,77 @@ export default function FinancialPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Touch Cards View */}
+            <div className="block md:hidden p-3 space-y-2.5">
+              {loading ? (
+                <div className="py-8 text-center text-slate-500 text-xs">Carregando mensalidades...</div>
+              ) : billings.length === 0 ? (
+                <div className="py-8 text-center text-slate-500 text-xs">Nenhuma mensalidade encontrada.</div>
+              ) : (
+                billings.map((b) => (
+                  <div key={b.id} className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 shadow-md">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                      <div 
+                        className="flex items-center gap-2.5 cursor-pointer"
+                        onClick={() => openStudentProfile(b)}
+                      >
+                        {b.photo_base64 ? (
+                          <img
+                            src={b.photo_base64}
+                            alt={b.first_name || b.username}
+                            className="w-10 h-10 rounded-full object-cover border border-emerald-500/40 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-sm shrink-0">
+                            {b.first_name?.[0] || b.username?.[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-white text-xs truncate">{b.first_name ? `${b.first_name} ${b.last_name || ''}` : b.username}</span>
+                          <span className="text-[9px] text-slate-400 font-mono">@{b.username}</span>
+                        </div>
+                      </div>
+
+                      <div>{getBillingStatusBadge(b.status)}</div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-0.5">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block">Vencimento & Forma:</span>
+                        <span className="font-mono text-slate-300 font-bold">{String(b.due_date).split('T')[0]} ({b.payment_method || 'Pix'})</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 block">Valor:</span>
+                        <span className="font-black text-emerald-400 text-sm">R$ {parseFloat(b.amount).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {b.status !== 'paid' && (
+                      <div className="pt-2 border-t border-slate-800/80 flex gap-2">
+                        <button
+                          onClick={() => { setSelectedPaidBilling(b); setShowPaidBillingModal(true); }}
+                          className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-slate-950 shrink-0" />
+                          <span>Dar Baixa no Pagamento</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* TAB 2: DESPESAS & SAÍDAS (CONTAS A PAGAR) */}
       {activeTab === 'saidas' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
-            <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-3">
+            {/* Search & Category Header */}
+            <div className="p-3.5 sm:p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-2.5">
               <div className="relative w-full sm:w-64">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
@@ -765,21 +890,22 @@ export default function FinancialPage() {
                   placeholder="Buscar despesa..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white w-full focus:border-rose-500"
+                  className="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white w-full focus:border-rose-500"
                 />
               </div>
 
               <select
                 value={expenseCategoryFilter}
                 onChange={(e) => setExpenseCategoryFilter(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:border-rose-500"
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white w-full sm:w-auto focus:border-rose-500"
               >
                 <option value="">Todas as Categorias</option>
                 {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-300">
                 <thead className="bg-slate-900 uppercase text-[10px] text-slate-400 font-semibold border-b border-slate-800">
                   <tr>
@@ -822,45 +948,89 @@ export default function FinancialPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Touch Cards View */}
+            <div className="block md:hidden p-3 space-y-2.5">
+              {expenses.length === 0 ? (
+                <div className="py-8 text-center text-slate-500 text-xs">Nenhuma despesa registrada.</div>
+              ) : (
+                expenses.map((exp) => (
+                  <div key={exp.id} className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 shadow-md">
+                    <div className="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                      <div>
+                        <h4 className="font-extrabold text-white text-xs">{exp.description}</h4>
+                        <span className="px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800 text-[9px] font-medium inline-block mt-1">
+                          {exp.category}
+                        </span>
+                      </div>
+                      <div>{getExpenseStatusBadge(exp.status)}</div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block">Vencimento & Forma:</span>
+                        <span className="font-mono text-slate-300 font-bold">{String(exp.due_date).split('T')[0]} ({exp.payment_method})</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 block">Valor Saída:</span>
+                        <span className="font-black text-rose-400 text-sm">-R$ {parseFloat(exp.amount).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {exp.status !== 'PAID' && (
+                      <div className="pt-2 border-t border-slate-800/80">
+                        <button
+                          onClick={() => { setSelectedPayExpense(exp); setShowPayExpenseModal(true); }}
+                          className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-slate-950 shrink-0" />
+                          <span>Dar Baixa no Pagamento</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* TAB 3: FLUXO DE CAIXA & DESTAQUES */}
       {activeTab === 'fluxo' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="glass-panel p-6 rounded-2xl border border-emerald-500/30 bg-emerald-950/10">
-              <span className="text-xs text-slate-400 uppercase font-bold block">Entradas Totais (Mensalidades)</span>
-              <span className="text-2xl font-black text-emerald-400 mt-1 block">R$ {parseFloat(cashflow.receitas || 0).toFixed(2)}</span>
+        <div className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="glass-panel p-4 sm:p-6 rounded-2xl border border-emerald-500/30 bg-emerald-950/10">
+              <span className="text-[10px] sm:text-xs text-slate-400 uppercase font-bold block">Entradas Totais (Mensalidades)</span>
+              <span className="text-xl sm:text-2xl font-black text-emerald-400 mt-1 block">R$ {parseFloat(cashflow.receitas || 0).toFixed(2)}</span>
             </div>
 
-            <div className="glass-panel p-6 rounded-2xl border border-rose-500/30 bg-rose-950/10">
-              <span className="text-xs text-slate-400 uppercase font-bold block">Saídas Totais (Despesas Pagas)</span>
-              <span className="text-2xl font-black text-rose-400 mt-1 block">R$ {parseFloat(cashflow.despesas || 0).toFixed(2)}</span>
+            <div className="glass-panel p-4 sm:p-6 rounded-2xl border border-rose-500/30 bg-rose-950/10">
+              <span className="text-[10px] sm:text-xs text-slate-400 uppercase font-bold block">Saídas Totais (Despesas Pagas)</span>
+              <span className="text-xl sm:text-2xl font-black text-rose-400 mt-1 block">R$ {parseFloat(cashflow.despesas || 0).toFixed(2)}</span>
             </div>
 
-            <div className="glass-panel p-6 rounded-2xl border border-cyan-500/30 bg-cyan-950/10">
-              <span className="text-xs text-cyan-300 uppercase font-bold block">Ponto de Equilíbrio (Break-Even)</span>
-              <span className="text-2xl font-black text-cyan-300 mt-1 block">~{cashflow.alunos_ponto_equilibrio || 0} alunos</span>
-              <span className="text-[10px] text-slate-400 block mt-1">Alunos de R$ 150/mês para cobrir o custo fixo</span>
+            <div className="glass-panel p-4 sm:p-6 rounded-2xl border border-cyan-500/30 bg-cyan-950/10">
+              <span className="text-[10px] sm:text-xs text-cyan-300 uppercase font-bold block">Ponto de Equilíbrio (Break-Even)</span>
+              <span className="text-xl sm:text-2xl font-black text-cyan-300 mt-1 block">~{cashflow.alunos_ponto_equilibrio || 0} alunos</span>
+              <span className="text-[9px] sm:text-[10px] text-slate-400 block mt-1">Alunos de R$ 150/mês para cobrir o custo fixo</span>
             </div>
           </div>
 
           {/* GRÁFICO VISUAL DE EVOLUÇÃO E LUCRO MENSAL */}
-          <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-6 shadow-2xl bg-gradient-to-b from-slate-900/90 to-slate-950">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div className="glass-panel p-4 sm:p-6 rounded-3xl border border-slate-800 space-y-4 sm:space-y-6 shadow-2xl bg-gradient-to-b from-slate-900/90 to-slate-950">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
               <div>
-                <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-emerald-400 shrink-0" />
                   <span>Evolução Financeira & Lucro Mensal (Últimos 6 Meses)</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Comparativo visual de Entradas (Receitas), Saídas (Despesas) e Lucro Líquido.
+                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+                  Comparativo visual de Entradas (Receitas), Saídas (Despesas) e Lucro Líquido Realizado (Baixas).
                 </p>
               </div>
 
-              <div className="flex items-center gap-4 text-xs font-bold">
+              <div className="flex items-center gap-3 text-[10px] sm:text-xs font-bold">
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span>
                   <span className="text-slate-300">Receitas</span>
@@ -871,7 +1041,7 @@ export default function FinancialPage() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-sm bg-cyan-400 inline-block"></span>
-                  <span className="text-slate-300">Lucro Líquido</span>
+                  <span className="text-slate-300">Lucro</span>
                 </div>
               </div>
             </div>
@@ -884,40 +1054,40 @@ export default function FinancialPage() {
                     ...cashflow.history.map(h => Math.max(h.receitas_pago || 0, h.despesas_pago || 0, Math.abs(h.lucro_pago || 0), 100))
                   );
                   return (
-                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 sm:gap-4 items-end min-h-[220px] pt-4">
+                    <div className="grid grid-cols-6 gap-1.5 sm:gap-4 items-end min-h-[200px] sm:min-h-[220px] pt-4">
                       {cashflow.history.map((item, idx) => {
                         const recVal = item.receitas_pago || 0;
                         const expVal = item.despesas_pago || 0;
                         const lucroVal = item.lucro_pago || 0;
 
-                        const recHeight = maxVal > 0 && recVal > 0 ? Math.max(12, Math.round((recVal / maxVal) * 160)) : 6;
-                        const expHeight = maxVal > 0 && expVal > 0 ? Math.max(12, Math.round((expVal / maxVal) * 160)) : 6;
+                        const recHeight = maxVal > 0 && recVal > 0 ? Math.max(12, Math.round((recVal / maxVal) * 150)) : 6;
+                        const expHeight = maxVal > 0 && expVal > 0 ? Math.max(12, Math.round((expVal / maxVal) * 150)) : 6;
                         const isProfitable = lucroVal >= 0;
 
                         return (
-                          <div key={idx} className="flex flex-col items-center gap-2 group">
-                            <div className="text-[10px] font-mono text-cyan-300 font-bold opacity-80 group-hover:opacity-100 transition-opacity text-center">
-                              R$ {lucroVal.toFixed(0)}
+                          <div key={idx} className="flex flex-col items-center gap-1.5 group">
+                            <div className="text-[9px] sm:text-[10px] font-mono text-cyan-300 font-bold opacity-80 group-hover:opacity-100 transition-opacity text-center">
+                              R${lucroVal.toFixed(0)}
                             </div>
 
-                            <div className="w-full flex items-end justify-center gap-1.5 h-[160px] bg-slate-950/60 rounded-xl p-1 border border-slate-800/80 group-hover:border-slate-700 transition-all">
+                            <div className="w-full flex items-end justify-center gap-1 sm:gap-1.5 h-[150px] sm:h-[160px] bg-slate-950/60 rounded-xl p-1 border border-slate-800/80 group-hover:border-slate-700 transition-all">
                               <div
                                 style={{ height: `${recHeight}px` }}
-                                className={`w-1/2 rounded-lg transition-all shadow-md ${recVal > 0 ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-emerald-500/10 group-hover:brightness-110' : 'bg-slate-800/40'}`}
-                                title={`Receitas Pagas (Dar Baixa): R$ ${recVal.toFixed(2)}`}
+                                className={`w-1/2 rounded-md sm:rounded-lg transition-all shadow-md ${recVal > 0 ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-emerald-500/10 group-hover:brightness-110' : 'bg-slate-800/40'}`}
+                                title={`Receitas Pagas: R$ ${recVal.toFixed(2)}`}
                               />
                               <div
                                 style={{ height: `${expHeight}px` }}
-                                className={`w-1/2 rounded-lg transition-all shadow-md ${expVal > 0 ? 'bg-gradient-to-t from-rose-600 to-rose-400 shadow-rose-500/10 group-hover:brightness-110' : 'bg-slate-800/40'}`}
-                                title={`Despesas Pagas (Dar Baixa): R$ ${expVal.toFixed(2)}`}
+                                className={`w-1/2 rounded-md sm:rounded-lg transition-all shadow-md ${expVal > 0 ? 'bg-gradient-to-t from-rose-600 to-rose-400 shadow-rose-500/10 group-hover:brightness-110' : 'bg-slate-800/40'}`}
+                                title={`Despesas Pagas: R$ ${expVal.toFixed(2)}`}
                               />
                             </div>
 
-                            <span className="text-[11px] font-bold text-slate-300 group-hover:text-white transition-colors">
+                            <span className="text-[10px] sm:text-[11px] font-bold text-slate-300 group-hover:text-white transition-colors">
                               {item.label}
                             </span>
-                            <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${isProfitable ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'}`}>
-                              {isProfitable ? `+R$ ${lucroVal.toFixed(0)}` : `-R$ ${Math.abs(lucroVal).toFixed(0)}`}
+                            <span className={`text-[8px] sm:text-[9px] font-extrabold px-1.5 py-0.5 rounded-full ${isProfitable ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'}`}>
+                              {isProfitable ? `+R$${lucroVal.toFixed(0)}` : `-R$${Math.abs(lucroVal).toFixed(0)}`}
                             </span>
                           </div>
                         );
