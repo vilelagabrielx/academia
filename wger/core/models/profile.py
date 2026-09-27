@@ -138,6 +138,13 @@ class UserProfile(models.Model):
     Flag to mark a temporary user (demo account)
     """
 
+    photo_base64 = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_('Photo'),
+        help_text=_('Low-res base64 encoded photo for the member profile.')
+    )
+
     #
     # User preferences
     #

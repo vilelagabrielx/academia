@@ -19,6 +19,12 @@
 {% block content %}
 {% url 'core:user:trainer-login' current_user.pk as trainer_login %}
 
+{% if current_user.userprofile.photo_base64 %}
+<div class="float-end" style="margin-left: 20px; margin-bottom: 20px;">
+    <img src="{{ current_user.userprofile.photo_base64 }}" alt="Foto do aluno" style="width: 150px; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">
+</div>
+{% endif %}
+
 {% if perms.gym.gym_trainer %}
 
 <h4>{% translate "Routines" %} <small>({% blocktranslate with number=10 %}last {{ number }}{% endblocktranslate %})</small></h4>

@@ -418,6 +418,7 @@ class GymAddUserView(
         form.helper.form_id = slugify(self.request.path)
         form.helper.form_method = 'post'
         form.helper.form_action = self.request.path
+        form.helper.attrs = {'enctype': 'multipart/form-data'}
         form.helper.add_input(Submit('submit', self.submit_text, css_class='btn-success btn-block'))
         form.helper.form_class = 'wger-form'
         return form
@@ -438,6 +439,18 @@ class GymAddUserView(
         # Update profile
         user.userprofile.gym = gym
         user.userprofile.birthdate = form.cleaned_data['birthdate']
+        
+        photo = form.cleaned_data.get('photo_upload')
+        if photo:
+            import base64
+            # encode safely
+            try:
+                mime_type = getattr(photo, 'content_type', 'image/jpeg')
+                encoded = base64.b64encode(photo.read()).decode('utf-8')
+                user.userprofile.photo_base64 = f"data:{mime_type};base64,{encoded}"
+            except Exception as e:
+                logger.error(f"Failed to process photo: {e}")
+
         user.userprofile.save()
 
         # Register the email with allauth so the member can log in by email

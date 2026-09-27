@@ -79,6 +79,7 @@ class GymUserAddForm(GymUserPermissionForm, UserPersonalInformationForm):
     """
 
     birthdate = forms.DateField(required=False)
+    photo_upload = forms.ImageField(required=False, label=_('Photo (Optional)'), help_text=_('Low resolution photo of the member.'))
 
     class Meta:
         model = User
