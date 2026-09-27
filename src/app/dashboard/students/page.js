@@ -1664,87 +1664,92 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* MODAL 2: CADASTRO / EDIÇÃO DE ALUNO (WIZARD DE ALTA USABILIDADE) */}
+      {/* MODAL 2: CADASTRO / EDIÇÃO DE ALUNO (WIZARD DE ALTA USABILIDADE DE NÍVEL APPLE iOS) */}
       {showWizardModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md">
-          <div className="glass-panel w-full max-w-3xl rounded-3xl border border-slate-800 shadow-2xl space-y-4 max-h-[94vh] overflow-y-auto flex flex-col justify-between">
-            {/* Top Modal Header */}
-            <div className="p-5 sm:p-6 border-b border-slate-800 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-xl transition-all">
+          <div className="glass-panel w-full max-w-3xl rounded-t-[32px] sm:rounded-3xl border border-white/10 shadow-2xl space-y-0 max-h-[94vh] overflow-y-auto flex flex-col justify-between">
+            {/* Top Modal Header (iOS Sheet Header Style) */}
+            <div className="p-5 sm:p-6 border-b border-white/10 space-y-4 sticky top-0 z-20 bg-slate-950/90 backdrop-blur-md shrink-0">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-extrabold text-white flex items-center gap-2">
+                  <h3 className="text-lg sm:text-xl font-black text-white tracking-tight flex items-center gap-2">
                     <UserPlus className="w-5 h-5 text-emerald-400" />
                     {editingStudentId ? 'Editar Ficha do Aluno' : 'Cadastrar Aluno'}
                   </h3>
-                  <span className="text-xs text-slate-400 block mt-0.5 font-mono">
-                    Atalho: <kbd className="px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700 text-emerald-400 font-bold">Ctrl + S</kbd> para salvar em qualquer tela!
+                  <span className="text-[11px] text-slate-400 block mt-0.5 font-medium">
+                    Atalho: <kbd className="px-1.5 py-0.5 bg-slate-800/80 rounded-md border border-slate-700 text-emerald-400 font-bold font-mono">Ctrl + S</kbd> para salvar instantaneamente
                   </span>
                 </div>
-                <button onClick={() => setShowWizardModal(false)} className="text-slate-400 hover:text-white text-lg font-bold p-1">✕</button>
+                <button 
+                  onClick={() => setShowWizardModal(false)} 
+                  className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700/80 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer text-sm font-bold"
+                >
+                  ✕
+                </button>
               </div>
 
               {/* Draft Restore Notification if Draft Exists */}
               {hasDraft && (
-                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300">
-                  <span className="flex items-center gap-1.5 font-semibold">
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300 shadow-sm">
+                  <span className="flex items-center gap-2 font-semibold">
                     <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                    Rascunho de cadastro encontrado no navegador.
+                    Rascunho de cadastro salvo encontrado.
                   </span>
                   <div className="flex gap-2">
-                    <button type="button" onClick={restoreDraft} className="px-3 py-1 rounded-lg bg-amber-500 text-slate-950 font-bold hover:bg-amber-400">
+                    <button type="button" onClick={restoreDraft} className="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 transition-all text-xs cursor-pointer">
                       Restaurar
                     </button>
-                    <button type="button" onClick={clearDraft} className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
+                    <button type="button" onClick={clearDraft} className="px-2.5 py-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-all text-xs cursor-pointer">
                       Descartar
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Mode Selector Header (Balcão Rápido vs Ficha Completa) */}
+              {/* iOS Segmented Control Selector Header (Balcão Rápido vs Ficha Completa) */}
               {!editingStudentId && (
-                <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-900 rounded-2xl border border-slate-800">
+                <div className="grid grid-cols-2 gap-1.5 p-1.5 bg-slate-900/90 rounded-2xl border border-white/10 backdrop-blur-md">
                   <button
                     type="button"
                     onClick={() => setWizardMode('fast')}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[40px] ${
                       wizardMode === 'fast'
-                        ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                        ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     <Zap className="w-4 h-4" />
-                    <span>⚡ Modo Rápido (Balcão 15s)</span>
+                    <span>⚡ Modo Rápido (15s)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setWizardMode('full')}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[40px] ${
                       wizardMode === 'full'
-                        ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                        ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
                         : 'text-slate-400 hover:text-white'
                     }`}
                   >
                     <Layers className="w-4 h-4" />
-                    <span>📋 Ficha Completa (5 Etapas)</span>
+                    <span>📋 Ficha Completa (5 Steps)</span>
                   </button>
                 </div>
               )}
 
-              {/* Steps Indicator Bar (Full Wizard Mode) */}
+              {/* Steps Indicator Bar (Full Wizard Mode - iOS Segmented Tabs) */}
               {wizardMode === 'full' && (
-                <div className="grid grid-cols-5 gap-1.5 text-center">
-                  {['1. Perfil', '2. Saúde & Treino', '3. Aferição', '4. Metas', '5. Cobrança'].map((label, index) => {
+                <div className="grid grid-cols-5 gap-1 text-center">
+                  {['1. Perfil', '2. Saúde', '3. Aferição', '4. Metas', '5. Cobrança'].map((label, index) => {
                     const stepNum = index + 1;
                     return (
                       <button
                         key={stepNum}
                         onClick={() => setWizardStep(stepNum)}
-                        className={`py-2 rounded-xl text-[10px] font-extrabold uppercase transition-all ${
+                        className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all cursor-pointer min-h-[36px] ${
                           wizardStep === stepNum
                             ? 'bg-emerald-500 text-slate-950 shadow-md'
-                            : 'bg-slate-900 text-slate-500 border border-slate-800 hover:text-slate-300'
+                            : 'bg-slate-900/80 text-slate-500 border border-slate-800 hover:text-slate-300'
                         }`}
                       >
                         {label}
@@ -1757,7 +1762,7 @@ export default function StudentsPage() {
 
             <div className="p-5 sm:p-6 flex-1 space-y-4">
               {errorMsg && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+                <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 shadow-sm font-semibold">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{errorMsg}</span>
                 </div>
@@ -2896,13 +2901,13 @@ export default function StudentsPage() {
               </form>
             </div>
 
-            {/* STICKY BOTTOM ACTION BAR (Touch target 48px+ for Mobile) */}
-            <div className="sticky bottom-0 z-20 bg-slate-900/95 backdrop-blur-md p-4 border-t border-slate-800 flex justify-between items-center gap-3 shrink-0 rounded-b-3xl">
+            {/* STICKY BOTTOM ACTION BAR (Apple iOS Glass Sheet Footer with 48px Touch Targets) */}
+            <div className="sticky bottom-0 z-20 bg-slate-950/90 backdrop-blur-xl p-4 sm:p-5 border-t border-white/10 flex justify-between items-center gap-3 shrink-0 rounded-b-none sm:rounded-b-3xl">
               {wizardMode === 'full' && wizardStep > 1 ? (
                 <button
                   type="button"
                   onClick={() => setWizardStep((s) => s - 1)}
-                  className="px-4 py-3 rounded-xl font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 flex items-center gap-1.5 cursor-pointer transition-all text-xs min-h-[44px]"
+                  className="px-4 py-3 rounded-2xl font-bold text-slate-300 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 flex items-center gap-1.5 cursor-pointer transition-all text-xs min-h-[48px]"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   <span>Anterior</span>
@@ -2916,7 +2921,7 @@ export default function StudentsPage() {
                   <button
                     type="button"
                     onClick={() => setWizardStep((s) => s + 1)}
-                    className="px-5 py-3 rounded-xl font-extrabold text-slate-950 bg-emerald-400 hover:bg-emerald-300 flex items-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer transition-all text-xs min-h-[44px]"
+                    className="px-5 py-3 rounded-2xl font-extrabold text-slate-950 bg-emerald-400 hover:bg-emerald-300 flex items-center gap-1.5 shadow-lg shadow-emerald-400/20 cursor-pointer transition-all text-xs min-h-[48px]"
                   >
                     <span>Próximo</span>
                     <ChevronRight className="w-4 h-4" />
@@ -2927,10 +2932,10 @@ export default function StudentsPage() {
                   type="button"
                   onClick={handleSubmitWizard}
                   disabled={submitting}
-                  className={`px-6 py-3 rounded-xl font-black transition-all cursor-pointer text-xs flex items-center gap-2 min-h-[44px] ${
+                  className={`px-6 py-3 rounded-2xl font-black transition-all cursor-pointer text-xs flex items-center gap-2 min-h-[48px] ${
                     wizardMode === 'fast'
-                      ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/30 text-sm'
-                      : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30'
+                      ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-xl shadow-emerald-500/30 text-sm'
+                      : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20'
                   }`}
                 >
                   {wizardMode === 'fast' ? <Zap className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
