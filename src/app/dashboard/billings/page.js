@@ -18,6 +18,66 @@ const EXPENSE_CATEGORIES = [
 
 const PAYMENT_METHODS = ['Pix', 'Cartão de Crédito', 'Boleto', 'Dinheiro', 'Transferência (TED)'];
 
+const getBillingStatusBadge = (status) => {
+  const s = String(status || '').toLowerCase();
+  switch (s) {
+    case 'paid':
+      return (
+        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1">
+          🟢 Pago
+        </span>
+      );
+    case 'overdue':
+      return (
+        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-rose-500/15 text-rose-400 border border-rose-500/30 inline-flex items-center gap-1">
+          🔴 Atrasado
+        </span>
+      );
+    case 'charged':
+      return (
+        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-purple-500/15 text-purple-300 border border-purple-500/30 inline-flex items-center gap-1">
+          🟣 Cobrado
+        </span>
+      );
+    case 'cancelled':
+      return (
+        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-slate-800 text-slate-400 border border-slate-700 inline-flex items-center gap-1">
+          ⚪ Cancelado
+        </span>
+      );
+    default:
+      return (
+        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 inline-flex items-center gap-1">
+          🟡 Pendente
+        </span>
+      );
+  }
+};
+
+const getExpenseStatusBadge = (status) => {
+  const s = String(status || '').toUpperCase();
+  switch (s) {
+    case 'PAID':
+      return (
+        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1">
+          🟢 Pago
+        </span>
+      );
+    case 'OVERDUE':
+      return (
+        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-rose-500/15 text-rose-400 border border-rose-500/30 inline-flex items-center gap-1">
+          🔴 Atrasado
+        </span>
+      );
+    default:
+      return (
+        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 inline-flex items-center gap-1">
+          🟡 Pendente
+        </span>
+      );
+  }
+};
+
 export default function FinancialPage() {
   const getCurrentMonthStr = () => new Date().toISOString().slice(0, 7);
 
@@ -596,13 +656,7 @@ export default function FinancialPage() {
                         <td className="py-3 px-4 font-extrabold text-emerald-400 text-sm">R$ {parseFloat(b.amount).toFixed(2)}</td>
                         <td className="py-3 px-4 text-slate-400">{b.payment_method || 'Pix'}</td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
-                            b.status === 'paid' ? 'bg-emerald-500/10 text-emerald-400' :
-                            b.status === 'overdue' ? 'bg-rose-500/10 text-rose-400' :
-                            b.status === 'charged' ? 'bg-purple-500/10 text-purple-300' : 'bg-amber-500/10 text-amber-400'
-                          }`}>
-                            {b.status.toUpperCase()}
-                          </span>
+                          {getBillingStatusBadge(b.status)}
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -677,9 +731,7 @@ export default function FinancialPage() {
                         <td className="py-3 px-4 text-slate-400">{exp.payment_method}</td>
                         <td className="py-3 px-4 font-extrabold text-rose-400 text-sm">-R$ {parseFloat(exp.amount).toFixed(2)}</td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${exp.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                            {exp.status}
-                          </span>
+                          {getExpenseStatusBadge(exp.status)}
                         </td>
                         <td className="py-3 px-4 text-right">
                           {exp.status !== 'PAID' && (
