@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, ArrowLeft, Calendar, Dumbbell, User, Award, TrendingUp } from 'lucide-react';
+import { Activity, ArrowLeft, Calendar, Dumbbell, User, Award, TrendingUp, Instagram } from 'lucide-react';
 
 export default function StudentHistoryPage({ params }) {
   const router = useRouter();
@@ -69,27 +69,46 @@ export default function StudentHistoryPage({ params }) {
 
       {/* Student Banner */}
       {student && (
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center gap-4 bg-slate-900/60">
-          {student.photo_base64 ? (
-            <img
-              src={student.photo_base64}
-              alt={student.username}
-              className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500"
-            />
-          ) : (
-            <div className="w-14 h-14 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-xl">
-              {student.first_name?.[0] || student.username[0]?.toUpperCase()}
-            </div>
-          )}
-          <div>
-            <h2 className="text-lg font-bold text-white">
-              {student.first_name} {student.last_name}
-            </h2>
-            <span className="text-xs text-slate-400 block font-mono">@{student.username}</span>
-            {student.whatsapp && (
-              <span className="text-xs text-emerald-400 mt-1 block">WhatsApp: {student.whatsapp}</span>
+        <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center justify-between flex-wrap gap-4 bg-slate-900/60">
+          <div className="flex items-center gap-4">
+            {student.photo_base64 ? (
+              <img
+                src={student.photo_base64}
+                alt={student.username}
+                className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-xl">
+                {student.first_name?.[0] || student.username[0]?.toUpperCase()}
+              </div>
             )}
+            <div>
+              <h2 className="text-lg font-bold text-white">
+                {student.first_name} {student.last_name}
+              </h2>
+              <span className="text-xs text-slate-400 block font-mono">@{student.username}</span>
+              {student.whatsapp && (
+                <span className="text-xs text-emerald-400 mt-1 block">WhatsApp: {student.whatsapp}</span>
+              )}
+            </div>
           </div>
+
+          {student.instagram && (
+            <a
+              href={student.instagram.startsWith('http') ? student.instagram : `https://instagram.com/${student.instagram.replace(/^@/, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-950 via-pink-950 to-amber-950 border border-pink-500/50 text-pink-200 hover:text-white hover:border-pink-400 transition-all text-xs font-bold shadow-lg shadow-pink-500/20"
+            >
+              <div className="w-5 h-5 rounded-lg bg-gradient-to-tr from-amber-500 via-pink-500 to-purple-600 flex items-center justify-center text-white shrink-0">
+                <Instagram className="w-3.5 h-3.5" />
+              </div>
+              <span>{student.instagram.startsWith('@') ? student.instagram : `@${student.instagram}`}</span>
+              <span className="text-[9px] bg-pink-500/20 text-pink-300 px-1.5 py-0.5 rounded border border-pink-500/40 uppercase font-black">
+                Destaque 🌟
+              </span>
+            </a>
+          )}
         </div>
       )}
 

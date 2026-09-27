@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getStudentWorkoutHistory } from '@/lib/db';
+import { getStudentCompleteHistory } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
 export async function GET(request, { params }) {
@@ -10,10 +10,11 @@ export async function GET(request, { params }) {
     }
 
     const { id } = params;
-    const history = await getStudentWorkoutHistory(id);
-    return NextResponse.json({ history });
+    const historyData = await getStudentCompleteHistory(id);
+    return NextResponse.json({ ...historyData });
   } catch (error) {
     console.error('Error fetching student history:', error);
     return NextResponse.json({ error: 'Erro ao buscar histórico do aluno' }, { status: 500 });
   }
 }
+

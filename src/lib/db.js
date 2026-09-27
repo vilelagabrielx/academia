@@ -62,8 +62,80 @@ export async function initDbSchema() {
   try {
     await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;`);
     await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS recurrence_id VARCHAR(64);`);
+
+    // Core userprofile extensions for Musculação, Shape & Performance
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS fase_shape VARCHAR(50) DEFAULT 'Recomposição';`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS nivel_treino VARCHAR(50) DEFAULT 'Intermediário';`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS frequencia_semanal VARCHAR(50) DEFAULT '5x por semana';`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS divisao_treino VARCHAR(50) DEFAULT 'Push / Pull / Legs';`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS objetivo_principal VARCHAR(50) DEFAULT 'Hipertrofia';`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS objetivos_secundarios TEXT;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS pontos_fracos TEXT;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS lesoes_restricoes TEXT;`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS altura NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS observacoes_treinador TEXT;`);
+
+    // Metas Corporais & Redes Sociais
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS instagram VARCHAR(100);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS peso_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS bf_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS braco_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS antebraco_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS ombro_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS peitoral_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS cintura_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS abdomen_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dorsal_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS coxa_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS gluteo_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS panturrilha_meta NUMERIC(5,2);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS pescoco_meta NUMERIC(5,2);`);
+
+    // Evaluation history table
+    await query(`
+      CREATE TABLE IF NOT EXISTS gym_medidas_historico (
+        id SERIAL PRIMARY KEY,
+        aluno_id INTEGER NOT NULL,
+        data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        registrado_por VARCHAR(150),
+        peso NUMERIC(5,2),
+        bf_percentual NUMERIC(5,2),
+        pescoco NUMERIC(5,2),
+        ombro NUMERIC(5,2),
+        peitoral_torax NUMERIC(5,2),
+        dorsal_largura NUMERIC(5,2),
+        dorsal_espessura NUMERIC(5,2),
+        cintura NUMERIC(5,2),
+        abdomen NUMERIC(5,2),
+        quadril NUMERIC(5,2),
+        braco_direito NUMERIC(5,2),
+        braco_esquerdo NUMERIC(5,2),
+        braco_contraido NUMERIC(5,2),
+        antebraco_direito NUMERIC(5,2),
+        antebraco_esquerdo NUMERIC(5,2),
+        coxa_direita NUMERIC(5,2),
+        coxa_esquerda NUMERIC(5,2),
+        gluteo NUMERIC(5,2),
+        panturrilha_direita NUMERIC(5,2),
+        panturrilha_esquerda NUMERIC(5,2),
+        observacoes TEXT,
+        resumo_alteracao TEXT
+      );
+    `);
+
+    // Meta history table
+    await query(`
+      CREATE TABLE IF NOT EXISTS gym_metas_historico (
+        id SERIAL PRIMARY KEY,
+        aluno_id INTEGER NOT NULL,
+        data_alteracao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        campo_meta VARCHAR(50),
+        valor_anterior NUMERIC(5,2),
+        valor_novo NUMERIC(5,2)
+      );
+    `);
   } catch (err) {
-    // Column might already exist
+    console.error('Error initializing DB schema extensions:', err);
   }
 }
 
@@ -114,8 +186,13 @@ export async function getStudents(search = '') {
 
   let sql = `
     SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.is_staff, u.date_joined,
-           p.whatsapp, p.photo_base64, p.gym_id, p.age, p.height, p.goal, p.blood_type, p.training_days, p.current_weight,
+           p.whatsapp, p.instagram, p.photo_base64, p.gym_id, p.age, p.height, p.goal, p.blood_type, p.training_days, p.current_weight,
            COALESCE(p.enrollment_status, 'active') as enrollment_status, p.membership_expires_at,
+           p.fase_shape, p.nivel_treino, p.frequencia_semanal, p.divisao_treino,
+           p.objetivo_principal, p.objetivos_secundarios, p.pontos_fracos, p.lesoes_restricoes,
+           p.altura, p.observacoes_treinador,
+           p.peso_meta, p.bf_meta, p.braco_meta, p.antebraco_meta, p.ombro_meta, p.peitoral_meta,
+           p.cintura_meta, p.abdomen_meta, p.dorsal_meta, p.coxa_meta, p.gluteo_meta, p.panturrilha_meta, p.pescoco_meta,
            (SELECT COUNT(*) FROM manager_routine r WHERE r.user_id = u.id) as routine_count
     FROM auth_user u
     LEFT JOIN core_userprofile p ON p.user_id = u.id
@@ -124,7 +201,7 @@ export async function getStudents(search = '') {
   const params = [];
   if (search) {
     params.push(`%${search}%`);
-    sql += ` AND (u.first_name ILIKE $1 OR u.last_name ILIKE $1 OR u.username ILIKE $1 OR u.email ILIKE $1 OR p.whatsapp ILIKE $1)`;
+    sql += ` AND (u.first_name ILIKE $1 OR u.last_name ILIKE $1 OR u.username ILIKE $1 OR u.email ILIKE $1 OR p.whatsapp ILIKE $1 OR p.instagram ILIKE $1)`;
   }
   sql += ` ORDER BY u.date_joined DESC`;
   const res = await query(sql, params);
@@ -139,6 +216,14 @@ export async function getStudents(search = '') {
       await query(`UPDATE core_userprofile SET enrollment_status = 'renewal_needed' WHERE user_id = $1`, [s.id]);
     }
 
+    // Latest body evaluations
+    const evalRes = await query(
+      `SELECT * FROM gym_medidas_historico WHERE aluno_id = $1 ORDER BY data_registro DESC, id DESC LIMIT 2`,
+      [s.id]
+    );
+    s.latest_evaluation = evalRes.rows[0] || null;
+    s.previous_evaluation = evalRes.rows[1] || null;
+
     // Get all non-cancelled billings
     const bRes = await query(
       `SELECT * FROM gym_billing 
@@ -148,7 +233,6 @@ export async function getStudents(search = '') {
     );
     const allBillings = bRes.rows;
 
-    // Billing for current calendar month
     const currentMonthBilling = allBillings.find(
       (b) => b.due_date && b.due_date.toISOString().split('T')[0].slice(0, 7) === currentMonthStr
     );
@@ -163,11 +247,6 @@ export async function getStudents(search = '') {
     s.last_paid_amount = paidBilling ? paidBilling.amount : null;
     s.last_paid_date = paidBilling ? paidBilling.paid_date : null;
 
-    // Status classification:
-    // 1: sem_cobranca (⚠️ Sem cobrança vinculada ao mês atual)
-    // 2: atrasada (🔴 Cobrança atrasada)
-    // 3: pendente (🟡 Cobrança pendente)
-    // 4: em_dia (🟢 Cobrança em dia / paga)
     if (!currentMonthBilling) {
       s.billing_status = 'sem_cobranca';
       s.billing_status_rank = 1;
@@ -187,7 +266,7 @@ export async function getStudents(search = '') {
     }
   }
 
-  // Priority Sort: 1 (sem_cobranca) -> 2 (atrasada) -> 3 (pendente) -> 4 (em_dia)
+  // Priority Sort
   students.sort((a, b) => {
     if (a.billing_status_rank !== b.billing_status_rank) {
       return a.billing_status_rank - b.billing_status_rank;
@@ -200,29 +279,33 @@ export async function getStudents(search = '') {
   return students;
 }
 
-export async function createStudent({
-  first_name,
-  last_name = '',
-  username = '',
-  email = '',
-  password = '',
-  whatsapp = '',
-  photo_base64 = '',
-  age = null,
-  height = null,
-  current_weight = null,
-  blood_type = '',
-  goal = '',
-  training_days = '',
-  create_first_billing = false,
-  billing_amount = null,
-  billing_due_date = null,
-  billing_notes = '',
-  billing_payment_method = 'Pix',
-  is_recurring = false,
-  initial_amount = null, // fallback legacy parameter
-  due_date = null,       // fallback legacy parameter
-}) {
+export async function createStudent(data = {}) {
+  await initDbSchema();
+  const {
+    first_name,
+    last_name = '',
+    username = '',
+    email = '',
+    password = '',
+    whatsapp = '',
+    instagram = '',
+    photo_base64 = '',
+    age = null,
+    height = null,
+    current_weight = null,
+    blood_type = '',
+    goal = '',
+    training_days = '',
+    create_first_billing = false,
+    billing_amount = null,
+    billing_due_date = null,
+    billing_notes = '',
+    billing_payment_method = 'Pix',
+    is_recurring = false,
+    initial_amount = null,
+    due_date = null,
+  } = data;
+
   const cleanFirstName = (first_name || 'Aluno').trim();
   let finalUsername = (username || cleanFirstName.toLowerCase().replace(/[^a-z0-9]/g, '')).trim();
   if (!finalUsername) finalUsername = `aluno_${Date.now().toString().slice(-4)}`;
@@ -246,11 +329,12 @@ export async function createStudent({
 
   await query(
     `INSERT INTO core_userprofile 
-     (user_id, is_temporary, workout_reminder_active, workout_reminder, workout_duration, notification_language_id, weight_unit, num_days_weight_reminder, can_add_user, trophies_enabled, time_zone, whatsapp, photo_base64, age, height, current_weight, blood_type, goal, training_days, enrollment_status)
-     VALUES ($1, false, false, 14, 12, 2, 'kg', 0, false, true, '', $2, $3, $4, $5, $6, $7, $8, $9, 'active')`,
+     (user_id, is_temporary, workout_reminder_active, workout_reminder, workout_duration, notification_language_id, weight_unit, num_days_weight_reminder, can_add_user, trophies_enabled, time_zone, whatsapp, instagram, photo_base64, age, height, current_weight, blood_type, goal, training_days, enrollment_status)
+     VALUES ($1, false, false, 14, 12, 2, 'kg', 0, false, true, '', $2, $3, $4, $5, $6, $7, $8, $9, $10, 'active')`,
     [
       userId,
       whatsapp || '',
+      instagram || '',
       photo_base64 || '',
       age ? parseInt(age, 10) : null,
       height ? parseInt(height, 10) : null,
@@ -260,6 +344,9 @@ export async function createStudent({
       training_days || '',
     ]
   );
+
+  // Update profile fields & goals if provided
+  await updateStudent(userId, data);
 
   // Check if first billing creation requested
   const shouldCreateBilling = create_first_billing || Boolean(initial_amount && due_date);
@@ -281,61 +368,319 @@ export async function createStudent({
   return userRes.rows[0];
 }
 
-export async function updateStudent(id, {
-  first_name,
-  last_name,
-  email,
-  whatsapp,
-  photo_base64,
-  password,
-  age,
-  height,
-  current_weight,
-  blood_type,
-  goal,
-  training_days,
-}) {
+export async function updateStudent(id, data = {}) {
+  await initDbSchema();
+
+  // 1. Track changed goals
+  const profRes = await query(`SELECT * FROM core_userprofile WHERE user_id = $1`, [id]);
+  const currentProf = profRes.rows[0] || {};
+
+  const goalFields = [
+    'peso_meta', 'bf_meta', 'braco_meta', 'antebraco_meta', 'ombro_meta',
+    'peitoral_meta', 'cintura_meta', 'abdomen_meta', 'dorsal_meta', 'coxa_meta',
+    'gluteo_meta', 'panturrilha_meta', 'pescoco_meta'
+  ];
+
+  for (const field of goalFields) {
+    if (data[field] !== undefined) {
+      const oldVal = currentProf[field] !== null && currentProf[field] !== undefined ? parseFloat(currentProf[field]) : null;
+      const newVal = data[field] !== null && data[field] !== '' ? parseFloat(data[field]) : null;
+      if (oldVal !== newVal) {
+        await query(
+          `INSERT INTO gym_metas_historico (aluno_id, campo_meta, valor_anterior, valor_novo)
+           VALUES ($1, $2, $3, $4)`,
+          [id, field, oldVal, newVal]
+        );
+      }
+    }
+  }
+
+  // Update auth_user table
   let sql = `UPDATE auth_user SET first_name = $1, last_name = $2, email = $3`;
-  const params = [first_name || '', last_name || '', email || ''];
-  
-  if (password) {
-    params.push(hashDjangoPassword(password));
+  const params = [data.first_name || '', data.last_name || '', data.email || ''];
+
+  if (data.password) {
+    params.push(hashDjangoPassword(data.password));
     sql += `, password = $${params.length}`;
   }
-  
+
   params.push(id);
   sql += ` WHERE id = $${params.length}`;
   await query(sql, params);
 
-  await query(
-    `UPDATE core_userprofile 
-     SET whatsapp = $1, 
-         photo_base64 = COALESCE(NULLIF($2, ''), photo_base64),
-         age = $3,
-         height = $4,
-         current_weight = $5,
-         blood_type = $6,
-         goal = $7,
-         training_days = $8
-     WHERE user_id = $9`,
-    [
-      whatsapp || '',
-      photo_base64 || '',
-      age ? parseInt(age, 10) : null,
-      height ? parseInt(height, 10) : null,
-      current_weight ? parseFloat(current_weight) : null,
-      blood_type || '',
-      goal || '',
-      training_days || '',
-      id,
-    ]
-  );
+  const parseNum = (val) => (val !== undefined && val !== null && val !== '' ? parseFloat(val) : null);
+
+  // Update core_userprofile table
+  const pSql = `
+    UPDATE core_userprofile 
+    SET whatsapp = COALESCE($1, whatsapp),
+        instagram = COALESCE($32, instagram),
+        photo_base64 = COALESCE(NULLIF($2, ''), photo_base64),
+        age = COALESCE($3, age),
+        height = COALESCE($4, height),
+        current_weight = COALESCE($5, current_weight),
+        blood_type = COALESCE($6, blood_type),
+        goal = COALESCE($7, goal),
+        training_days = COALESCE($8, training_days),
+        fase_shape = COALESCE($9, fase_shape),
+        nivel_treino = COALESCE($10, nivel_treino),
+        frequencia_semanal = COALESCE($11, frequencia_semanal),
+        divisao_treino = COALESCE($12, divisao_treino),
+        objetivo_principal = COALESCE($13, objetivo_principal),
+        objetivos_secundarios = COALESCE($14, objetivos_secundarios),
+        pontos_fracos = COALESCE($15, pontos_fracos),
+        lesoes_restricoes = COALESCE($16, lesoes_restricoes),
+        altura = COALESCE($17, altura),
+        observacoes_treinador = COALESCE($18, observacoes_treinador),
+        peso_meta = COALESCE($19, peso_meta),
+        bf_meta = COALESCE($20, bf_meta),
+        braco_meta = COALESCE($21, braco_meta),
+        antebraco_meta = COALESCE($22, antebraco_meta),
+        ombro_meta = COALESCE($23, ombro_meta),
+        peitoral_meta = COALESCE($24, peitoral_meta),
+        cintura_meta = COALESCE($25, cintura_meta),
+        abdomen_meta = COALESCE($26, abdomen_meta),
+        dorsal_meta = COALESCE($27, dorsal_meta),
+        coxa_meta = COALESCE($28, coxa_meta),
+        gluteo_meta = COALESCE($29, gluteo_meta),
+        panturrilha_meta = COALESCE($30, panturrilha_meta),
+        pescoco_meta = COALESCE($31, pescoco_meta)
+    WHERE user_id = $33
+  `;
+
+  await query(pSql, [
+    data.whatsapp !== undefined ? data.whatsapp : null,
+    data.photo_base64 || '',
+    data.age ? parseInt(data.age, 10) : null,
+    data.height ? parseInt(data.height, 10) : null,
+    parseNum(data.current_weight),
+    data.blood_type || null,
+    data.goal || data.objetivo_principal || null,
+    data.training_days || data.frequencia_semanal || null,
+    data.fase_shape || null,
+    data.nivel_treino || null,
+    data.frequencia_semanal || null,
+    data.divisao_treino || null,
+    data.objetivo_principal || null,
+    data.objetivos_secundarios !== undefined ? data.objetivos_secundarios : null,
+    data.pontos_fracos !== undefined ? data.pontos_fracos : null,
+    data.lesoes_restricoes !== undefined ? data.lesoes_restricoes : null,
+    parseNum(data.altura),
+    data.observacoes_treinador !== undefined ? data.observacoes_treinador : null,
+    parseNum(data.peso_meta),
+    parseNum(data.bf_meta),
+    parseNum(data.braco_meta),
+    parseNum(data.antebraco_meta),
+    parseNum(data.ombro_meta),
+    parseNum(data.peitoral_meta),
+    parseNum(data.cintura_meta),
+    parseNum(data.abdomen_meta),
+    parseNum(data.dorsal_meta),
+    parseNum(data.coxa_meta),
+    parseNum(data.gluteo_meta),
+    parseNum(data.panturrilha_meta),
+    parseNum(data.pescoco_meta),
+    data.instagram !== undefined ? data.instagram : null,
+    id,
+  ]);
 
   return { id };
 }
 
+export async function addBodyEvaluation(alunoId, evalData = {}, registeredBy = 'Treinador') {
+  await initDbSchema();
+
+  const prevRes = await query(
+    `SELECT * FROM gym_medidas_historico WHERE aluno_id = $1 ORDER BY data_registro DESC, id DESC LIMIT 1`,
+    [alunoId]
+  );
+  const prev = prevRes.rows[0] || null;
+
+  const profRes = await query(`SELECT * FROM core_userprofile WHERE user_id = $1`, [alunoId]);
+  const profile = profRes.rows[0] || {};
+  const faseShape = profile.fase_shape || 'Recomposição';
+
+  const parseNum = (val) => (val !== undefined && val !== null && val !== '' ? parseFloat(val) : null);
+
+  const peso = parseNum(evalData.peso);
+  const bf_percentual = parseNum(evalData.bf_percentual);
+  const pescoco = parseNum(evalData.pescoco);
+  const ombro = parseNum(evalData.ombro);
+  const peitoral_torax = parseNum(evalData.peitoral_torax);
+  const dorsal_largura = parseNum(evalData.dorsal_largura);
+  const dorsal_espessura = parseNum(evalData.dorsal_espessura);
+  const cintura = parseNum(evalData.cintura);
+  const abdomen = parseNum(evalData.abdomen);
+  const quadril = parseNum(evalData.quadril);
+  const braco_direito = parseNum(evalData.braco_direito);
+  const braco_esquerdo = parseNum(evalData.braco_esquerdo);
+  const braco_contraido = parseNum(evalData.braco_contraido);
+  const antebraco_direito = parseNum(evalData.antebraco_direito);
+  const antebraco_esquerdo = parseNum(evalData.antebraco_esquerdo);
+  const coxa_direita = parseNum(evalData.coxa_direita);
+  const coxa_esquerda = parseNum(evalData.coxa_esquerda);
+  const gluteo = parseNum(evalData.gluteo);
+  const panturrilha_direita = parseNum(evalData.panturrilha_direita);
+  const panturrilha_esquerda = parseNum(evalData.panturrilha_esquerda);
+  const observacoes = evalData.observacoes || '';
+
+  let evolucoes = 0;
+  let estaveis = 0;
+  let regressoes = 0;
+
+  if (prev) {
+    const compareMetric = (currVal, prevVal, isReductionPositive = false) => {
+      if (currVal === null || prevVal === null || currVal === undefined || prevVal === undefined) return;
+      const delta = currVal - prevVal;
+      if (Math.abs(delta) < 0.2) {
+        estaveis++;
+      } else if (isReductionPositive ? delta < 0 : delta > 0) {
+        evolucoes++;
+      } else {
+        regressoes++;
+      }
+    };
+
+    compareMetric(braco_contraido || braco_direito, prev.braco_contraido || prev.braco_direito);
+    compareMetric(peitoral_torax, prev.peitoral_torax);
+    compareMetric(ombro, prev.ombro);
+    compareMetric(dorsal_largura, prev.dorsal_largura);
+    compareMetric(coxa_direita, prev.coxa_direita);
+    compareMetric(panturrilha_direita, prev.panturrilha_direita);
+    compareMetric(gluteo, prev.gluteo);
+    compareMetric(cintura, prev.cintura, true);
+    compareMetric(abdomen, prev.abdomen, true);
+    compareMetric(bf_percentual, prev.bf_percentual, true);
+
+    if (peso !== null && prev.peso !== null) {
+      const pDelta = peso - prev.peso;
+      if (Math.abs(pDelta) < 0.3) {
+        estaveis++;
+      } else if (faseShape === 'Bulking' && pDelta > 0) {
+        evolucoes++;
+      } else if (faseShape === 'Cutting' && pDelta < 0) {
+        evolucoes++;
+      } else if (faseShape === 'Bulking' && pDelta < 0) {
+        regressoes++;
+      } else if (faseShape === 'Cutting' && pDelta > 0) {
+        regressoes++;
+      } else {
+        estaveis++;
+      }
+    }
+  }
+
+  const resumo_alteracao = prev
+    ? `${evolucoes} evoluções, ${estaveis} estáveis, ${regressoes} regressões`
+    : 'Primeira avaliação registrada!';
+
+  const res = await query(
+    `INSERT INTO gym_medidas_historico 
+     (aluno_id, registrado_por, peso, bf_percentual, pescoco, ombro, peitoral_torax, dorsal_largura, dorsal_espessura,
+      cintura, abdomen, quadril, braco_direito, braco_esquerdo, braco_contraido, antebraco_direito, antebraco_esquerdo,
+      coxa_direita, coxa_esquerda, gluteo, panturrilha_direita, panturrilha_esquerda, observacoes, resumo_alteracao)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+     RETURNING *`,
+    [
+      alunoId,
+      registeredBy,
+      peso,
+      bf_percentual,
+      pescoco,
+      ombro,
+      peitoral_torax,
+      dorsal_largura,
+      dorsal_espessura,
+      cintura,
+      abdomen,
+      quadril,
+      braco_direito,
+      braco_esquerdo,
+      braco_contraido,
+      antebraco_direito,
+      antebraco_esquerdo,
+      coxa_direita,
+      coxa_esquerda,
+      gluteo,
+      panturrilha_direita,
+      panturrilha_esquerda,
+      observacoes,
+      resumo_alteracao,
+    ]
+  );
+
+  if (peso !== null) {
+    await query(`UPDATE core_userprofile SET current_weight = $1 WHERE user_id = $2`, [peso, alunoId]);
+  }
+
+  return {
+    evaluation: res.rows[0],
+    isFirst: !prev,
+    evolucoes,
+    estaveis,
+    regressoes,
+    resumo_alteracao,
+  };
+}
+
+export async function getStudentCompleteHistory(alunoId) {
+  await initDbSchema();
+
+  const evalRes = await query(
+    `SELECT * FROM gym_medidas_historico WHERE aluno_id = $1 ORDER BY data_registro DESC, id DESC`,
+    [alunoId]
+  );
+
+  const prRes = await query(
+    `SELECT 
+       l.exercise_id, 
+       t.name as exercise_name,
+       MAX(l.weight) as max_weight,
+       MAX(l.repetitions) as max_reps,
+       MAX(l.date) as last_date
+     FROM manager_workoutlog l
+     JOIN exercises_translation t ON t.exercise_id = l.exercise_id AND t.language_id = 2
+     WHERE l.user_id = $1 AND l.weight > 0
+     GROUP BY l.exercise_id, t.name
+     ORDER BY max_weight DESC
+     LIMIT 15`,
+    [alunoId]
+  );
+
+  const logRes = await query(
+    `SELECT 
+       l.id,
+       l.exercise_id,
+       t.name as exercise_name,
+       l.weight,
+       l.repetitions,
+       l.date,
+       (l.weight * l.repetitions) as volume
+     FROM manager_workoutlog l
+     JOIN exercises_translation t ON t.exercise_id = l.exercise_id AND t.language_id = 2
+     WHERE l.user_id = $1 AND l.weight > 0
+     ORDER BY l.date DESC, l.id DESC
+     LIMIT 100`,
+    [alunoId]
+  );
+
+  const metaRes = await query(
+    `SELECT * FROM gym_metas_historico WHERE aluno_id = $1 ORDER BY data_alteracao DESC, id DESC`,
+    [alunoId]
+  );
+
+  return {
+    evaluations: evalRes.rows,
+    personalRecords: prRes.rows,
+    performanceLogs: logRes.rows,
+    metaHistory: metaRes.rows,
+  };
+}
+
 export async function deleteStudent(id) {
   await query(`DELETE FROM gym_billing WHERE user_id = $1`, [id]);
+  await query(`DELETE FROM gym_medidas_historico WHERE aluno_id = $1`, [id]);
+  await query(`DELETE FROM gym_metas_historico WHERE aluno_id = $1`, [id]);
   await query(`DELETE FROM core_userprofile WHERE user_id = $1`, [id]);
   await query(`DELETE FROM manager_workoutlog WHERE user_id = $1`, [id]);
   await query(`DELETE FROM manager_workoutsession WHERE user_id = $1`, [id]);
