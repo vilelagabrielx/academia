@@ -252,7 +252,21 @@ export default function StudentsPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    loadStudents();
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchParam = urlParams.get('search') || urlParams.get('q');
+      const targetId = urlParams.get('id') || urlParams.get('studentId');
+      const openModalFlag = urlParams.get('openModal') === 'true';
+
+      if (searchParam) {
+        setSearch(searchParam);
+        loadStudents(searchParam, targetId, openModalFlag);
+      } else {
+        loadStudents('', targetId, openModalFlag);
+      }
+    } else {
+      loadStudents();
+    }
   }, []);
 
   // Keyboard shortcut: Ctrl + S / Cmd + S to save wizard from anywhere
@@ -330,20 +344,43 @@ export default function StudentsPage() {
     } catch (e) {}
   };
 
-  const loadStudents = async () => {
+  const loadStudents = async (searchQuery = search, autoOpenId = null, shouldOpenModal = false) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/students?search=${encodeURIComponent(search)}`);
+      const queryStr = searchQuery !== undefined && searchQuery !== null ? searchQuery : search;
+      const res = await fetch(`/api/students?search=${encodeURIComponent(queryStr)}`);
       const data = await res.json();
       const loadedStudents = data.students || [];
       setStudents(loadedStudents);
 
       if (typeof window !== 'undefined') {
         const urlParams = new URLSearchParams(window.location.search);
-        const targetId = urlParams.get('id') || urlParams.get('studentId');
+        const targetId = autoOpenId || urlParams.get('id') || urlParams.get('studentId');
+        const searchParam = queryStr || urlParams.get('search') || urlParams.get('q');
+        const openModalFlag = shouldOpenModal || urlParams.get('openModal') === 'true';
+
+        let found = null;
+
         if (targetId) {
-          const found = loadedStudents.find((s) => String(s.id) === String(targetId));
-          if (found) openStudentProfile(found);
+          found = loadedStudents.find((s) => String(s.id) === String(targetId));
+        }
+
+        if (!found && searchParam) {
+          const cleanParam = String(searchParam).trim().toLowerCase();
+          found = loadedStudents.find((s) => 
+            String(s.id) === cleanParam ||
+            String(s.username).toLowerCase() === cleanParam ||
+            String(s.first_name).toLowerCase().includes(cleanParam) ||
+            `${s.first_name || ''} ${s.last_name || ''}`.toLowerCase().includes(cleanParam)
+          );
+        }
+
+        if (!found && openModalFlag && loadedStudents.length > 0) {
+          found = loadedStudents[0];
+        }
+
+        if (found) {
+          openStudentProfile(found);
         }
       }
     } catch (err) {
