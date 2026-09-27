@@ -93,6 +93,50 @@ export default function StudentsPage() {
   // Accordion Toggle for Step 3 (Aferição Corporal)
   const [showEvalAccordion, setShowEvalAccordion] = useState(false);
 
+  // Custom Health Tag Inputs State
+  const [customRestricaoInput, setCustomRestricaoInput] = useState('');
+  const [customCardioInput, setCustomCardioInput] = useState('');
+
+  const addCustomRestricao = () => {
+    const trimmed = customRestricaoInput.trim();
+    if (!trimmed) return;
+    setFormData((prev) => {
+      const currentArr = Array.isArray(prev.restricoes_articulares) ? [...prev.restricoes_articulares] : [];
+      if (!currentArr.includes(trimmed)) {
+        return { ...prev, restricoes_articulares: [...currentArr, trimmed] };
+      }
+      return prev;
+    });
+    setCustomRestricaoInput('');
+  };
+
+  const removeRestricaoTag = (tagToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      restricoes_articulares: (Array.isArray(prev.restricoes_articulares) ? prev.restricoes_articulares : []).filter((i) => i !== tagToRemove),
+    }));
+  };
+
+  const addCustomCardio = () => {
+    const trimmed = customCardioInput.trim();
+    if (!trimmed) return;
+    setFormData((prev) => {
+      const currentArr = Array.isArray(prev.condicoes_cardio_metabolicas) ? [...prev.condicoes_cardio_metabolicas] : [];
+      if (!currentArr.includes(trimmed)) {
+        return { ...prev, condicoes_cardio_metabolicas: [...currentArr, trimmed] };
+      }
+      return prev;
+    });
+    setCustomCardioInput('');
+  };
+
+  const removeCardioTag = (tagToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      condicoes_cardio_metabolicas: (Array.isArray(prev.condicoes_cardio_metabolicas) ? prev.condicoes_cardio_metabolicas : []).filter((i) => i !== tagToRemove),
+    }));
+  };
+
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -973,6 +1017,15 @@ export default function StudentsPage() {
                                 <ShieldAlert className="w-3 h-3 text-rose-400" /> CARDIO / METABÓLICO
                               </span>
                             )}
+                            {student.contato_emergencia_nome && (
+                              <span 
+                                className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-extrabold text-[9px] border border-amber-500/40 flex items-center gap-1"
+                                title={`Emergência: ${student.contato_emergencia_nome} (${student.contato_emergencia_parentesco || 'Contato'}) - Tel: ${student.contato_emergencia_telefone || 'N/A'}`}
+                              >
+                                <Heart className="w-3 h-3 text-amber-400 fill-amber-400/20" /> 
+                                EMERGÊNCIA: {student.contato_emergencia_nome}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[10px] text-slate-400 block font-mono">@{student.username}</span>
@@ -1199,22 +1252,31 @@ export default function StudentsPage() {
                   )}
                 </div>
 
-                {/* Contato de Emergência Box */}
+                {/* Contato de Emergência Box - Destaque Principal */}
                 {viewingStudent.contato_emergencia_nome && (
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-200 mt-2">
-                    <div className="flex items-center gap-2">
-                      <Heart className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span className="font-bold">Emergência:</span>
-                      <span>{viewingStudent.contato_emergencia_nome} ({viewingStudent.contato_emergencia_parentesco || 'Contato'})</span>
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-amber-900/20 to-slate-900 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-200 mt-2 shadow-lg shadow-amber-500/10">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
+                        <Heart className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      </div>
+                      <div>
+                        <span className="font-extrabold text-amber-300 uppercase tracking-wider text-[10px] block">Contato de Emergência (Indispensável)</span>
+                        <span className="font-bold text-white text-xs">
+                          {viewingStudent.contato_emergencia_nome}
+                          {viewingStudent.contato_emergencia_parentesco ? ` (${viewingStudent.contato_emergencia_parentesco})` : ''}
+                        </span>
+                      </div>
                     </div>
                     {viewingStudent.contato_emergencia_telefone && (
                       <a
                         href={`https://wa.me/${viewingStudent.contato_emergencia_telefone.replace(/\D/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-extrabold flex items-center gap-1 text-[11px]"
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black flex items-center gap-1.5 text-xs shadow-md transition-all cursor-pointer"
+                        title="Ligar ou enviar mensagem para contato de emergência"
                       >
-                        <MessageCircle className="w-3 h-3" />
+                        <MessageCircle className="w-3.5 h-3.5" />
                         <span>{viewingStudent.contato_emergencia_telefone}</span>
                       </a>
                     )}
@@ -2047,30 +2109,72 @@ export default function StudentsPage() {
                               Restrições Articulares & Coluna (Tag Vermelha/Laranja no Perfil)
                             </label>
                             <div className="flex flex-wrap gap-1.5 p-2 bg-slate-900/90 rounded-xl border border-slate-800">
-                              {RESTRICOES_ARTICULARES_OPTIONS.map((item) => {
+                              {Array.from(new Set([...RESTRICOES_ARTICULARES_OPTIONS, ...(Array.isArray(formData.restricoes_articulares) ? formData.restricoes_articulares : [])])).map((item) => {
                                 const isSelected = Array.isArray(formData.restricoes_articulares) && formData.restricoes_articulares.includes(item);
+                                const isCustom = !RESTRICOES_ARTICULARES_OPTIONS.includes(item);
                                 return (
                                   <button
                                     type="button"
                                     key={item}
                                     onClick={() => {
-                                      const currentArr = Array.isArray(formData.restricoes_articulares) ? [...formData.restricoes_articulares] : [];
                                       if (isSelected) {
-                                        setFormData({ ...formData, restricoes_articulares: currentArr.filter(i => i !== item) });
+                                        removeRestricaoTag(item);
                                       } else {
-                                        setFormData({ ...formData, restricoes_articulares: [...currentArr, item] });
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          restricoes_articulares: [...(Array.isArray(prev.restricoes_articulares) ? prev.restricoes_articulares : []), item]
+                                        }));
                                       }
                                     }}
-                                    className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer border ${
+                                    className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer border flex items-center gap-1 ${
                                       isSelected
-                                        ? 'bg-rose-500 text-white border-rose-400 shadow-md shadow-rose-500/20 scale-105'
+                                        ? isCustom
+                                          ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20 scale-105 font-extrabold'
+                                          : 'bg-rose-500 text-white border-rose-400 shadow-md shadow-rose-500/20 scale-105'
                                         : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
                                     }`}
                                   >
-                                    {isSelected ? '✓ ' : '+ '} {item}
+                                    <span>{isSelected ? '✓ ' : '+ '} {item}</span>
+                                    {isSelected && (
+                                      <span
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          removeRestricaoTag(item);
+                                        }}
+                                        className="ml-1 text-[11px] hover:text-white font-extrabold opacity-80 hover:opacity-100 px-1"
+                                        title="Remover tag"
+                                      >
+                                        ✕
+                                      </span>
+                                    )}
                                   </button>
                                 );
                               })}
+                            </div>
+
+                            {/* Inline custom tag adder */}
+                            <div className="mt-2 flex gap-2">
+                              <input
+                                type="text"
+                                value={customRestricaoInput}
+                                onChange={(e) => setCustomRestricaoInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    addCustomRestricao();
+                                  }
+                                }}
+                                placeholder="Outra restrição articular/coluna (ex: Prótese de quadril, Escoliose)..."
+                                className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none flex-1"
+                              />
+                              <button
+                                type="button"
+                                onClick={addCustomRestricao}
+                                className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs cursor-pointer shadow-md transition-all shrink-0 flex items-center gap-1"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Adicionar Tag</span>
+                              </button>
                             </div>
                           </div>
 
@@ -2080,30 +2184,72 @@ export default function StudentsPage() {
                               Condições Cardiovasculares & Metabólicas (Alerta de Risco Alto)
                             </label>
                             <div className="flex flex-wrap gap-1.5 p-2 bg-slate-900/90 rounded-xl border border-slate-800">
-                              {CONDICOES_CARDIO_OPTIONS.map((item) => {
+                              {Array.from(new Set([...CONDICOES_CARDIO_OPTIONS, ...(Array.isArray(formData.condicoes_cardio_metabolicas) ? formData.condicoes_cardio_metabolicas : [])])).map((item) => {
                                 const isSelected = Array.isArray(formData.condicoes_cardio_metabolicas) && formData.condicoes_cardio_metabolicas.includes(item);
+                                const isCustom = !CONDICOES_CARDIO_OPTIONS.includes(item);
                                 return (
                                   <button
                                     type="button"
                                     key={item}
                                     onClick={() => {
-                                      const currentArr = Array.isArray(formData.condicoes_cardio_metabolicas) ? [...formData.condicoes_cardio_metabolicas] : [];
                                       if (isSelected) {
-                                        setFormData({ ...formData, condicoes_cardio_metabolicas: currentArr.filter(i => i !== item) });
+                                        removeCardioTag(item);
                                       } else {
-                                        setFormData({ ...formData, condicoes_cardio_metabolicas: [...currentArr, item] });
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          condicoes_cardio_metabolicas: [...(Array.isArray(prev.condicoes_cardio_metabolicas) ? prev.condicoes_cardio_metabolicas : []), item]
+                                        }));
                                       }
                                     }}
-                                    className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer border ${
+                                    className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer border flex items-center gap-1 ${
                                       isSelected
-                                        ? 'bg-red-600 text-white border-red-400 shadow-md shadow-red-500/30 scale-105'
+                                        ? isCustom
+                                          ? 'bg-rose-500 text-white border-rose-400 shadow-md shadow-rose-500/30 scale-105 font-extrabold'
+                                          : 'bg-red-600 text-white border-red-400 shadow-md shadow-red-500/30 scale-105'
                                         : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
                                     }`}
                                   >
-                                    {isSelected ? '✓ ' : '+ '} {item}
+                                    <span>{isSelected ? '✓ ' : '+ '} {item}</span>
+                                    {isSelected && (
+                                      <span
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          removeCardioTag(item);
+                                        }}
+                                        className="ml-1 text-[11px] hover:text-white font-extrabold opacity-80 hover:opacity-100 px-1"
+                                        title="Remover tag"
+                                      >
+                                        ✕
+                                      </span>
+                                    )}
                                   </button>
                                 );
                               })}
+                            </div>
+
+                            {/* Inline custom tag adder */}
+                            <div className="mt-2 flex gap-2">
+                              <input
+                                type="text"
+                                value={customCardioInput}
+                                onChange={(e) => setCustomCardioInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    addCustomCardio();
+                                  }
+                                }}
+                                placeholder="Outra condição cardiovascular/metabólica (ex: Asma grave, Marcapasso)..."
+                                className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-rose-400 focus:outline-none flex-1"
+                              />
+                              <button
+                                type="button"
+                                onClick={addCustomCardio}
+                                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow-md transition-all shrink-0 flex items-center gap-1"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Adicionar Tag</span>
+                              </button>
                             </div>
                           </div>
 
@@ -2234,44 +2380,49 @@ export default function StudentsPage() {
                         </div>
 
                         {/* 3. Contato de Emergência (Indispensável) */}
-                        <div className="p-3.5 rounded-2xl bg-amber-950/20 border border-amber-500/30 space-y-3">
-                          <div className="flex items-center gap-2 text-amber-400 font-extrabold text-xs uppercase tracking-wider">
-                            <Heart className="w-4 h-4 text-amber-400 shrink-0" />
-                            <span>3. Contato de Emergência (Indispensável)</span>
+                        <div className="p-3.5 rounded-2xl bg-amber-950/20 border border-amber-500/40 space-y-3 shadow-md shadow-amber-500/5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-amber-400 font-extrabold text-xs uppercase tracking-wider">
+                              <Heart className="w-4 h-4 text-amber-400 shrink-0 fill-amber-400/20" />
+                              <span>3. Contato de Emergência (Indispensável)</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-300/80 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                              ⚡ Destaque no Perfil & Tabela
+                            </span>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
-                              <label className="block font-semibold text-slate-300 mb-1">Nome do Contato</label>
+                              <label className="block font-bold text-amber-200 mb-1 text-xs">Nome do Contato</label>
                               <input
                                 type="text"
                                 value={formData.contato_emergencia_nome}
                                 onChange={(e) => setFormData({ ...formData, contato_emergencia_nome: e.target.value })}
                                 placeholder="Ex: Maria Vilela"
-                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                                className="w-full bg-slate-900 border border-amber-500/30 focus:border-amber-400 rounded-xl px-3 py-2 text-white placeholder-slate-500"
                               />
                             </div>
 
                             <div>
-                              <label className="block font-semibold text-slate-300 mb-1">Parentesco</label>
+                              <label className="block font-bold text-amber-200 mb-1 text-xs">Parentesco</label>
                               <input
                                 type="text"
                                 value={formData.contato_emergencia_parentesco}
                                 onChange={(e) => setFormData({ ...formData, contato_emergencia_parentesco: e.target.value })}
                                 placeholder="Ex: Mãe, Esposa"
-                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                                className="w-full bg-slate-900 border border-amber-500/30 focus:border-amber-400 rounded-xl px-3 py-2 text-white placeholder-slate-500"
                               />
                             </div>
 
                             <div>
-                              <label className="block font-semibold text-slate-300 mb-1">Telefone / WhatsApp</label>
+                              <label className="block font-bold text-amber-200 mb-1 text-xs">Telefone / WhatsApp</label>
                               <input
                                 type="tel"
                                 inputMode="tel"
                                 value={formData.contato_emergencia_telefone}
                                 onChange={(e) => setFormData({ ...formData, contato_emergencia_telefone: e.target.value })}
                                 placeholder="(11) 99999-9999"
-                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                                className="w-full bg-slate-900 border border-amber-500/30 focus:border-amber-400 rounded-xl px-3 py-2 text-white placeholder-slate-500"
                               />
                             </div>
                           </div>
