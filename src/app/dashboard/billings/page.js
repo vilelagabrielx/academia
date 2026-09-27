@@ -3,16 +3,39 @@
 import { useState, useEffect } from 'react';
 import { 
   CreditCard, Plus, CheckCircle2, AlertCircle, Clock, MessageCircle, FileText, Download, Eye, 
-  Trash2, Search, DollarSign, Send, Filter, Printer, BellRing, Upload, Calendar, Check, Repeat, UserX, AlertTriangle, Pencil 
+  Trash2, Search, DollarSign, Send, Filter, Printer, BellRing, Upload, Calendar, Check, Repeat, UserX, AlertTriangle, Pencil, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 export default function BillingsPage() {
-  const [summary, setSummary] = useState({ total_paid: 0, total_pending: 0, total_charged: 0, total_overdue: 0 });
+  const getCurrentMonthStr = () => new Date().toISOString().slice(0, 7);
+
+  const [summary, setSummary] = useState({ total_paid: 0, total_pending: 0, total_charged: 0, total_overdue: 0, total_receber: 0, total_geral: 0 });
   const [billings, setBillings] = useState([]);
   const [students, setStudents] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState(getCurrentMonthStr()); // 'YYYY-MM' or 'all'
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+
+  const formatMonthLabel = (mStr) => {
+    if (!mStr || mStr === 'all') return '🌐 Todos os Meses (Visão Geral)';
+    const [year, month] = mStr.split('-');
+    const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1);
+    const monthName = date.toLocaleDateString('pt-BR', { month: 'long' });
+    return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} de ${year}`;
+  };
+
+  const changeMonthBy = (offset) => {
+    if (monthFilter === 'all') {
+      setMonthFilter(getCurrentMonthStr());
+      return;
+    }
+    const [year, month] = monthFilter.split('-');
+    const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1 + offset, 1);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    setMonthFilter(`${y}-${m}`);
+  };
 
   // New Billing Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -76,19 +99,19 @@ export default function BillingsPage() {
 
   useEffect(() => {
     loadData();
-  }, [statusFilter]);
+  }, [statusFilter, monthFilter]);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const [bRes, sRes] = await Promise.all([
-        fetch(`/api/billings?status=${statusFilter}&search=${encodeURIComponent(search)}`),
+        fetch(`/api/billings?status=${statusFilter}&month_year=${monthFilter}&search=${encodeURIComponent(search)}`),
         fetch('/api/students'),
       ]);
       const bData = await bRes.json();
       const sData = await sRes.json();
 
-      setSummary(bData.summary || { total_paid: 0, total_pending: 0, total_charged: 0, total_overdue: 0 });
+      setSummary(bData.summary || { total_paid: 0, total_pending: 0, total_charged: 0, total_overdue: 0, total_receber: 0, total_geral: 0 });
       setBillings(bData.billings || []);
       setStudents(sData.students || []);
     } catch (err) {
@@ -368,53 +391,133 @@ export default function BillingsPage() {
         </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center gap-4 bg-emerald-950/10">
-          <div className="p-3.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 className="w-6 h-6" />
+      {/* Month / Temporal Navigation Bar */}
+      <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+            <Calendar className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">Total Recebido</span>
-            <span className="text-xl font-extrabold text-emerald-400">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Filtro Temporal de Cobranças</span>
+            <span className="text-sm font-extrabold text-white flex items-center gap-2">
+              {formatMonthLabel(monthFilter)}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => changeMonthBy(-1)}
+              disabled={monthFilter === 'all'}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer transition-all"
+              title="Mês Anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <input
+              type="month"
+              value={monthFilter === 'all' ? '' : monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value || 'all')}
+              className="bg-transparent border-0 text-xs font-bold text-white px-2 py-1 focus:outline-none cursor-pointer"
+            />
+
+            <button
+              onClick={() => changeMonthBy(1)}
+              disabled={monthFilter === 'all'}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer transition-all"
+              title="Próximo Mês"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <button
+            onClick={() => setMonthFilter(monthFilter === 'all' ? getCurrentMonthStr() : 'all')}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+              monthFilter === 'all'
+                ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md shadow-cyan-500/20'
+                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+            }`}
+          >
+            {monthFilter === 'all' ? '🗓️ Ver Mês Atual' : '🌐 Visão Geral (Todos)'}
+          </button>
+        </div>
+      </div>
+
+      {/* Summary Cards Grid (5 Cards: Total Recebido, TOTAL A RECEBER, Pendentes, Cobrados, Atrasados) */}
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+        {/* Card 1: Total Recebido */}
+        <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex items-center gap-3 bg-emerald-950/10">
+          <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Total Recebido</span>
+            <span className="text-lg font-extrabold text-emerald-400">
               R$ {parseFloat(summary.total_paid || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
+            <span className="text-[10px] text-emerald-500/80 block font-medium">{summary.count_paid || 0} pagos</span>
           </div>
         </div>
 
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center gap-4 bg-amber-950/10">
-          <div className="p-3.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Clock className="w-6 h-6" />
+        {/* Card 2: TOTAL A RECEBER (Destaque Ciano) */}
+        <div className="glass-panel p-4 rounded-2xl border border-cyan-500/40 flex items-center gap-3 bg-cyan-950/20 shadow-lg shadow-cyan-950/30 relative overflow-hidden">
+          <div className="absolute top-0 right-0 px-2 py-0.5 bg-cyan-500/20 text-[9px] font-black text-cyan-300 uppercase tracking-tighter rounded-bl-lg">
+            A Receber
+          </div>
+          <div className="p-3 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0">
+            <DollarSign className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">Pendentes</span>
-            <span className="text-xl font-extrabold text-amber-400">
+            <span className="text-[10px] text-cyan-300 uppercase tracking-wider font-bold block">Total a Receber</span>
+            <span className="text-lg font-black text-cyan-300">
+              R$ {parseFloat(summary.total_receber !== undefined ? summary.total_receber : ((summary.total_pending || 0) + (summary.total_charged || 0) + (summary.total_overdue || 0))).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+            <span className="text-[10px] text-cyan-400/80 block font-medium">Pendente + Cobrado + Atraso</span>
+          </div>
+        </div>
+
+        {/* Card 3: Pendentes */}
+        <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex items-center gap-3 bg-amber-950/10">
+          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+            <Clock className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Pendentes</span>
+            <span className="text-lg font-extrabold text-amber-400">
               R$ {parseFloat(summary.total_pending || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
+            <span className="text-[10px] text-amber-500/80 block font-medium">{summary.count_pending || 0} cobranças</span>
           </div>
         </div>
 
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center gap-4 bg-amber-900/10">
-          <div className="p-3.5 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/20">
-            <BellRing className="w-6 h-6" />
+        {/* Card 4: Cobrados (Lembrete) */}
+        <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex items-center gap-3 bg-purple-950/10">
+          <div className="p-3 rounded-xl bg-purple-500/10 text-purple-300 border border-purple-500/20 shrink-0">
+            <BellRing className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">Cobrados (Lembrete)</span>
-            <span className="text-xl font-extrabold text-amber-300">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Cobrados (Lembrete)</span>
+            <span className="text-lg font-extrabold text-purple-300">
               R$ {parseFloat(summary.total_charged || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
+            <span className="text-[10px] text-purple-400/80 block font-medium">{summary.count_charged || 0} notificados</span>
           </div>
         </div>
 
-        <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center gap-4 bg-rose-950/20">
-          <div className="p-3.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-            <AlertCircle className="w-6 h-6" />
+        {/* Card 5: Atrasados */}
+        <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex items-center gap-3 bg-rose-950/20">
+          <div className="p-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
+            <AlertCircle className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">Atrasados</span>
-            <span className="text-xl font-extrabold text-rose-400">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Atrasados</span>
+            <span className="text-lg font-extrabold text-rose-400">
               R$ {parseFloat(summary.total_overdue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
+            <span className="text-[10px] text-rose-400/80 block font-medium">{summary.count_overdue || 0} em atraso</span>
           </div>
         </div>
       </div>

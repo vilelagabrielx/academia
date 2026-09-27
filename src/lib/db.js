@@ -158,6 +158,43 @@ export async function initDbSchema() {
         valor_novo NUMERIC(5,2)
       );
     `);
+
+    // Expense & Recurrence tables
+    await query(`
+      CREATE TABLE IF NOT EXISTS gym_expense_recurrences (
+        id VARCHAR(64) PRIMARY KEY,
+        description VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        payment_method VARCHAR(50) DEFAULT 'Pix',
+        base_amount NUMERIC(10, 2) NOT NULL,
+        frequency VARCHAR(20) NOT NULL DEFAULT 'MONTHLY',
+        due_day INTEGER NOT NULL DEFAULT 5,
+        start_date DATE NOT NULL,
+        end_date DATE,
+        status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS gym_expenses (
+        id VARCHAR(64) PRIMARY KEY,
+        recurrence_id VARCHAR(64),
+        description VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        amount NUMERIC(10, 2) NOT NULL,
+        due_date DATE NOT NULL,
+        payment_date TIMESTAMP,
+        status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+        payment_method VARCHAR(50) DEFAULT 'Pix',
+        notes TEXT,
+        proof_base64 TEXT,
+        proof_filename VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT unique_recurrence_per_due_date UNIQUE (recurrence_id, due_date)
+      );
+    `);
   } catch (err) {
     console.error('Error initializing DB schema extensions:', err);
   }
@@ -1027,7 +1064,7 @@ export async function getStudentWorkoutHistory(user_id) {
 // BILLING MODULE (Módulo de Cobranças)
 // ==========================================
 
-export async function getBillingSummary() {
+export async function getBillingSummary({ month_year, search, user_id } = {}) {
   await query(
     `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status = 'pending'`
   );
@@ -1035,22 +1072,59 @@ export async function getBillingSummary() {
     `UPDATE gym_billing SET status = 'overdue' WHERE remind_at < CURRENT_DATE AND status = 'charged'`
   );
 
-  const res = await query(`
+  let sql = `
     SELECT 
-      COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) as total_paid,
-      COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as total_pending,
-      COALESCE(SUM(CASE WHEN status = 'charged' THEN amount ELSE 0 END), 0) as total_charged,
-      COALESCE(SUM(CASE WHEN status = 'overdue' THEN amount ELSE 0 END), 0) as total_overdue,
-      COUNT(CASE WHEN status = 'paid' THEN 1 END) as count_paid,
-      COUNT(CASE WHEN status = 'pending' THEN 1 END) as count_pending,
-      COUNT(CASE WHEN status = 'charged' THEN 1 END) as count_charged,
-      COUNT(CASE WHEN status = 'overdue' THEN 1 END) as count_overdue
-    FROM gym_billing
-  `);
-  return res.rows[0];
+      COALESCE(SUM(CASE WHEN b.status = 'paid' THEN b.amount ELSE 0 END), 0) as total_paid,
+      COALESCE(SUM(CASE WHEN b.status = 'pending' THEN b.amount ELSE 0 END), 0) as total_pending,
+      COALESCE(SUM(CASE WHEN b.status = 'charged' THEN b.amount ELSE 0 END), 0) as total_charged,
+      COALESCE(SUM(CASE WHEN b.status = 'overdue' THEN b.amount ELSE 0 END), 0) as total_overdue,
+      COALESCE(SUM(CASE WHEN b.status IN ('pending', 'charged', 'overdue') THEN b.amount ELSE 0 END), 0) as total_receber,
+      COALESCE(SUM(b.amount), 0) as total_geral,
+      COUNT(CASE WHEN b.status = 'paid' THEN 1 END) as count_paid,
+      COUNT(CASE WHEN b.status = 'pending' THEN 1 END) as count_pending,
+      COUNT(CASE WHEN b.status = 'charged' THEN 1 END) as count_charged,
+      COUNT(CASE WHEN b.status = 'overdue' THEN 1 END) as count_overdue,
+      COUNT(*) as count_total
+    FROM gym_billing b
+    JOIN auth_user u ON u.id = b.user_id
+    LEFT JOIN core_userprofile p ON p.user_id = u.id
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (month_year && month_year !== 'all') {
+    params.push(`${month_year}%`);
+    sql += ` AND b.due_date::text LIKE $${params.length}`;
+  }
+
+  if (user_id) {
+    params.push(user_id);
+    sql += ` AND b.user_id = $${params.length}`;
+  }
+
+  if (search) {
+    params.push(`%${search}%`);
+    sql += ` AND (u.first_name ILIKE $${params.length} OR u.last_name ILIKE $${params.length} OR u.username ILIKE $${params.length} OR p.whatsapp ILIKE $${params.length})`;
+  }
+
+  const res = await query(sql, params);
+  const row = res.rows[0] || {};
+  return {
+    total_paid: parseFloat(row.total_paid || 0),
+    total_pending: parseFloat(row.total_pending || 0),
+    total_charged: parseFloat(row.total_charged || 0),
+    total_overdue: parseFloat(row.total_overdue || 0),
+    total_receber: parseFloat(row.total_receber || 0),
+    total_geral: parseFloat(row.total_geral || 0),
+    count_paid: parseInt(row.count_paid || 0, 10),
+    count_pending: parseInt(row.count_pending || 0, 10),
+    count_charged: parseInt(row.count_charged || 0, 10),
+    count_overdue: parseInt(row.count_overdue || 0, 10),
+    count_total: parseInt(row.count_total || 0, 10),
+  };
 }
 
-export async function getBillings({ status, user_id, search } = {}) {
+export async function getBillings({ status, user_id, search, month_year } = {}) {
   await query(
     `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status = 'pending'`
   );
@@ -1066,6 +1140,11 @@ export async function getBillings({ status, user_id, search } = {}) {
     WHERE 1=1
   `;
   const params = [];
+
+  if (month_year && month_year !== 'all') {
+    params.push(`${month_year}%`);
+    sql += ` AND b.due_date::text LIKE $${params.length}`;
+  }
 
   if (status) {
     params.push(status);
@@ -1438,4 +1517,364 @@ export async function renewStudentEnrollment(studentId, { amount = 60.00, startD
   );
 
   return { studentId, createdBillings, membership_expires_at: lastDueDateStr };
+}
+
+// ==========================================
+// EXPENSE MODULE & RECURRENCE ENGINE (Motor JIT / Lazy Evaluation)
+// ==========================================
+
+export async function ensureExpensesGenerated(targetMonthStr) {
+  await initDbSchema();
+  if (!targetMonthStr || targetMonthStr === 'all') {
+    targetMonthStr = new Date().toISOString().slice(0, 7);
+  }
+  const parts = targetMonthStr.split('-');
+  const yearStr = parts[0];
+  const monthStr = parts[1];
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+
+  const startOfMonth = `${yearStr}-${monthStr}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endOfMonth = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const res = await query(`
+    SELECT * FROM gym_expense_recurrences
+    WHERE status = 'ACTIVE'
+      AND start_date <= $1
+      AND (end_date IS NULL OR end_date >= $2)
+  `, [endOfMonth, startOfMonth]);
+
+  for (const rule of res.rows) {
+    const safeDay = Math.min(rule.due_day || 5, lastDay);
+    const dueDateStr = `${yearStr}-${monthStr}-${String(safeDay).padStart(2, '0')}`;
+    const initialStatus = dueDateStr < todayStr ? 'OVERDUE' : 'PENDING';
+    const expenseId = `exp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    await query(`
+      INSERT INTO gym_expenses (id, recurrence_id, description, category, amount, due_date, status, payment_method, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ON CONFLICT (recurrence_id, due_date) DO NOTHING
+    `, [
+      expenseId,
+      rule.id,
+      rule.description,
+      rule.category,
+      parseFloat(rule.base_amount),
+      dueDateStr,
+      initialStatus,
+      rule.payment_method || 'Pix',
+      rule.notes || `Despesa Recorrente (${monthStr}/${yearStr})`
+    ]);
+  }
+}
+
+export async function ensureStudentBillingsGenerated(targetMonthStr) {
+  await initDbSchema();
+  if (!targetMonthStr || targetMonthStr === 'all') {
+    targetMonthStr = new Date().toISOString().slice(0, 7);
+  }
+  const parts = targetMonthStr.split('-');
+  const yearStr = parts[0];
+  const monthStr = parts[1];
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const lastDay = new Date(year, month, 0).getDate();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const studentsRes = await query(`
+    SELECT u.id as user_id, p.dia_vencimento_recorrente
+    FROM auth_user u
+    JOIN core_userprofile p ON p.user_id = u.id
+    WHERE p.enrollment_status = 'active'
+  `);
+
+  for (const s of studentsRes.rows) {
+    const existing = await query(`
+      SELECT id FROM gym_billing 
+      WHERE user_id = $1 AND due_date::text LIKE $2
+      LIMIT 1
+    `, [s.user_id, `${targetMonthStr}%`]);
+
+    if (existing.rows.length === 0) {
+      const dueDay = s.dia_vencimento_recorrente || 5;
+      const safeDay = Math.min(dueDay, lastDay);
+      const dueDateStr = `${yearStr}-${monthStr}-${String(safeDay).padStart(2, '0')}`;
+      const status = dueDateStr < todayStr ? 'overdue' : 'pending';
+
+      await query(`
+        INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes, is_recurring)
+        VALUES ($1, 150.00, $2, 'Pix', $3, $4, true)
+      `, [s.user_id, dueDateStr, status, `Mensalidade Recorrente (${monthStr}/${yearStr})`]);
+    }
+  }
+}
+
+export async function getExpenseSummary({ month_year, search, category } = {}) {
+  await ensureExpensesGenerated(month_year);
+
+  let sql = `
+    SELECT 
+      COALESCE(SUM(CASE WHEN status = 'PAID' THEN amount ELSE 0 END), 0) as total_paid,
+      COALESCE(SUM(CASE WHEN status = 'PENDING' THEN amount ELSE 0 END), 0) as total_pending,
+      COALESCE(SUM(CASE WHEN status = 'OVERDUE' THEN amount ELSE 0 END), 0) as total_overdue,
+      COALESCE(SUM(CASE WHEN status IN ('PENDING', 'OVERDUE') THEN amount ELSE 0 END), 0) as total_a_pagar,
+      COALESCE(SUM(amount), 0) as total_geral,
+      COUNT(CASE WHEN status = 'PAID' THEN 1 END) as count_paid,
+      COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as count_pending,
+      COUNT(CASE WHEN status = 'OVERDUE' THEN 1 END) as count_overdue,
+      COUNT(*) as count_total
+    FROM gym_expenses
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (month_year && month_year !== 'all') {
+    params.push(`${month_year}%`);
+    sql += ` AND due_date::text LIKE $${params.length}`;
+  }
+
+  if (category) {
+    params.push(category);
+    sql += ` AND category = $${params.length}`;
+  }
+
+  if (search) {
+    params.push(`%${search}%`);
+    sql += ` AND (description ILIKE $${params.length} OR category ILIKE $${params.length} OR notes ILIKE $${params.length})`;
+  }
+
+  const res = await query(sql, params);
+  const row = res.rows[0] || {};
+
+  // Find top category
+  let topCatSql = `
+    SELECT category, SUM(amount) as sum_cat
+    FROM gym_expenses
+    WHERE 1=1
+  `;
+  const topCatParams = [];
+  if (month_year && month_year !== 'all') {
+    topCatParams.push(`${month_year}%`);
+    topCatSql += ` AND due_date::text LIKE $${topCatParams.length}`;
+  }
+  topCatSql += ` GROUP BY category ORDER BY sum_cat DESC LIMIT 1`;
+  const topCatRes = await query(topCatSql, topCatParams);
+  const topCategory = topCatRes.rows[0] ? topCatRes.rows[0].category : 'Nenhuma';
+  const topCategorySum = topCatRes.rows[0] ? parseFloat(topCatRes.rows[0].sum_cat) : 0;
+
+  return {
+    total_paid: parseFloat(row.total_paid || 0),
+    total_pending: parseFloat(row.total_pending || 0),
+    total_overdue: parseFloat(row.total_overdue || 0),
+    total_a_pagar: parseFloat(row.total_a_pagar || 0),
+    total_geral: parseFloat(row.total_geral || 0),
+    count_paid: parseInt(row.count_paid || 0, 10),
+    count_pending: parseInt(row.count_pending || 0, 10),
+    count_overdue: parseInt(row.count_overdue || 0, 10),
+    count_total: parseInt(row.count_total || 0, 10),
+    top_category: topCategory,
+    top_category_sum: topCategorySum,
+  };
+}
+
+export async function getExpenses({ month_year, status, category, search } = {}) {
+  await ensureExpensesGenerated(month_year);
+
+  await query(`UPDATE gym_expenses SET status = 'OVERDUE' WHERE due_date < CURRENT_DATE AND status = 'PENDING'`);
+
+  let sql = `SELECT * FROM gym_expenses WHERE 1=1`;
+  const params = [];
+
+  if (month_year && month_year !== 'all') {
+    params.push(`${month_year}%`);
+    sql += ` AND due_date::text LIKE $${params.length}`;
+  }
+
+  if (status) {
+    params.push(status);
+    sql += ` AND status = $${params.length}`;
+  }
+
+  if (category) {
+    params.push(category);
+    sql += ` AND category = $${params.length}`;
+  }
+
+  if (search) {
+    params.push(`%${search}%`);
+    sql += ` AND (description ILIKE $${params.length} OR category ILIKE $${params.length} OR notes ILIKE $${params.length})`;
+  }
+
+  sql += ` ORDER BY due_date ASC, id DESC`;
+  const res = await query(sql, params);
+  return res.rows;
+}
+
+export async function createExpense({
+  description,
+  category,
+  amount,
+  due_date,
+  payment_method = 'Pix',
+  status = 'PENDING',
+  notes = '',
+  proof_base64 = null,
+  proof_filename = null,
+  is_recurring = false,
+  frequency = 'MONTHLY',
+  due_day = null,
+  end_date = null
+}) {
+  await initDbSchema();
+  const id = `exp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const dateObj = new Date(due_date);
+  const computedDueDay = due_day ? parseInt(due_day, 10) : dateObj.getDate();
+
+  let recurrenceId = null;
+
+  if (is_recurring) {
+    recurrenceId = `rec_exp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    await query(`
+      INSERT INTO gym_expense_recurrences (id, description, category, payment_method, base_amount, frequency, due_day, start_date, end_date, status, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'ACTIVE', $10)
+    `, [
+      recurrenceId,
+      description,
+      category,
+      payment_method,
+      parseFloat(amount),
+      frequency,
+      computedDueDay,
+      due_date,
+      end_date || null,
+      notes
+    ]);
+  }
+
+  const initialStatus = status === 'PAID' ? 'PAID' : (due_date < todayStr ? 'OVERDUE' : 'PENDING');
+  const paymentDate = status === 'PAID' ? new Date() : null;
+
+  const res = await query(`
+    INSERT INTO gym_expenses (id, recurrence_id, description, category, amount, due_date, payment_date, status, payment_method, notes, proof_base64, proof_filename)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    RETURNING *
+  `, [
+    id,
+    recurrenceId,
+    description,
+    category,
+    parseFloat(amount),
+    due_date,
+    paymentDate,
+    initialStatus,
+    payment_method,
+    notes,
+    proof_base64 || null,
+    proof_filename || null
+  ]);
+
+  return { success: true, expense: res.rows[0], recurrenceId };
+}
+
+export async function updateExpense(id, { description, category, amount, due_date, payment_method, notes, status, scope = 'single' }) {
+  await initDbSchema();
+  const origRes = await query(`SELECT * FROM gym_expenses WHERE id = $1`, [id]);
+  if (origRes.rows.length === 0) throw new Error('Despesa não encontrada');
+  const target = origRes.rows[0];
+
+  const newDesc = description !== undefined ? description : target.description;
+  const newCat = category !== undefined ? category : target.category;
+  const newAmount = amount !== undefined ? parseFloat(amount) : target.amount;
+  const newDueDate = due_date !== undefined ? due_date : target.due_date;
+  const newPaymentMethod = payment_method !== undefined ? payment_method : target.payment_method;
+  const newNotes = notes !== undefined ? notes : target.notes;
+  const newStatus = status !== undefined ? status : target.status;
+
+  const res = await query(`
+    UPDATE gym_expenses
+    SET description = $1, category = $2, amount = $3, due_date = $4, payment_method = $5, notes = $6, status = $7
+    WHERE id = $8
+    RETURNING *
+  `, [newDesc, newCat, newAmount, newDueDate, newPaymentMethod, newNotes, newStatus, id]);
+
+  if (target.recurrence_id && (scope === 'future' || scope === 'all')) {
+    const dueDay = new Date(newDueDate).getDate();
+    await query(`
+      UPDATE gym_expense_recurrences
+      SET description = $1, category = $2, base_amount = $3, payment_method = $4, due_day = $5
+      WHERE id = $6
+    `, [newDesc, newCat, newAmount, newPaymentMethod, dueDay, target.recurrence_id]);
+  }
+
+  return { success: true, expense: res.rows[0] };
+}
+
+export async function markExpenseAsPaid(id, { payment_date = null, proof_base64 = null, proof_filename = null, notes = null } = {}) {
+  const pDate = payment_date ? new Date(payment_date) : new Date();
+  const res = await query(`
+    UPDATE gym_expenses
+    SET status = 'PAID', payment_date = $1, proof_base64 = COALESCE($2, proof_base64), proof_filename = COALESCE($3, proof_filename), notes = COALESCE($4, notes)
+    WHERE id = $5
+    RETURNING *
+  `, [pDate, proof_base64, proof_filename, notes, id]);
+  return res.rows[0];
+}
+
+export async function deleteExpense(id, { delete_recurrence = false } = {}) {
+  const origRes = await query(`SELECT recurrence_id FROM gym_expenses WHERE id = $1`, [id]);
+  const recurrenceId = origRes.rows[0]?.recurrence_id;
+
+  if (delete_recurrence && recurrenceId) {
+    await query(`UPDATE gym_expense_recurrences SET status = 'CANCELLED' WHERE id = $1`, [recurrenceId]);
+    await query(`DELETE FROM gym_expenses WHERE recurrence_id = $1 AND status = 'PENDING'`, [recurrenceId]);
+  } else {
+    await query(`DELETE FROM gym_expenses WHERE id = $1`, [id]);
+  }
+
+  return true;
+}
+
+export async function getCashFlowSummary({ month_year } = {}) {
+  await ensureExpensesGenerated(month_year);
+  await ensureStudentBillingsGenerated(month_year);
+
+  const monthPattern = month_year && month_year !== 'all' ? `${month_year}%` : `${new Date().toISOString().slice(0, 7)}%`;
+
+  const revRes = await query(`
+    SELECT COALESCE(SUM(amount), 0) as total_receitas, COUNT(*) as count_receitas
+    FROM gym_billing
+    WHERE status = 'paid' AND due_date::text LIKE $1
+  `, [monthPattern]);
+
+  const expRes = await query(`
+    SELECT COALESCE(SUM(amount), 0) as total_despesas, COUNT(*) as count_despesas
+    FROM gym_expenses
+    WHERE status = 'PAID' AND due_date::text LIKE $1
+  `, [monthPattern]);
+
+  const fixedRes = await query(`
+    SELECT COALESCE(SUM(base_amount), 0) as total_custo_fixo
+    FROM gym_expense_recurrences
+    WHERE status = 'ACTIVE'
+  `);
+
+  const receitas = parseFloat(revRes.rows[0].total_receitas || 0);
+  const despesas = parseFloat(expRes.rows[0].total_despesas || 0);
+  const custoFixo = parseFloat(fixedRes.rows[0].total_custo_fixo || 0);
+  const lucroLiquido = receitas - despesas;
+  
+  const mensalidadeMedia = 150;
+  const alunosPontoEquilibrio = custoFixo > 0 ? Math.ceil(custoFixo / mensalidadeMedia) : 0;
+
+  return {
+    receitas,
+    despesas,
+    lucro_liquido: lucroLiquido,
+    custo_fixo: custoFixo,
+    alunos_ponto_equilibrio: alunosPontoEquilibrio,
+    mensalidade_media: mensalidadeMedia
+  };
 }

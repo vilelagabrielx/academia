@@ -15,9 +15,10 @@ export async function GET(request) {
     const status = searchParams.get('status') || null;
     const userId = searchParams.get('user_id') || null;
     const search = searchParams.get('search') || '';
+    const monthYear = searchParams.get('month_year') || null;
 
-    const summary = await getBillingSummary();
-    const billings = await getBillings({ status, user_id: userId, search });
+    const summary = await getBillingSummary({ month_year: monthYear, search, user_id: userId });
+    const billings = await getBillings({ status, user_id: userId, search, month_year: monthYear });
 
     return NextResponse.json({ summary, billings });
   } catch (error) {

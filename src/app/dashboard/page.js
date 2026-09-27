@@ -4,13 +4,19 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Users, Dumbbell, FileText, Plus, MessageCircle, Instagram, ArrowUpRight, Search, Activity, 
-  UserPlus, CheckCircle2, Eye, User, Scale, Droplet, Target, Calendar, CreditCard, Trash2, RefreshCw, AlertTriangle 
+  UserPlus, CheckCircle2, Eye, User, Scale, Droplet, Target, Calendar, CreditCard, Trash2, RefreshCw, AlertTriangle, TrendingDown, DollarSign 
 } from 'lucide-react';
 
 export default function DashboardPage() {
   const [students, setStudents] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [routines, setRoutines] = useState([]);
+  const [financeStats, setFinanceStats] = useState({
+    total_receber: 0,
+    total_despesas: 0,
+    lucro_liquido: 0,
+    receitas: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [quickSearch, setQuickSearch] = useState('');
 
@@ -56,18 +62,32 @@ export default function DashboardPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [stdRes, exRes, rtRes] = await Promise.all([
+      const [stdRes, exRes, rtRes, cfRes, bSummaryRes] = await Promise.all([
         fetch('/api/students'),
         fetch('/api/exercises'),
         fetch('/api/routines'),
+        fetch('/api/cashflow'),
+        fetch('/api/billings'),
       ]);
       const stdData = await stdRes.json();
       const exData = await exRes.json();
       const rtData = await rtRes.json();
+      const cfData = await cfRes.json();
+      const bSummaryData = await bSummaryRes.json();
 
       setStudents(stdData.students || []);
       setExercises(exData.exercises || []);
       setRoutines(rtData.routines || []);
+
+      const cf = cfData.cashflow || {};
+      const sum = bSummaryData.summary || {};
+
+      setFinanceStats({
+        total_receber: sum.total_receber || (parseFloat(sum.total_pending || 0) + parseFloat(sum.total_charged || 0) + parseFloat(sum.total_overdue || 0)),
+        total_despesas: cf.despesas || 0,
+        lucro_liquido: cf.lucro_liquido || 0,
+        receitas: cf.receitas || 0,
+      });
     } catch (err) {
       console.error('Error loading dashboard data:', err);
     } finally {
@@ -238,7 +258,7 @@ export default function DashboardPage() {
               Painel de Gestão da Academia
             </h1>
             <p className="text-slate-400 mt-2 text-sm max-w-2xl">
-              Gerencie seus alunos, controle mensalidades e acompanhe a evolução dos treinos em tempo real.
+              Gerencie seus alunos, controle mensalidades, saídas de caixa e acompanhe o **Lucro Parcial Mensal**.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -256,6 +276,54 @@ export default function DashboardPage() {
               <Plus className="w-5 h-5" />
               <span>Criar Treino</span>
             </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* 💰 Destaques Financeiros (Total a Receber, Total de Despesas, Lucro Parcial Mensal) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Card 1: Total a Receber */}
+        <Link href="/dashboard/billings" className="glass-panel p-5 rounded-2xl border border-cyan-500/30 bg-cyan-950/20 hover:border-cyan-500/60 transition-all flex items-center gap-4 group">
+          <div className="p-3.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 group-hover:scale-105 transition-transform">
+            <CreditCard className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[11px] text-cyan-300 uppercase tracking-wider font-bold block">Total a Receber</span>
+            <span className="text-2xl font-black text-cyan-300">
+              R$ {parseFloat(financeStats.total_receber || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        </Link>
+
+        {/* Card 2: Total de Despesas */}
+        <Link href="/dashboard/expenses" className="glass-panel p-5 rounded-2xl border border-rose-500/30 bg-rose-950/20 hover:border-rose-500/60 transition-all flex items-center gap-4 group">
+          <div className="p-3.5 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30 group-hover:scale-105 transition-transform">
+            <TrendingDown className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[11px] text-rose-300 uppercase tracking-wider font-bold block">Total de Despesas</span>
+            <span className="text-2xl font-black text-rose-400">
+              R$ {parseFloat(financeStats.total_despesas || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        </Link>
+
+        {/* Card 3: Lucro Parcial Mensal */}
+        <div className={`glass-panel p-5 rounded-2xl border flex items-center gap-4 ${
+          financeStats.lucro_liquido >= 0
+            ? 'border-emerald-500/40 bg-emerald-950/20'
+            : 'border-rose-500/40 bg-rose-950/20'
+        }`}>
+          <div className={`p-3.5 rounded-xl border ${
+            financeStats.lucro_liquido >= 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+          }`}>
+            <DollarSign className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[11px] uppercase tracking-wider font-bold block text-emerald-300">Lucro Parcial Mensal</span>
+            <span className={`text-2xl font-black ${financeStats.lucro_liquido >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              R$ {parseFloat(financeStats.lucro_liquido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
           </div>
         </div>
       </div>
