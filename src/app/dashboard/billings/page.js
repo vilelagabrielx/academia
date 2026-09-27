@@ -777,6 +777,34 @@ export default function BillingsPage() {
                 </select>
               </div>
 
+              {/* Presets de Mensalidade */}
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1.5">Valores Rápidos & Planos</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewBilling((prev) => ({ ...prev, amount: '60.00', notes: 'Mensalidade Iron Solder' }))}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] font-bold text-center transition-all text-xs"
+                  >
+                    R$ 60,00 (Mensal)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewBilling((prev) => ({ ...prev, amount: '100.00', notes: 'Mensalidade' }))}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-center transition-all text-xs"
+                  >
+                    R$ 100,00
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewBilling((prev) => ({ ...prev, amount: '150.00', notes: 'Mensalidade' }))}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-center transition-all text-xs"
+                  >
+                    R$ 150,00
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-300 mb-1">Valor (R$) *</label>
@@ -800,6 +828,17 @@ export default function BillingsPage() {
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Descrição / Tipo de Cobrança</label>
+                <input
+                  type="text"
+                  value={newBilling.notes}
+                  onChange={(e) => setNewBilling({ ...newBilling, notes: e.target.value })}
+                  placeholder="Ex: Mensalidade, Taxa de Matrícula..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                />
               </div>
 
               <div>
@@ -827,9 +866,9 @@ export default function BillingsPage() {
                 <button
                   type="submit"
                   disabled={creating}
-                  className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400"
+                  className="px-5 py-2 rounded-xl font-bold text-black bg-[#D4AF37] hover:bg-[#C5A059] shadow-lg shadow-[#D4AF37]/20 cursor-pointer"
                 >
-                  {creating ? 'Criando...' : 'Criar Cobrança'}
+                  {creating ? 'Criando...' : 'Criar Mensalidade / Cobrança'}
                 </button>
               </div>
             </form>

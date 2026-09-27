@@ -38,19 +38,19 @@ export default function DashboardLayout({ children }) {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950">
+    <div className="min-h-screen flex flex-col bg-[#0D0D0D]">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-500/20">
-              <Dumbbell className="w-6 h-6" />
+      <header className="sticky top-0 z-40 bg-[#121212]/90 backdrop-blur-md border-b border-[#D4AF37]/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-3 group">
+            <div className="w-12 h-12 rounded-xl bg-[#1F1F1F] border border-[#D4AF37]/30 p-1 flex items-center justify-center shadow-lg shadow-black/50 group-hover:border-[#D4AF37] transition-all">
+              <img src="/logo.png" alt="Iron Solder Gym" className="w-full h-full object-contain" />
             </div>
             <div>
-              <span className="font-extrabold text-lg tracking-tight text-white block leading-tight">Academia Pro</span>
-              <span className="text-[10px] text-emerald-400 uppercase tracking-widest font-semibold">Painel Professor</span>
+              <span className="font-bebas text-2xl tracking-wider text-white block leading-none">IRON SOLDER GYM</span>
+              <span className="text-[10px] text-[#D4AF37] uppercase tracking-widest font-bold">Painel de Gestão</span>
             </div>
-          </div>
+          </Link>
 
           {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center gap-1">
@@ -61,10 +61,10 @@ export default function DashboardLayout({ children }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                     isActive
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      ? 'bg-[#D4AF37] text-black font-extrabold shadow-lg shadow-[#D4AF37]/20'
+                      : 'text-slate-300 hover:text-white hover:bg-[#1F1F1F] hover:border hover:border-[#D4AF37]/30'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -78,14 +78,14 @@ export default function DashboardLayout({ children }) {
           <div className="hidden md:flex items-center gap-4">
             {user && (
               <div className="text-right">
-                <span className="text-xs font-semibold text-slate-200 block">{user.first_name || user.username}</span>
-                <span className="text-[10px] text-slate-400 block">{user.email || 'Professor'}</span>
+                <span className="text-xs font-bold text-white block">{user.first_name || user.username}</span>
+                <span className="text-[10px] text-[#D4AF37] block font-mono">{user.email || 'Professor'}</span>
               </div>
             )}
             <button
               onClick={handleLogout}
               title="Sair"
-              className="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              className="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all cursor-pointer"
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -94,15 +94,15 @@ export default function DashboardLayout({ children }) {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"
+            className="md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-[#1F1F1F]"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-6 h-6 text-[#D4AF37]" /> : <Menu className="w-6 h-6 text-[#D4AF37]" />}
           </button>
         </div>
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-slate-900 border-b border-slate-800 px-4 pt-2 pb-4 space-y-1">
+          <div className="md:hidden bg-[#121212] border-b border-[#D4AF37]/20 px-4 pt-2 pb-4 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -111,10 +111,10 @@ export default function DashboardLayout({ children }) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                     isActive
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                      ? 'bg-[#D4AF37] text-black font-extrabold'
+                      : 'text-slate-300 hover:text-white hover:bg-[#1F1F1F]'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
