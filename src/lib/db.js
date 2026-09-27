@@ -1584,13 +1584,19 @@ export async function ensureStudentBillingsGenerated(targetMonthStr) {
   const todayStr = new Date().toISOString().split('T')[0];
 
   const studentsRes = await query(`
-    SELECT u.id as user_id, p.dia_vencimento_recorrente
+    SELECT u.id as user_id, p.dia_vencimento_recorrente, u.date_joined
     FROM auth_user u
     JOIN core_userprofile p ON p.user_id = u.id
     WHERE p.enrollment_status = 'active'
   `);
 
   for (const s of studentsRes.rows) {
+    const joinedMonthStr = s.date_joined ? new Date(s.date_joined).toISOString().slice(0, 7) : '2000-01';
+    if (targetMonthStr < joinedMonthStr) {
+      // Não gera cobranças retroativas para meses anteriores à data de cadastro do aluno
+      continue;
+    }
+
     const existing = await query(`
       SELECT id FROM gym_billing 
       WHERE user_id = $1 AND due_date::text LIKE $2

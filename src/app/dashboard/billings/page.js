@@ -881,14 +881,17 @@ export default function FinancialPage() {
               {cashflow.history && cashflow.history.length > 0 ? (
                 (() => {
                   const maxVal = Math.max(
-                    ...cashflow.history.map(h => Math.max(h.receitas_total || 0, h.despesas_total || 0, Math.abs(h.lucro_projetado || 0), 100))
+                    ...cashflow.history.map(h => Math.max(h.receitas_pago || 0, h.despesas_pago || 0, Math.abs(h.lucro_pago || 0), 100))
                   );
                   return (
                     <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 sm:gap-4 items-end min-h-[220px] pt-4">
                       {cashflow.history.map((item, idx) => {
-                        const recHeight = Math.max(12, Math.round(((item.receitas_total || 0) / maxVal) * 160));
-                        const expHeight = Math.max(12, Math.round(((item.despesas_total || 0) / maxVal) * 160));
-                        const lucroVal = item.lucro_pago !== 0 ? item.lucro_pago : item.lucro_projetado;
+                        const recVal = item.receitas_pago || 0;
+                        const expVal = item.despesas_pago || 0;
+                        const lucroVal = item.lucro_pago || 0;
+
+                        const recHeight = maxVal > 0 && recVal > 0 ? Math.max(12, Math.round((recVal / maxVal) * 160)) : 6;
+                        const expHeight = maxVal > 0 && expVal > 0 ? Math.max(12, Math.round((expVal / maxVal) * 160)) : 6;
                         const isProfitable = lucroVal >= 0;
 
                         return (
@@ -900,13 +903,13 @@ export default function FinancialPage() {
                             <div className="w-full flex items-end justify-center gap-1.5 h-[160px] bg-slate-950/60 rounded-xl p-1 border border-slate-800/80 group-hover:border-slate-700 transition-all">
                               <div
                                 style={{ height: `${recHeight}px` }}
-                                className="w-1/2 bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-lg transition-all shadow-md shadow-emerald-500/10 group-hover:brightness-110"
-                                title={`Receitas: R$ ${(item.receitas_total || 0).toFixed(2)}`}
+                                className={`w-1/2 rounded-lg transition-all shadow-md ${recVal > 0 ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-emerald-500/10 group-hover:brightness-110' : 'bg-slate-800/40'}`}
+                                title={`Receitas Pagas (Dar Baixa): R$ ${recVal.toFixed(2)}`}
                               />
                               <div
                                 style={{ height: `${expHeight}px` }}
-                                className="w-1/2 bg-gradient-to-t from-rose-600 to-rose-400 rounded-lg transition-all shadow-md shadow-rose-500/10 group-hover:brightness-110"
-                                title={`Despesas: R$ ${(item.despesas_total || 0).toFixed(2)}`}
+                                className={`w-1/2 rounded-lg transition-all shadow-md ${expVal > 0 ? 'bg-gradient-to-t from-rose-600 to-rose-400 shadow-rose-500/10 group-hover:brightness-110' : 'bg-slate-800/40'}`}
+                                title={`Despesas Pagas (Dar Baixa): R$ ${expVal.toFixed(2)}`}
                               />
                             </div>
 
