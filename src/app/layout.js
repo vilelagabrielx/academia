@@ -24,6 +24,7 @@ export default function RootLayout({ children }) {
     <html lang="pt-BR" className="dark" style={{ backgroundColor: '#000000' }}>
       <head>
         <meta name="theme-color" content="#000000" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="icon" href="/logo.png" type="image/png" sizes="any" />
