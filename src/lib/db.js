@@ -61,8 +61,13 @@ export async function authenticateUser(usernameOrEmail, password) {
 export async function getStudents(search = '') {
   let sql = `
     SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.is_staff, u.date_joined,
-           p.whatsapp, p.photo_base64, p.gym_id,
-           (SELECT COUNT(*) FROM manager_routine r WHERE r.user_id = u.id) as routine_count
+           p.whatsapp, p.photo_base64, p.gym_id, p.age, p.height, p.goal, p.blood_type, p.training_days, p.current_weight,
+           (SELECT COUNT(*) FROM manager_routine r WHERE r.user_id = u.id) as routine_count,
+           (SELECT b.amount FROM gym_billing b WHERE b.user_id = u.id ORDER BY b.due_date DESC LIMIT 1) as latest_billing_amount,
+           (SELECT b.status FROM gym_billing b WHERE b.user_id = u.id ORDER BY b.due_date DESC LIMIT 1) as latest_billing_status,
+           (SELECT b.due_date FROM gym_billing b WHERE b.user_id = u.id ORDER BY b.due_date DESC LIMIT 1) as latest_billing_due_date,
+           (SELECT b.amount FROM gym_billing b WHERE b.user_id = u.id AND b.status = 'paid' ORDER BY b.paid_date DESC LIMIT 1) as last_paid_amount,
+           (SELECT b.paid_date FROM gym_billing b WHERE b.user_id = u.id AND b.status = 'paid' ORDER BY b.paid_date DESC LIMIT 1) as last_paid_date
     FROM auth_user u
     LEFT JOIN core_userprofile p ON p.user_id = u.id
     WHERE u.is_staff = false AND u.is_superuser = false
@@ -77,7 +82,33 @@ export async function getStudents(search = '') {
   return res.rows;
 }
 
-export async function createStudent({ username, first_name, last_name, email, password, whatsapp, photo_base64 }) {
+export async function createStudent({
+  first_name,
+  last_name = '',
+  username = '',
+  email = '',
+  password = '',
+  whatsapp = '',
+  photo_base64 = '',
+  age = null,
+  height = null,
+  current_weight = null,
+  blood_type = '',
+  goal = '',
+  training_days = '',
+  initial_amount = null,
+  due_date = null,
+}) {
+  const cleanFirstName = (first_name || 'Aluno').trim();
+  let finalUsername = (username || cleanFirstName.toLowerCase().replace(/[^a-z0-9]/g, '')).trim();
+  if (!finalUsername) finalUsername = `aluno_${Date.now().toString().slice(-4)}`;
+
+  // Ensure unique username
+  const checkUser = await query(`SELECT id FROM auth_user WHERE username = $1`, [finalUsername]);
+  if (checkUser.rows.length > 0) {
+    finalUsername = `${finalUsername}_${Math.floor(100 + Math.random() * 900)}`;
+  }
+
   const hashedPassword = hashDjangoPassword(password || '123456');
   const now = new Date();
   
@@ -85,22 +116,54 @@ export async function createStudent({ username, first_name, last_name, email, pa
     `INSERT INTO auth_user (username, first_name, last_name, email, password, is_staff, is_active, is_superuser, date_joined)
      VALUES ($1, $2, $3, $4, $5, false, true, false, $6)
      RETURNING id, username, first_name, last_name, email, date_joined`,
-    [username, first_name || '', last_name || '', email || '', hashedPassword, now]
+    [finalUsername, cleanFirstName, last_name || '', email || '', hashedPassword, now]
   );
   
   const userId = userRes.rows[0].id;
 
   await query(
     `INSERT INTO core_userprofile 
-     (user_id, is_temporary, workout_reminder_active, workout_reminder, workout_duration, notification_language_id, weight_unit, num_days_weight_reminder, can_add_user, trophies_enabled, time_zone, whatsapp, photo_base64)
-     VALUES ($1, false, false, 14, 12, 2, 'kg', 0, false, true, '', $2, $3)`,
-    [userId, whatsapp || '', photo_base64 || '']
+     (user_id, is_temporary, workout_reminder_active, workout_reminder, workout_duration, notification_language_id, weight_unit, num_days_weight_reminder, can_add_user, trophies_enabled, time_zone, whatsapp, photo_base64, age, height, current_weight, blood_type, goal, training_days)
+     VALUES ($1, false, false, 14, 12, 2, 'kg', 0, false, true, '', $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      userId,
+      whatsapp || '',
+      photo_base64 || '',
+      age ? parseInt(age, 10) : null,
+      height ? parseInt(height, 10) : null,
+      current_weight ? parseFloat(current_weight) : null,
+      blood_type || '',
+      goal || '',
+      training_days || '',
+    ]
   );
+
+  // Create initial billing if provided
+  if (initial_amount && due_date) {
+    await query(
+      `INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes)
+       VALUES ($1, $2, $3, 'Pix', 'pending', 'Mensalidade Inicial')`,
+      [userId, parseFloat(initial_amount), due_date]
+    );
+  }
 
   return userRes.rows[0];
 }
 
-export async function updateStudent(id, { first_name, last_name, email, whatsapp, photo_base64, password }) {
+export async function updateStudent(id, {
+  first_name,
+  last_name,
+  email,
+  whatsapp,
+  photo_base64,
+  password,
+  age,
+  height,
+  current_weight,
+  blood_type,
+  goal,
+  training_days,
+}) {
   let sql = `UPDATE auth_user SET first_name = $1, last_name = $2, email = $3`;
   const params = [first_name || '', last_name || '', email || ''];
   
@@ -114,8 +177,27 @@ export async function updateStudent(id, { first_name, last_name, email, whatsapp
   await query(sql, params);
 
   await query(
-    `UPDATE core_userprofile SET whatsapp = $1, photo_base64 = COALESCE(NULLIF($2, ''), photo_base64) WHERE user_id = $3`,
-    [whatsapp || '', photo_base64 || '', id]
+    `UPDATE core_userprofile 
+     SET whatsapp = $1, 
+         photo_base64 = COALESCE(NULLIF($2, ''), photo_base64),
+         age = $3,
+         height = $4,
+         current_weight = $5,
+         blood_type = $6,
+         goal = $7,
+         training_days = $8
+     WHERE user_id = $9`,
+    [
+      whatsapp || '',
+      photo_base64 || '',
+      age ? parseInt(age, 10) : null,
+      height ? parseInt(height, 10) : null,
+      current_weight ? parseFloat(current_weight) : null,
+      blood_type || '',
+      goal || '',
+      training_days || '',
+      id,
+    ]
   );
 
   return { id };
