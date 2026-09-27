@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   CreditCard, Plus, CheckCircle2, AlertCircle, Clock, MessageCircle, FileText, Download, Eye, 
   Trash2, Search, DollarSign, Send, Filter, Printer, BellRing, Upload, Calendar, Check, Repeat, 
-  UserX, AlertTriangle, Pencil, ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Layers, Award, Sparkles
+  UserX, AlertTriangle, Pencil, ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Layers, Award, Sparkles,
+  Users, User, Dumbbell, Heart, ShieldAlert, ExternalLink, Instagram
 } from 'lucide-react';
 
 const EXPENSE_CATEGORIES = [
@@ -98,6 +100,21 @@ export default function FinancialPage() {
   const [billings, setBillings] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [students, setStudents] = useState([]);
+
+  // Student Profile Detail Viewer Modal
+  const [viewingStudent, setViewingStudent] = useState(null);
+
+  const openStudentProfile = (b) => {
+    const matched = students.find((s) => String(s.id) === String(b.user_id) || s.username === b.username) || {
+      id: b.user_id,
+      first_name: b.first_name,
+      last_name: b.last_name,
+      username: b.username,
+      whatsapp: b.whatsapp,
+      photo_base64: b.photo_base64,
+    };
+    setViewingStudent(matched);
+  };
 
   // Modals: Billings (Entradas)
   const [showCreateBillingModal, setShowCreateBillingModal] = useState(false);
@@ -564,7 +581,27 @@ export default function FinancialPage() {
                   <tbody className="divide-y divide-rose-500/10">
                     {overdueBillings.map((b) => (
                       <tr key={b.id}>
-                        <td className="py-2 px-3 font-bold text-white">{b.first_name || b.username}</td>
+                        <td 
+                          className="py-2.5 px-3 font-bold text-white flex items-center gap-2.5 cursor-pointer group hover:text-emerald-400 transition-colors"
+                          onClick={() => openStudentProfile(b)}
+                          title="Clique para ver a ficha/perfil do aluno"
+                        >
+                          {b.photo_base64 ? (
+                            <img
+                              src={b.photo_base64}
+                              alt={b.first_name || b.username}
+                              className="w-7 h-7 rounded-full object-cover border border-rose-500/40 shrink-0 group-hover:border-emerald-400 transition-colors"
+                            />
+                          ) : (
+                            <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-xs shrink-0 group-hover:border-emerald-400">
+                              {b.first_name?.[0] || b.username?.[0]?.toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <span className="group-hover:underline">{b.first_name ? `${b.first_name} ${b.last_name || ''}` : b.username}</span>
+                            <span className="text-[9px] text-slate-400 font-mono font-normal">@{b.username}</span>
+                          </div>
+                        </td>
                         <td className="py-2 px-3 font-extrabold text-rose-400">R$ {parseFloat(b.amount).toFixed(2)}</td>
                         <td className="py-2 px-3 font-mono">{String(b.due_date).split('T')[0]}</td>
                         <td className="py-2 px-3 text-right">
@@ -649,8 +686,26 @@ export default function FinancialPage() {
                   ) : (
                     billings.map((b) => (
                       <tr key={b.id} className="hover:bg-slate-900/40">
-                        <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
-                          <span>{b.first_name ? `${b.first_name} ${b.last_name || ''}` : b.username}</span>
+                        <td 
+                          className="py-3 px-4 font-bold text-white flex items-center gap-2.5 cursor-pointer group hover:text-emerald-400 transition-colors"
+                          onClick={() => openStudentProfile(b)}
+                          title="Clique para ver a ficha/perfil do aluno"
+                        >
+                          {b.photo_base64 ? (
+                            <img
+                              src={b.photo_base64}
+                              alt={b.first_name || b.username}
+                              className="w-8 h-8 rounded-full object-cover border border-emerald-500/40 shrink-0 group-hover:border-emerald-400 transition-colors"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-xs shrink-0 group-hover:border-emerald-400">
+                              {b.first_name?.[0] || b.username?.[0]?.toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <span className="group-hover:underline">{b.first_name ? `${b.first_name} ${b.last_name || ''}` : b.username}</span>
+                            <span className="text-[9px] text-slate-400 font-mono font-normal">@{b.username}</span>
+                          </div>
                         </td>
                         <td className="py-3 px-4 font-mono text-slate-400">{String(b.due_date).split('T')[0]}</td>
                         <td className="py-3 px-4 font-extrabold text-emerald-400 text-sm">R$ {parseFloat(b.amount).toFixed(2)}</td>
@@ -848,6 +903,141 @@ export default function FinancialPage() {
                 <button type="submit" disabled={creatingExpense} className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-rose-500">Salvar Despesa</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* MODAL FICHA / PERFIL RÁPIDO DO ALUNO */}
+      {viewingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-xl rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-base font-extrabold text-white">Perfil do Aluno</h3>
+              </div>
+              <button
+                onClick={() => setViewingStudent(null)}
+                className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-1.5 rounded-xl transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Student Card Header */}
+            <div className="flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/30 border border-slate-800">
+              {viewingStudent.photo_base64 ? (
+                <img
+                  src={viewingStudent.photo_base64}
+                  alt={viewingStudent.username}
+                  className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-md shrink-0"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-extrabold text-emerald-400 text-2xl shrink-0">
+                  {viewingStudent.first_name?.[0] || viewingStudent.username?.[0]?.toUpperCase()}
+                </div>
+              )}
+
+              <div className="space-y-1.5 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-lg font-black text-white">
+                    {viewingStudent.first_name} {viewingStudent.last_name}
+                  </h4>
+                  <span className="text-xs text-slate-400 font-mono">@{viewingStudent.username}</span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {viewingStudent.fase_shape && (
+                    <span className="px-2 py-0.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-bold text-[10px]">
+                      {viewingStudent.fase_shape}
+                    </span>
+                  )}
+                  {viewingStudent.nivel_treino && (
+                    <span className="px-2 py-0.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-300 font-bold text-[10px]">
+                      {viewingStudent.nivel_treino}
+                    </span>
+                  )}
+                  {(viewingStudent.objetivo_principal || viewingStudent.goal) && (
+                    <span className="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold text-[10px]">
+                      {viewingStudent.objetivo_principal || viewingStudent.goal}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency Contact Highlight Banner */}
+            {viewingStudent.contato_emergencia_nome && (
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-amber-900/20 to-slate-900 border border-amber-500/40 flex items-center justify-between text-xs text-amber-200 shadow-md">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
+                    <Heart className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  </div>
+                  <div>
+                    <span className="font-extrabold text-amber-300 uppercase tracking-wider text-[9px] block">Contato de Emergência</span>
+                    <span className="font-bold text-white text-xs">
+                      {viewingStudent.contato_emergencia_nome}
+                      {viewingStudent.contato_emergencia_parentesco ? ` (${viewingStudent.contato_emergencia_parentesco})` : ''}
+                    </span>
+                  </div>
+                </div>
+                {viewingStudent.contato_emergencia_telefone && (
+                  <a
+                    href={`https://wa.me/${viewingStudent.contato_emergencia_telefone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black flex items-center gap-1.5 text-xs shadow-md transition-all cursor-pointer"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>{viewingStudent.contato_emergencia_telefone}</span>
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Health Restrictions & Safety Badges */}
+            <div className="space-y-2 text-xs">
+              {viewingStudent.restricoes_articulares && (
+                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                  <span className="font-bold text-amber-400 block text-[11px] mb-1">Restrições Articulares:</span>
+                  <span className="text-slate-300 font-semibold">
+                    {Array.isArray(viewingStudent.restricoes_articulares) ? viewingStudent.restricoes_articulares.join(', ') : viewingStudent.restricoes_articulares}
+                  </span>
+                </div>
+              )}
+
+              {viewingStudent.condicoes_cardio_metabolicas && (
+                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                  <span className="font-bold text-rose-400 block text-[11px] mb-1">Condições Cardiovasculares:</span>
+                  <span className="text-slate-300 font-semibold">
+                    {Array.isArray(viewingStudent.condicoes_cardio_metabolicas) ? viewingStudent.condicoes_cardio_metabolicas.join(', ') : viewingStudent.condicoes_cardio_metabolicas}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer / Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+              <Link
+                href={`/dashboard/students?search=${encodeURIComponent(viewingStudent.first_name || viewingStudent.username)}`}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition-all"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Ver Ficha Completa na Gestão</span>
+              </Link>
+
+              {viewingStudent.whatsapp && (
+                <a
+                  href={`https://wa.me/${viewingStudent.whatsapp.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>WhatsApp do Aluno</span>
+                </a>
+              )}
+            </div>
           </div>
         </div>
       )}
