@@ -27,9 +27,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const data = await request.json();
-    if (!data.username) {
-      return NextResponse.json({ error: 'Nome de usuário é obrigatório' }, { status: 400 });
+    if (!data.first_name && !data.username) {
+      return NextResponse.json({ error: 'Nome do aluno é obrigatório' }, { status: 400 });
     }
 
     const student = await createStudent(data);

@@ -307,12 +307,27 @@ export async function createStudent(data = {}) {
   } = data;
 
   const cleanFirstName = (first_name || 'Aluno').trim();
-  let finalUsername = (username || cleanFirstName.toLowerCase().replace(/[^a-z0-9]/g, '')).trim();
-  if (!finalUsername) finalUsername = `aluno_${Date.now().toString().slice(-4)}`;
+  const cleanLastName = (last_name || '').trim();
 
-  const checkUser = await query(`SELECT id FROM auth_user WHERE username = $1`, [finalUsername]);
-  if (checkUser.rows.length > 0) {
-    finalUsername = `${finalUsername}_${Math.floor(100 + Math.random() * 900)}`;
+  let baseUsername = username
+    ? username.trim().toLowerCase()
+    : `${cleanFirstName}_${cleanLastName}`
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9_]/g, '')
+        .replace(/^_|_$/g, '');
+
+  if (!baseUsername) baseUsername = `aluno_${Date.now().toString().slice(-4)}`;
+
+  let finalUsername = baseUsername;
+  let attempts = 0;
+  while (attempts < 10) {
+    const checkUser = await query(`SELECT id FROM auth_user WHERE username = $1`, [finalUsername]);
+    if (checkUser.rows.length === 0) break;
+    attempts++;
+    finalUsername = `${baseUsername}_${Math.floor(100 + Math.random() * 900)}`;
   }
 
   const hashedPassword = hashDjangoPassword(password || '123456');
@@ -347,6 +362,12 @@ export async function createStudent(data = {}) {
 
   // Update profile fields & goals if provided
   await updateStudent(userId, data);
+
+  // Check if initial body evaluation provided
+  const evalData = data.initial_evaluation;
+  if (evalData && (evalData.peso || evalData.bf_percentual || evalData.cintura || evalData.braco_contraido || evalData.ombro || evalData.peitoral_torax || evalData.coxa_direita || evalData.observacoes)) {
+    await addBodyEvaluation(userId, evalData, 'Treinador (Cadastro)');
+  }
 
   // Check if first billing creation requested
   const shouldCreateBilling = create_first_billing || Boolean(initial_amount && due_date);

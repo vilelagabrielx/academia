@@ -228,6 +228,31 @@ export default function StudentsPage() {
       panturrilha_meta: '',
       pescoco_meta: '',
 
+      initial_evaluation: {
+        data_registro: new Date().toISOString().split('T')[0],
+        peso: '',
+        bf_percentual: '',
+        pescoco: '',
+        ombro: '',
+        peitoral_torax: '',
+        dorsal_largura: '',
+        dorsal_espessura: '',
+        cintura: '',
+        abdomen: '',
+        quadril: '',
+        braco_direito: '',
+        braco_esquerdo: '',
+        braco_contraido: '',
+        antebraco_direito: '',
+        antebraco_esquerdo: '',
+        coxa_direita: '',
+        coxa_esquerda: '',
+        gluteo: '',
+        panturrilha_direita: '',
+        panturrilha_esquerda: '',
+        observacoes: ''
+      },
+
       create_first_billing: false,
       billing_amount: '150.00',
       billing_due_date: new Date().toISOString().split('T')[0],
@@ -292,6 +317,31 @@ export default function StudentsPage() {
       gluteo_meta: student.gluteo_meta || '',
       panturrilha_meta: student.panturrilha_meta || '',
       pescoco_meta: student.pescoco_meta || '',
+
+      initial_evaluation: {
+        data_registro: new Date().toISOString().split('T')[0],
+        peso: '',
+        bf_percentual: '',
+        pescoco: '',
+        ombro: '',
+        peitoral_torax: '',
+        dorsal_largura: '',
+        dorsal_espessura: '',
+        cintura: '',
+        abdomen: '',
+        quadril: '',
+        braco_direito: '',
+        braco_esquerdo: '',
+        braco_contraido: '',
+        antebraco_direito: '',
+        antebraco_esquerdo: '',
+        coxa_direita: '',
+        coxa_esquerda: '',
+        gluteo: '',
+        panturrilha_direita: '',
+        panturrilha_esquerda: '',
+        observacoes: ''
+      },
 
       create_first_billing: false,
       billing_amount: student.latest_billing_amount || '150.00',
@@ -1711,15 +1761,15 @@ export default function StudentsPage() {
                   {editingStudentId ? 'Editar Ficha do Aluno' : 'Cadastrar Aluno (Ficha Completa)'}
                 </h3>
                 <span className="text-xs text-emerald-400 font-semibold block mt-0.5">
-                  Etapa {wizardStep} de 4 &bull; Apenas o Nome é obrigatório!
+                  Etapa {wizardStep} de 5 &bull; Apenas o Nome é obrigatório!
                 </span>
               </div>
               <button onClick={() => setShowWizardModal(false)} className="text-slate-400 hover:text-white">✕</button>
             </div>
 
             {/* Steps indicator */}
-            <div className="grid grid-cols-4 gap-2 text-center">
-              {['1. Perfil', '2. Objetivos', '3. Metas', '4. Cobrança'].map((label, index) => {
+            <div className="grid grid-cols-5 gap-1.5 text-center">
+              {['1. Perfil', '2. Objetivos', '3. Aferição', '4. Metas', '5. Cobrança'].map((label, index) => {
                 const stepNum = index + 1;
                 return (
                   <button
@@ -1728,7 +1778,7 @@ export default function StudentsPage() {
                     className={`py-2 rounded-xl text-[10px] font-extrabold uppercase transition-all ${
                       wizardStep === stepNum
                         ? 'bg-emerald-500 text-slate-950 shadow-md'
-                        : 'bg-slate-900 text-slate-500 border border-slate-800'
+                        : 'bg-slate-900 text-slate-500 border border-slate-800 hover:text-slate-300'
                     }`}
                   >
                     {label}
@@ -1967,8 +2017,275 @@ export default function StudentsPage() {
                 </div>
               )}
 
-              {/* PASSO 3: METAS CORPORAIS (OPCIONAL) */}
+              {/* PASSO 3: AFERIÇÃO CORPORAL INICIAL (OPCIONAL) */}
               {wizardStep === 3 && (
+                <div className="space-y-4">
+                  <div className="p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 space-y-1">
+                    <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-xs uppercase tracking-wider">
+                      <Activity className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <span>Nova Aferição Corporal para {formData.first_name || 'Aluno'} (Opcional)</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Cadastre as medidas corporais e o percentual de gordura do aluno nesta etapa inicial (100% opcional).
+                    </p>
+                  </div>
+
+                  {/* Datas & Dados Principais */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-300 mb-1">Data da Avaliação *</label>
+                      <input
+                        type="date"
+                        value={formData.initial_evaluation?.data_registro || new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          initial_evaluation: { ...formData.initial_evaluation, data_registro: e.target.value }
+                        })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-300 mb-1">Peso (kg)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        placeholder="84.5"
+                        value={formData.initial_evaluation?.peso || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormData({
+                            ...formData,
+                            current_weight: val || formData.current_weight,
+                            initial_evaluation: { ...formData.initial_evaluation, peso: val }
+                          });
+                        }}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500 font-bold text-emerald-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-300 mb-1">BF (% Gordura)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        placeholder="13.0"
+                        value={formData.initial_evaluation?.bf_percentual || ''}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          initial_evaluation: { ...formData.initial_evaluation, bf_percentual: e.target.value }
+                        })}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Seção 1: Tronco & Proporção */}
+                  <div className="space-y-2 pt-2 border-t border-slate-800">
+                    <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <Dumbbell className="w-3.5 h-3.5 text-cyan-400" />
+                      Tronco & Proporção
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Pescoço (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="40.0"
+                          value={formData.initial_evaluation?.pescoco || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, pescoco: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Ombros (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="125.0"
+                          value={formData.initial_evaluation?.ombro || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, ombro: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Peitoral (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="110.0"
+                          value={formData.initial_evaluation?.peitoral_torax || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, peitoral_torax: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Dorsal Largura (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="118.0"
+                          value={formData.initial_evaluation?.dorsal_largura || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, dorsal_largura: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Dorsal Espessura (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="42.0"
+                          value={formData.initial_evaluation?.dorsal_espessura || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, dorsal_espessura: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Cintura (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="82.0"
+                          value={formData.initial_evaluation?.cintura || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, cintura: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Abdômen (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="85.0"
+                          value={formData.initial_evaluation?.abdomen || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, abdomen: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Quadril (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="100.0"
+                          value={formData.initial_evaluation?.quadril || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, quadril: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Seção 2: Braços & Antebraços */}
+                  <div className="space-y-2 pt-2 border-t border-slate-800">
+                    <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                      Braços & Antebraços
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Braço D (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="38.5"
+                          value={formData.initial_evaluation?.braco_direito || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_direito: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Braço E (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="38.5"
+                          value={formData.initial_evaluation?.braco_esquerdo || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_esquerdo: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Braço Contraído (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="41.0"
+                          value={formData.initial_evaluation?.braco_contraido || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_contraido: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white font-bold text-cyan-300"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Antebraço D (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="32.0"
+                          value={formData.initial_evaluation?.antebraco_direito || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, antebraco_direito: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Antebraço E (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="32.0"
+                          value={formData.initial_evaluation?.antebraco_esquerdo || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, antebraco_esquerdo: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Seção 3: Pernas & Glúteos */}
+                  <div className="space-y-2 pt-2 border-t border-slate-800">
+                    <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+                      <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
+                      Pernas & Glúteos
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Coxa D (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="60.0"
+                          value={formData.initial_evaluation?.coxa_direita || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, coxa_direita: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Coxa E (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="60.0"
+                          value={formData.initial_evaluation?.coxa_esquerda || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, coxa_esquerda: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Glúteo (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="102.0"
+                          value={formData.initial_evaluation?.gluteo || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, gluteo: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Panturrilha D (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="39.0"
+                          value={formData.initial_evaluation?.panturrilha_direita || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, panturrilha_direita: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Panturrilha E (cm)</label>
+                        <input
+                          type="number" step="0.1" placeholder="39.0"
+                          value={formData.initial_evaluation?.panturrilha_esquerda || ''}
+                          onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, panturrilha_esquerda: e.target.value } })}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Observações da Avaliação */}
+                  <div className="pt-2 border-t border-slate-800">
+                    <label className="block font-semibold text-slate-300 mb-1">Observações da Avaliação</label>
+                    <textarea
+                      rows="2"
+                      placeholder="Anotações gerais sobre assimetria, postura ou evolução..."
+                      value={formData.initial_evaluation?.observacoes || ''}
+                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, observacoes: e.target.value } })}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600"
+                    ></textarea>
+                  </div>
+                </div>
+              )}
+
+              {/* PASSO 4: METAS CORPORAIS (OPCIONAL) */}
+              {wizardStep === 4 && (
                 <div className="space-y-4">
                   <p className="text-[11px] text-slate-400">Defina as metas corporais do aluno (todas opcionais). As metas gerarão barras de progresso animadas no perfil.</p>
                   
@@ -2024,8 +2341,8 @@ export default function StudentsPage() {
                 </div>
               )}
 
-              {/* PASSO 4: PRIMEIRA COBRANÇA (OPCIONAL) */}
-              {wizardStep === 4 && (
+              {/* PASSO 5: PRIMEIRA COBRANÇA (OPCIONAL) */}
+              {wizardStep === 5 && (
                 <div className="space-y-4">
                   <label className="flex items-center gap-3 p-3.5 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
                     <input
@@ -2128,7 +2445,7 @@ export default function StudentsPage() {
                 )}
 
                 <div className="flex gap-2">
-                  {wizardStep < 4 ? (
+                  {wizardStep < 5 ? (
                     <button
                       type="button"
                       onClick={() => setWizardStep((s) => s + 1)}
