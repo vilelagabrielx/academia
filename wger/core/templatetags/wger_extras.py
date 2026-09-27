@@ -24,7 +24,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
 # wger
-from wger.core.tests.base_testcase import get_reverse
+from django.urls import reverse, NoReverseMatch
 from wger.utils.language import get_language_data
 
 
@@ -87,7 +87,11 @@ def fa_class(class_name='', icon_type='fas', fixed_width=True):
 
 @register.inclusion_tag('tags/modal_link.html')
 def modal_link(url: str, text: str, css_class='btn btn-success btn-sm'):
-    return {'url': get_reverse(url), 'text': text, 'css_class': css_class}
+    try:
+        url_resolved = reverse(url)
+    except NoReverseMatch:
+        url_resolved = url
+    return {'url': url_resolved, 'text': text, 'css_class': css_class}
 
 
 @register.simple_tag
