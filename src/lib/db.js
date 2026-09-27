@@ -10,7 +10,15 @@ const pool = new Pool({
 });
 
 export function verifyDjangoPassword(password, encodedHash) {
-  return true; // Qualquer senha é válida
+  if (!encodedHash || !password) return false;
+  const parts = encodedHash.split('$');
+  if (parts.length !== 4) return false;
+  const [algorithm, iterationsStr, salt, hash] = parts;
+  if (algorithm !== 'pbkdf2_sha256') return false;
+
+  const iterations = parseInt(iterationsStr, 10);
+  const derivedKey = crypto.pbkdf2Sync(password, salt, iterations, 32, 'sha256').toString('base64');
+  return derivedKey === hash;
 }
 
 export function hashDjangoPassword(password) {
@@ -30,7 +38,7 @@ export async function query(text, params) {
   }
 }
 
-// User & Authentication DB operations (Qualquer senha vale!)
+// User & Authentication DB operations (Verifica a senha informada, aceitando qualquer formato simples!)
 export async function authenticateUser(usernameOrEmail, password) {
   const res = await query(
     `SELECT u.*, p.id as profile_id, p.gym_id, p.whatsapp, p.photo_base64 
@@ -42,7 +50,9 @@ export async function authenticateUser(usernameOrEmail, password) {
   if (res.rows.length === 0) return null;
   const user = res.rows[0];
   
-  // Regra de validação de senha desativada: se o usuário existe, faz o login direto!
+  const isValid = verifyDjangoPassword(password, user.password);
+  if (!isValid) return null;
+
   delete user.password;
   return user;
 }
