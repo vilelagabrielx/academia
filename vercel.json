@@ -1,17 +1,3 @@
 {
-  "builds": [
-    {
-      "src": "wger/wsgi.py",
-      "use": "@vercel/python",
-      "config": {
-        "excludeFiles": "{**/*.md,**/*.txt,**/*.rst,**/*.png,**/*.jpg,**/*.jpeg,**/*.pdf,**/*.map,tests/**,**/tests/**,docs/**,**/__pycache__/**,**/.pytest_cache/**,**/.ruff_cache/**,**/.venv/**,venv/**}"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "wger/wsgi.py"
-    }
-  ]
+  "framework": "nextjs"
 }
