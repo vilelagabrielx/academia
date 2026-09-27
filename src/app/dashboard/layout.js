@@ -34,8 +34,7 @@ export default function DashboardLayout({ children }) {
     { label: 'Alunos', href: '/dashboard/students', icon: Users },
     { label: 'Treinos', href: '/dashboard/routines', icon: FileText },
     { label: 'Exercícios', href: '/dashboard/exercises', icon: Dumbbell },
-    { label: 'Cobranças', href: '/dashboard/billings', icon: CreditCard },
-    { label: 'Despesas', href: '/dashboard/expenses', icon: TrendingDown },
+    { label: 'Financeiro', href: '/dashboard/billings', icon: CreditCard },
   ];
 
   return (
