@@ -508,12 +508,31 @@ export default function FinancialPage() {
                         <td className="py-2 px-3 font-extrabold text-rose-400">R$ {parseFloat(b.amount).toFixed(2)}</td>
                         <td className="py-2 px-3 font-mono">{String(b.due_date).split('T')[0]}</td>
                         <td className="py-2 px-3 text-right">
-                          <button
-                            onClick={() => { setSelectedWaBilling(b); setWaMessage(`Olá ${b.first_name || 'Aluno'}! Constamos uma pendência de R$ ${parseFloat(b.amount).toFixed(2)} referente à mensalidade.`); setShowWaModal(true); }}
-                            className="px-2.5 py-1 bg-emerald-500 text-slate-950 font-bold rounded-lg hover:bg-emerald-400 text-[10px]"
-                          >
-                            WhatsApp
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                setSelectedPaidBilling(b);
+                                setShowPaidBillingModal(true);
+                              }}
+                              className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-lg text-[10px] shadow-md transition-all cursor-pointer flex items-center gap-1"
+                              title="Dar baixa no pagamento desta mensalidade"
+                            >
+                              <CheckCircle2 className="w-3 h-3 text-slate-950" />
+                              <span>Dar Baixa</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedWaBilling(b);
+                                setWaMessage(`Olá ${b.first_name || 'Aluno'}! Constamos uma pendência de R$ ${parseFloat(b.amount).toFixed(2)} referente à mensalidade com vencimento em ${String(b.due_date).split('T')[0]}.`);
+                                setShowWaModal(true);
+                              }}
+                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold rounded-lg text-[10px] shadow-sm transition-all cursor-pointer flex items-center gap-1"
+                              title="Enviar lembrete por WhatsApp"
+                            >
+                              <MessageCircle className="w-3 h-3 text-emerald-400" />
+                              <span>WhatsApp</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
