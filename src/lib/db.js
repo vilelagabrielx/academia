@@ -605,3 +605,35 @@ export async function getOverdueBillings() {
   `);
   return res.rows;
 }
+
+export async function convertToMonthly(id, { createNextMonth = true } = {}) {
+  const origRes = await query(`SELECT * FROM gym_billing WHERE id = $1`, [id]);
+  if (origRes.rows.length === 0) throw new Error('Cobrança não encontrada');
+  const orig = origRes.rows[0];
+
+  await query(
+    `UPDATE gym_billing SET notes = 'Mensalidade' WHERE id = $1`,
+    [id]
+  );
+
+  let nextBilling = null;
+  if (createNextMonth) {
+    const currentDueDate = new Date(orig.due_date);
+    const nextDueDate = new Date(currentDueDate);
+    nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+    
+    const dueDateStr = nextDueDate.toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    const status = dueDateStr < todayStr ? 'overdue' : 'pending';
+
+    const newRes = await query(
+      `INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes)
+       VALUES ($1, $2, $3, $4, $5, 'Mensalidade Recorrente')
+       RETURNING *`,
+      [orig.user_id, orig.amount, dueDateStr, orig.payment_method || 'Pix', status]
+    );
+    nextBilling = newRes.rows[0];
+  }
+
+  return { convertedId: id, nextBilling };
+}
