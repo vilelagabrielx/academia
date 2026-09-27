@@ -5,6 +5,15 @@ export const metadata = {
   description: 'Os melhores planos estão aqui. Treine com foco, disciplina e superação.',
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#0D0D0D',
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR" className="dark">

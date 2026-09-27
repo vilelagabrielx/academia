@@ -191,6 +191,36 @@ export default function StudentsPage() {
     }
   };
 
+  const handleCancelEnrollment = async (studentId, studentName) => {
+    if (!confirm(`Tem certeza que deseja CANCELAR A MATRÍCULA de ${studentName}? Todas as mensalidades futuras pendentes serão canceladas.`)) return;
+    try {
+      const res = await fetch(`/api/students/${studentId}/cancel-enrollment`, { method: 'POST' });
+      if (!res.ok) throw new Error('Erro ao cancelar matrícula');
+      alert('Matrícula cancelada com sucesso!');
+      setViewingStudent(null);
+      loadStudents();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleRenewEnrollment = async (studentId, studentName) => {
+    if (!confirm(`Deseja RENOVAR A MATRÍCULA de ${studentName} por mais 1 ano (gerando 12 mensalidades)?`)) return;
+    try {
+      const res = await fetch(`/api/students/${studentId}/renew-enrollment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 60.00 }),
+      });
+      if (!res.ok) throw new Error('Erro ao renovar matrícula');
+      alert('Matrícula renovada por 1 ano com sucesso! 12 novas mensalidades geradas.');
+      setViewingStudent(null);
+      loadStudents();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -390,10 +420,27 @@ export default function StudentsPage() {
 
               <div className="text-center sm:text-left space-y-2 flex-1">
                 <div>
-                  <h2 className="text-2xl font-extrabold text-white">
-                    {viewingStudent.first_name} {viewingStudent.last_name}
-                  </h2>
-                  <span className="text-xs text-slate-400 font-mono block">@{viewingStudent.username}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-2xl font-extrabold text-white">
+                      {viewingStudent.first_name} {viewingStudent.last_name}
+                    </h2>
+                    {viewingStudent.enrollment_status === 'renewal_needed' && (
+                      <span className="px-2.5 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37] text-[#D4AF37] font-bold text-[10px] uppercase tracking-wider animate-pulse">
+                        ⚠️ Renovação Obrigatória (1 Ano)
+                      </span>
+                    )}
+                    {viewingStudent.enrollment_status === 'cancelled' && (
+                      <span className="px-2.5 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-400 font-bold text-[10px] uppercase tracking-wider">
+                        Matrícula Cancelada
+                      </span>
+                    )}
+                    {viewingStudent.enrollment_status === 'active' && (
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-[10px] uppercase tracking-wider">
+                        Matrícula Ativa (1 Ano)
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-slate-400 font-mono block mt-1">@{viewingStudent.username}</span>
                 </div>
 
                 {viewingStudent.whatsapp && (
@@ -488,28 +535,37 @@ export default function StudentsPage() {
             </div>
 
             {/* Modal Actions */}
-            <div className="flex justify-between items-center pt-4 border-t border-slate-800">
-              <button
-                onClick={() => handleDelete(viewingStudent.id, viewingStudent.first_name)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20"
-              >
-                Excluir Aluno
-              </button>
+            <div className="flex flex-wrap justify-between items-center gap-3 pt-4 border-t border-slate-800">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleCancelEnrollment(viewingStudent.id, viewingStudent.first_name)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 cursor-pointer"
+                >
+                  Cancelar Matrícula
+                </button>
+                <button
+                  onClick={() => handleDelete(viewingStudent.id, viewingStudent.first_name)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 bg-slate-800 hover:text-white"
+                >
+                  Excluir
+                </button>
+              </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-2">
+                {(viewingStudent.enrollment_status === 'renewal_needed' || viewingStudent.enrollment_status === 'cancelled') && (
+                  <button
+                    onClick={() => handleRenewEnrollment(viewingStudent.id, viewingStudent.first_name)}
+                    className="px-4 py-2 rounded-xl text-xs font-black text-black bg-[#D4AF37] hover:bg-[#C5A059] shadow-lg shadow-[#D4AF37]/20 cursor-pointer"
+                  >
+                    Renovar Matrícula (+12 Meses)
+                  </button>
+                )}
                 <button
                   onClick={() => handleOpenEditWizard(viewingStudent)}
                   className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700"
                 >
                   Editar Cadastro
                 </button>
-                <Link
-                  href={`/dashboard/students/${viewingStudent.id}/history`}
-                  className="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 flex items-center gap-1.5"
-                >
-                  <span>Ver Histórico de Treinos</span>
-                  <ArrowUpRight className="w-4 h-4" />
-                </Link>
               </div>
             </div>
           </div>

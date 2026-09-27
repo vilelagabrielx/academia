@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { 
   CreditCard, Plus, CheckCircle2, AlertCircle, Clock, MessageCircle, FileText, Download, Eye, 
-  Trash2, Search, DollarSign, Send, Filter, Printer, BellRing, Upload, Calendar, Check, Repeat
+  Trash2, Search, DollarSign, Send, Filter, Printer, BellRing, Upload, Calendar, Check, Repeat, UserX
 } from 'lucide-react';
 
 export default function BillingsPage() {
@@ -194,6 +194,18 @@ export default function BillingsPage() {
       alert(err.message);
     } finally {
       setConverting(false);
+    }
+  };
+
+  const handleCancelStudentEnrollmentFromBilling = async (userId, studentName) => {
+    if (!confirm(`Este aluno cancelou a matrícula?\n\nConfirmar o cancelamento da matrícula de ${studentName} irá cancelar TODAS as próximas mensalidades pendentes deste aluno.`)) return;
+    try {
+      const res = await fetch(`/api/students/${userId}/cancel-enrollment`, { method: 'POST' });
+      if (!res.ok) throw new Error('Erro ao cancelar matrícula');
+      alert(`Matrícula de ${studentName} cancelada e mensalidades pendentes limpas com sucesso!`);
+      loadData();
+    } catch (err) {
+      alert(err.message);
     }
   };
 
@@ -557,10 +569,18 @@ export default function BillingsPage() {
                           setCreateNextMonthOption(true);
                           setShowConvertModal(true);
                         }}
-                        title="Transformar em Mensalidade Recorrente"
-                        className="p-1.5 rounded-lg text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 transition-all"
+                        title="Transformar em Plano Recorrente (12 Meses)"
+                        className="p-1.5 rounded-lg text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 transition-all cursor-pointer"
                       >
                         <Repeat className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleCancelStudentEnrollmentFromBilling(b.user_id, b.first_name || b.username)}
+                        title="Este Aluno Cancelou a Matrícula (Cancelar Próximas Mensalidades)"
+                        className="p-1.5 rounded-lg text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all cursor-pointer"
+                      >
+                        <UserX className="w-4 h-4" />
                       </button>
 
                       {b.status === 'paid' && (
@@ -591,6 +611,539 @@ export default function BillingsPage() {
           </div>
         )}
       </div>
+
+      {/* MODAL 1: MARK AS CHARGED */}
+      {showChargeModal && selectedChargeBilling && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <BellRing className="w-5 h-5 text-amber-400" />
+                Marcar Cobrança Feita & Definir Lembrete
+              </h3>
+              <button onClick={() => setShowChargeModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleMarkAsChargedSubmit} className="space-y-4 text-xs">
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                <span className="font-semibold text-white block">
+                  Aluno: {selectedChargeBilling.first_name} {selectedChargeBilling.last_name}
+                </span>
+                <span className="text-amber-400 font-bold block">
+                  Valor: R$ {parseFloat(selectedChargeBilling.amount).toFixed(2)}
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Me Lembre em (Dias):</label>
+                <select
+                  value={remindDays}
+                  onChange={(e) => setRemindDays(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-amber-400"
+                >
+                  <option value="2">Em 2 dias (Amarelo)</option>
+                  <option value="3">Em 3 dias (Amarelo)</option>
+                  <option value="5">Em 5 dias (Amarelo)</option>
+                  <option value="7">Em 7 dias (Amarelo)</option>
+                  <option value="custom">Data Personalizada...</option>
+                </select>
+              </div>
+
+              {remindDays === 'custom' && (
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Data Específica do Lembrete</label>
+                  <input
+                    type="date"
+                    required
+                    value={customRemindDate}
+                    onChange={(e) => setCustomRemindDate(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-amber-400"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Observações da Cobrança (Opcional)</label>
+                <textarea
+                  rows={2}
+                  value={chargeNotes}
+                  onChange={(e) => setChargeNotes(e.target.value)}
+                  placeholder="Ex: Mandei mensagem no WhatsApp, disse que pagará na sexta..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowChargeModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={charging}
+                  className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-amber-400 hover:bg-amber-300"
+                >
+                  {charging ? 'Salvando...' : 'Salvar Cobrança e Lembrete'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: MARK AS PAID */}
+      {showPaidModal && selectedPaidBilling && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                Registrar Pagamento Recebido
+              </h3>
+              <button onClick={() => setShowPaidModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handlePaidSubmit} className="space-y-4 text-xs">
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                <span className="font-semibold text-white block">
+                  Aluno: {selectedPaidBilling.first_name} {selectedPaidBilling.last_name}
+                </span>
+                <span className="text-emerald-400 font-extrabold text-sm block">
+                  Valor Pago: R$ {parseFloat(selectedPaidBilling.amount).toFixed(2)}
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">
+                  Anexar Comprovante (Opcional - Imagem/PDF):
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handleProofFileUpload}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-slate-300 focus:outline-none"
+                />
+              </div>
+
+              {paidProofFilename && (
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 font-semibold flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  <span>Comprovante: {paidProofFilename}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Observações do Pagamento (Opcional)</label>
+                <input
+                  type="text"
+                  value={paidNotes}
+                  onChange={(e) => setPaidNotes(e.target.value)}
+                  placeholder="Ex: Recebido em dinheiro no balcão / Pix..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowPaidModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPaid}
+                  className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400"
+                >
+                  {savingPaid ? 'Confirmando...' : 'Confirmar Pagamento'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: NEW BILLING MODAL */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Plus className="w-5 h-5 text-emerald-400" />
+                Criar Nova Cobrança
+              </h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleCreateBilling} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Selecione o Aluno *</label>
+                <select
+                  required
+                  value={newBilling.user_id}
+                  onChange={(e) => setNewBilling({ ...newBilling, user_id: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                >
+                  <option value="">-- Selecionar Aluno --</option>
+                  {students.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.first_name} {s.last_name} (@{s.username})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Presets de Mensalidade */}
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1.5">Valores Rápidos & Planos</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewBilling((prev) => ({ ...prev, amount: '60.00', notes: 'Mensalidade Iron Solder' }))}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] font-bold text-center transition-all text-xs"
+                  >
+                    R$ 60,00 (Mensal)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewBilling((prev) => ({ ...prev, amount: '100.00', notes: 'Mensalidade' }))}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-center transition-all text-xs"
+                  >
+                    R$ 100,00
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewBilling((prev) => ({ ...prev, amount: '150.00', notes: 'Mensalidade' }))}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-center transition-all text-xs"
+                  >
+                    R$ 150,00
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Valor (R$) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={newBilling.amount}
+                    onChange={(e) => setNewBilling({ ...newBilling, amount: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-bold text-emerald-400 focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Data de Vencimento *</label>
+                  <input
+                    type="date"
+                    required
+                    value={newBilling.due_date}
+                    onChange={(e) => setNewBilling({ ...newBilling, due_date: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Descrição / Tipo de Cobrança</label>
+                <input
+                  type="text"
+                  value={newBilling.notes}
+                  onChange={(e) => setNewBilling({ ...newBilling, notes: e.target.value })}
+                  placeholder="Ex: Mensalidade, Taxa de Matrícula..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Forma de Pagamento</label>
+                <select
+                  value={newBilling.payment_method}
+                  onChange={(e) => setNewBilling({ ...newBilling, payment_method: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                >
+                  <option value="Pix">Pix</option>
+                  <option value="Cartão de Crédito">Cartão de Crédito</option>
+                  <option value="Dinheiro">Dinheiro</option>
+                  <option value="Boleto">Boleto</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="px-5 py-2 rounded-xl font-bold text-black bg-[#D4AF37] hover:bg-[#C5A059] shadow-lg shadow-[#D4AF37]/20 cursor-pointer"
+                >
+                  {creating ? 'Criando...' : 'Criar Mensalidade / Cobrança'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: PROOF VIEWER */}
+      {showProofModal && selectedProof && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-lg rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Eye className="w-5 h-5 text-cyan-400" />
+                Comprovante de Pagamento
+              </h3>
+              <button onClick={() => setShowProofModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-xs space-y-1">
+                <span className="font-semibold text-white block">
+                  Aluno: {selectedProof.first_name} {selectedProof.last_name}
+                </span>
+                <span className="text-slate-400 block">
+                  Arquivo: {selectedProof.proof_filename || 'comprovante.jpg'}
+                </span>
+              </div>
+
+              <div className="max-h-[60vh] overflow-auto flex justify-center bg-slate-950 p-2 rounded-xl border border-slate-800">
+                {selectedProof.proof_base64?.startsWith('data:application/pdf') ? (
+                  <iframe
+                    src={selectedProof.proof_base64}
+                    className="w-full h-96 rounded-lg"
+                    title="Comprovante PDF"
+                  />
+                ) : (
+                  <img
+                    src={selectedProof.proof_base64}
+                    alt="Comprovante"
+                    className="max-w-full h-auto rounded-lg object-contain"
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+              <a
+                href={selectedProof.proof_base64}
+                download={selectedProof.proof_filename || 'comprovante.jpg'}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-950 bg-cyan-400 hover:bg-cyan-300 flex items-center gap-1.5"
+              >
+                <Download className="w-4 h-4" />
+                <span>Baixar Comprovante</span>
+              </a>
+              <button
+                onClick={() => setShowProofModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 bg-slate-800 hover:text-white"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: WHATSAPP REMINDER */}
+      {showWaModal && selectedWaBilling && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-lg rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-emerald-400" />
+                Enviar Lembrete por WhatsApp
+              </h3>
+              <button onClick={() => setShowWaModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+                <span className="font-semibold text-white block">
+                  Aluno: {selectedWaBilling.first_name} {selectedWaBilling.last_name}
+                </span>
+                <span className="text-emerald-400 font-semibold block">
+                  WhatsApp: {selectedWaBilling.whatsapp || 'Não informado'}
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">
+                  Mensagem Personalizada (Você pode editar antes de enviar):
+                </label>
+                <textarea
+                  rows={6}
+                  value={waMessage}
+                  onChange={(e) => setWaMessage(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-xs font-mono"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowWaModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={sendWaMessage}
+                  className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Abrir no WhatsApp</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 6: RECEIPT */}
+      {showReceiptModal && selectedReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-white text-slate-900 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-6">
+            <div className="text-center border-b pb-4">
+              <h2 className="text-2xl font-black uppercase tracking-tight text-slate-950">RECIBO DE PAGAMENTO</h2>
+              <p className="text-xs text-slate-500">Iron Solder Gym &bull; Gestão de Treinos</p>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between py-1 border-b">
+                <span className="font-semibold text-slate-500">Recebido de:</span>
+                <span className="font-bold text-slate-900">{selectedReceipt.first_name} {selectedReceipt.last_name}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b">
+                <span className="font-semibold text-slate-500">Valor Pago:</span>
+                <span className="font-extrabold text-emerald-600 text-sm">
+                  R$ {parseFloat(selectedReceipt.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b">
+                <span className="font-semibold text-slate-500">Referente a:</span>
+                <span className="font-bold text-slate-800">{selectedReceipt.notes || 'Mensalidade da Academia'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b">
+                <span className="font-semibold text-slate-500">Forma de Pagamento:</span>
+                <span className="font-bold text-slate-800">{selectedReceipt.payment_method}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b">
+                <span className="font-semibold text-slate-500">Data de Vencimento:</span>
+                <span>{new Date(selectedReceipt.due_date).toLocaleDateString('pt-BR')}</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="font-semibold text-slate-500">Data do Pagamento:</span>
+                <span className="font-bold">{new Date(selectedReceipt.paid_date || Date.now()).toLocaleDateString('pt-BR')}</span>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t text-center">
+              <div className="w-48 mx-auto border-b border-slate-900 mb-1"></div>
+              <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold block">
+                Assinatura do Responsável
+              </span>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowReceiptModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 flex items-center gap-2"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Imprimir / Salvar PDF</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 7: TRANSFORM BILLING INTO 1-YEAR MONTHLY RECURRENCE */}
+      {showConvertModal && selectedConvertBilling && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Repeat className="w-5 h-5 text-purple-400" />
+                Gerar Recorrência de 1 Ano (12 Mensalidades)
+              </h3>
+              <button onClick={() => setShowConvertModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleConvertSubmit} className="space-y-4 text-xs">
+              <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Aluno:</span>
+                  <span className="font-bold text-white">{selectedConvertBilling.first_name} {selectedConvertBilling.last_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Valor Mensal:</span>
+                  <span className="font-extrabold text-emerald-400">R$ {parseFloat(selectedConvertBilling.amount).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Primeiro Vencimento:</span>
+                  <span className="font-semibold text-slate-200">{new Date(selectedConvertBilling.due_date).toLocaleDateString('pt-BR')}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl space-y-2 text-purple-200">
+                <p className="font-semibold">
+                  Ao confirmar, o sistema gerará automaticamente <strong className="text-white font-bold">12 mensalidades mensais</strong> para este aluno, ativando a renovação obrigatória a cada 1 ano.
+                </p>
+              </div>
+
+              <label className="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
+                <input
+                  type="checkbox"
+                  checked={createNextMonthOption}
+                  onChange={(e) => setCreateNextMonthOption(e.target.checked)}
+                  className="w-4 h-4 rounded text-purple-500 focus:ring-purple-400 bg-slate-950 border-slate-700"
+                />
+                <div>
+                  <span className="font-bold text-white block">Gerar Recorrência Completa de 12 Meses (1 Ano)</span>
+                  <span className="text-[11px] text-slate-400 block">
+                    Cria 12 mensalidades mensais (1/12 até 12/12) com controle de renovação ao final do ciclo.
+                  </span>
+                </div>
+              </label>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowConvertModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={converting}
+                  className="px-5 py-2 rounded-xl font-bold text-white bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/20 cursor-pointer"
+                >
+                  {converting ? 'Gerando 12 Meses...' : 'Gerar 1 Ano de Mensalidades'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL 1: MARK AS CHARGED & SET REMINDER (COBRANÇA FEITA + LEMBRETE EM X DIAS) */}
       {showChargeModal && selectedChargeBilling && (
@@ -1038,80 +1591,6 @@ export default function BillingsPage() {
                 <span>Imprimir / Salvar PDF</span>
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 7: TRANSFORM BILLING INTO MONTHLY SUBSCRIPTION */}
-      {showConvertModal && selectedConvertBilling && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="glass-panel w-full max-w-md rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Repeat className="w-5 h-5 text-purple-400" />
-                Transformar Cobrança em Mensalidade
-              </h3>
-              <button onClick={() => setShowConvertModal(false)} className="text-slate-400 hover:text-white">✕</button>
-            </div>
-
-            <form onSubmit={handleConvertSubmit} className="space-y-4 text-xs">
-              <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Aluno:</span>
-                  <span className="font-bold text-white">{selectedConvertBilling.first_name} {selectedConvertBilling.last_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Valor Atual:</span>
-                  <span className="font-extrabold text-emerald-400">R$ {parseFloat(selectedConvertBilling.amount).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Vencimento Atual:</span>
-                  <span className="font-semibold text-slate-200">{new Date(selectedConvertBilling.due_date).toLocaleDateString('pt-BR')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Descrição Atual:</span>
-                  <span className="italic text-slate-300">{selectedConvertBilling.notes || 'Sem descrição'}</span>
-                </div>
-              </div>
-
-              <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl space-y-2 text-purple-200">
-                <p className="font-semibold">
-                  Ao confirmar, esta cobrança será atualizada para o status de <strong className="text-white font-bold">"Mensalidade"</strong> oficial.
-                </p>
-              </div>
-
-              <label className="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
-                <input
-                  type="checkbox"
-                  checked={createNextMonthOption}
-                  onChange={(e) => setCreateNextMonthOption(e.target.checked)}
-                  className="w-4 h-4 rounded text-purple-500 focus:ring-purple-400 bg-slate-950 border-slate-700"
-                />
-                <div>
-                  <span className="font-bold text-white block">Gerar Próxima Mensalidade (+30 dias)</span>
-                  <span className="text-[11px] text-slate-400 block">
-                    Cria automaticamente a mensalidade do mês seguinte para manter o aluno no ciclo mensal.
-                  </span>
-                </div>
-              </label>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowConvertModal(false)}
-                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 hover:text-white"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={converting}
-                  className="px-5 py-2 rounded-xl font-bold text-white bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-600/20 cursor-pointer"
-                >
-                  {converting ? 'Convertendo...' : 'Confirmar Mensalidade'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

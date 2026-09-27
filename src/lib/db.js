@@ -62,6 +62,7 @@ export async function getStudents(search = '') {
   let sql = `
     SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.is_staff, u.date_joined,
            p.whatsapp, p.photo_base64, p.gym_id, p.age, p.height, p.goal, p.blood_type, p.training_days, p.current_weight,
+           COALESCE(p.enrollment_status, 'active') as enrollment_status, p.membership_expires_at,
            (SELECT COUNT(*) FROM manager_routine r WHERE r.user_id = u.id) as routine_count,
            (SELECT b.amount FROM gym_billing b WHERE b.user_id = u.id ORDER BY b.due_date DESC LIMIT 1) as latest_billing_amount,
            (SELECT b.status FROM gym_billing b WHERE b.user_id = u.id ORDER BY b.due_date DESC LIMIT 1) as latest_billing_status,
@@ -79,6 +80,16 @@ export async function getStudents(search = '') {
   }
   sql += ` ORDER BY u.date_joined DESC`;
   const res = await query(sql, params);
+  
+  // Auto-flag students whose 1-year membership has expired and need renewal
+  const today = new Date().toISOString().split('T')[0];
+  for (const s of res.rows) {
+    if (s.enrollment_status === 'active' && s.membership_expires_at && s.membership_expires_at < today) {
+      s.enrollment_status = 'renewal_needed';
+      await query(`UPDATE core_userprofile SET enrollment_status = 'renewal_needed' WHERE user_id = $1`, [s.id]);
+    }
+  }
+
   return res.rows;
 }
 
@@ -138,12 +149,29 @@ export async function createStudent({
     ]
   );
 
-  // Create initial billing if provided
+  // Create 12 months of recurring billings if initial_amount and due_date are provided
   if (initial_amount && due_date) {
+    const baseDate = new Date(due_date);
+    const todayStr = new Date().toISOString().split('T')[0];
+    let lastDueDateStr = due_date;
+
+    for (let i = 1; i <= 12; i++) {
+      const nextDueDate = new Date(baseDate);
+      nextDueDate.setMonth(nextDueDate.getMonth() + (i - 1));
+      const dueDateStr = nextDueDate.toISOString().split('T')[0];
+      lastDueDateStr = dueDateStr;
+      const status = dueDateStr < todayStr ? 'overdue' : 'pending';
+
+      await query(
+        `INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes)
+         VALUES ($1, $2, $3, 'Pix', $4, $5)`,
+        [userId, parseFloat(initial_amount), dueDateStr, status, `Mensalidade (${i}/12)`]
+      );
+    }
+
     await query(
-      `INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes)
-       VALUES ($1, $2, $3, 'Pix', 'pending', 'Mensalidade Inicial')`,
-      [userId, parseFloat(initial_amount), due_date]
+      `UPDATE core_userprofile SET enrollment_status = 'active', membership_expires_at = $1 WHERE user_id = $2`,
+      [lastDueDateStr, userId]
     );
   }
 
@@ -606,34 +634,106 @@ export async function getOverdueBillings() {
   return res.rows;
 }
 
-export async function convertToMonthly(id, { createNextMonth = true } = {}) {
+export async function convertToMonthly(id, { generateYear = true, monthsCount = 12 } = {}) {
   const origRes = await query(`SELECT * FROM gym_billing WHERE id = $1`, [id]);
   if (origRes.rows.length === 0) throw new Error('Cobrança não encontrada');
   const orig = origRes.rows[0];
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const count = generateYear ? 12 : 1;
+
   await query(
-    `UPDATE gym_billing SET notes = 'Mensalidade' WHERE id = $1`,
-    [id]
+    `UPDATE gym_billing SET notes = $1 WHERE id = $2`,
+    [`Mensalidade (1/${count})`, id]
   );
 
-  let nextBilling = null;
-  if (createNextMonth) {
-    const currentDueDate = new Date(orig.due_date);
-    const nextDueDate = new Date(currentDueDate);
-    nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-    
-    const dueDateStr = nextDueDate.toISOString().split('T')[0];
-    const todayStr = new Date().toISOString().split('T')[0];
-    const status = dueDateStr < todayStr ? 'overdue' : 'pending';
+  const createdBillings = [orig];
+  const startDate = new Date(orig.due_date);
+  let lastDueDateStr = orig.due_date;
 
-    const newRes = await query(
-      `INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes)
-       VALUES ($1, $2, $3, $4, $5, 'Mensalidade Recorrente')
-       RETURNING *`,
-      [orig.user_id, orig.amount, dueDateStr, orig.payment_method || 'Pix', status]
-    );
-    nextBilling = newRes.rows[0];
+  if (generateYear) {
+    for (let i = 2; i <= 12; i++) {
+      const nextDueDate = new Date(startDate);
+      nextDueDate.setMonth(nextDueDate.getMonth() + (i - 1));
+      const dueDateStr = nextDueDate.toISOString().split('T')[0];
+      lastDueDateStr = dueDateStr;
+      const status = dueDateStr < todayStr ? 'overdue' : 'pending';
+
+      const newRes = await query(
+        `INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *`,
+        [
+          orig.user_id,
+          orig.amount,
+          dueDateStr,
+          orig.payment_method || 'Pix',
+          status,
+          `Mensalidade (${i}/12)`,
+        ]
+      );
+      createdBillings.push(newRes.rows[0]);
+    }
   }
 
-  return { convertedId: id, nextBilling };
+  await query(
+    `UPDATE core_userprofile 
+     SET enrollment_status = 'active', membership_expires_at = $1 
+     WHERE user_id = $2`,
+    [lastDueDateStr, orig.user_id]
+  );
+
+  return { convertedId: id, totalCreated: createdBillings.length, createdBillings };
+}
+
+export async function cancelStudentEnrollment(studentId) {
+  // Update enrollment_status to 'cancelled'
+  await query(
+    `UPDATE core_userprofile SET enrollment_status = 'cancelled' WHERE user_id = $1`,
+    [studentId]
+  );
+
+  // Cancel all pending, charged, or overdue future billings for this student
+  await query(
+    `UPDATE gym_billing 
+     SET status = 'cancelled', notes = CONCAT(COALESCE(notes, ''), ' (Matrícula Cancelada)')
+     WHERE user_id = $1 AND status IN ('pending', 'charged', 'overdue')`,
+    [studentId]
+  );
+
+  return true;
+}
+
+export async function renewStudentEnrollment(studentId, { amount = 60.00, startDate = null } = {}) {
+  const baseDate = startDate ? new Date(startDate) : new Date();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const createdBillings = [];
+  let lastDueDateStr = null;
+
+  for (let i = 1; i <= 12; i++) {
+    const nextDueDate = new Date(baseDate);
+    nextDueDate.setMonth(nextDueDate.getMonth() + (i - 1));
+    const dueDateStr = nextDueDate.toISOString().split('T')[0];
+    lastDueDateStr = dueDateStr;
+    const status = dueDateStr < todayStr ? 'overdue' : 'pending';
+
+    const res = await query(
+      `INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes)
+       VALUES ($1, $2, $3, 'Pix', $4, $5)
+       RETURNING *`,
+      [studentId, parseFloat(amount), dueDateStr, status, `Mensalidade Renovada (${i}/12)`]
+    );
+    createdBillings.push(res.rows[0]);
+  }
+
+  // Set student back to active with new 1-year expiration
+  await query(
+    `UPDATE core_userprofile 
+     SET enrollment_status = 'active', membership_expires_at = $1 
+     WHERE user_id = $2`,
+    [lastDueDateStr, studentId]
+  );
+
+  return { studentId, createdBillings, membership_expires_at: lastDueDateStr };
 }
