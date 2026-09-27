@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  Dumbbell, UserCheck, ShieldCheck, ArrowRight, Lock, User, AlertCircle, 
+import {
+  Dumbbell, UserCheck, ShieldCheck, ArrowRight, Lock, User, AlertCircle,
   Check, Star, Shield, Zap, Award, Flame, MessageCircle, Instagram
 } from 'lucide-react';
 
@@ -77,7 +77,7 @@ export default function LandingAndLoginPage() {
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col justify-between selection:bg-[#D4AF37] selection:text-black">
-      
+
       {/* Navbar Header */}
       <header className="border-b border-[#D4AF37]/20 bg-[#121212]/90 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -118,7 +118,7 @@ export default function LandingAndLoginPage() {
       {/* Main Hero Banner */}
       <main className="flex-1 space-y-16 py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <section className="text-center relative py-8 sm:py-12 px-4 sm:px-6 rounded-3xl glass-panel-gold border border-[#D4AF37]/30 overflow-hidden space-y-6 sm:space-y-8 bg-gradient-to-b from-[#1F1F1F] via-[#121212] to-[#0D0D0D]">
-          
+
           {/* Logo Centralizada */}
           <div className="flex justify-center">
             <div className="w-24 h-24 sm:w-36 sm:h-36 rounded-2xl bg-[#121212] border-2 border-[#D4AF37] p-2 flex items-center justify-center shadow-2xl shadow-black/80">
@@ -174,7 +174,7 @@ export default function LandingAndLoginPage() {
               </div>
               <h3 className="font-bebas text-2xl text-white tracking-wide">Acesso Livre à Musculação</h3>
               <p className="text-xs text-[#A6A6A6] leading-relaxed">
-                Treine com total liberdade na nossa área de musculação climatizada e estruturada para hipertrofia e definição.
+                Treine com total liberdade na nossa área de musculação estruturada para hipertrofia e definição.
               </p>
             </div>
 
@@ -340,11 +340,10 @@ export default function LandingAndLoginPage() {
               <button
                 type="button"
                 onClick={() => setRole('trainer')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
-                  role === 'trainer'
-                    ? 'bg-[#D4AF37] text-black font-extrabold shadow-md'
-                    : 'text-[#A6A6A6] hover:text-white'
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${role === 'trainer'
+                  ? 'bg-[#D4AF37] text-black font-extrabold shadow-md'
+                  : 'text-[#A6A6A6] hover:text-white'
+                  }`}
               >
                 <ShieldCheck className="w-4 h-4" />
                 Professor
@@ -352,11 +351,10 @@ export default function LandingAndLoginPage() {
               <button
                 type="button"
                 onClick={() => setRole('student')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
-                  role === 'student'
-                    ? 'bg-[#D4AF37] text-black font-extrabold shadow-md'
-                    : 'text-[#A6A6A6] hover:text-white'
-                }`}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${role === 'student'
+                  ? 'bg-[#D4AF37] text-black font-extrabold shadow-md'
+                  : 'text-[#A6A6A6] hover:text-white'
+                  }`}
               >
                 <UserCheck className="w-4 h-4" />
                 Aluno
