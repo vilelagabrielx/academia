@@ -149,6 +149,7 @@ MIDDLEWARE = [
     # 'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
 
@@ -392,48 +393,14 @@ TIME_ZONE = 'UTC'
 # upstream need to be added here as well (plus their country flag)
 # https://github.com/django/django/blob/main/django/conf/global_settings.py
 AVAILABLE_LANGUAGES = (
-    ('bg', 'Bulgarian'),
-    ('ca', 'Catalan'),
-    ('cs', 'Czech'),
-    ('de', 'German'),
-    ('el', 'Greek'),
-    ('en', 'English'),
-    ('en-au', 'Australian English'),
-    ('en-gb', 'British English'),
-    ('es', 'Spanish'),
-    ('es-ar', 'Argentinian Spanish'),
-    ('es-co', 'Colombian Spanish'),
-    ('es-mx', 'Mexican Spanish'),
-    ('es-ni', 'Nicaraguan Spanish'),
-    ('es-ve', 'Venezuelan Spanish'),
-    ('fi', 'Finnish'),
-    ('fr', 'French'),
-    ('he', 'Hebrew'),
-    ('hr', 'Croatian'),
-    ('it', 'Italian'),
-    ('ko', 'Korean'),
-    ('mk', 'Macedonian'),
-    ('nl', 'Dutch'),
-    ('nb', 'Norwegian'),
-    ('pl', 'Polish'),
     ('pt', 'Portuguese'),
     ('pt-br', 'Brazilian Portuguese'),
-    ('ro', 'Romanian'),
-    ('ru', 'Russian'),
-    ('sk', 'Slovak'),
-    ('sl', 'Slovenian'),
-    ('sr', 'Serbian'),
-    ('sv', 'Swedish'),
-    ('ta', 'Tamil'),
-    ('th', 'Thai'),
-    ('tr', 'Turkish'),
-    ('uk', 'Ukrainian'),
-    ('zh-hans', 'Chinese simplified'),
-    ('zh-hant', 'Traditional Chinese'),
 )
 
+LANGUAGES = AVAILABLE_LANGUAGES
+
 # Default language code for this installation.
-LANGUAGE_CODE = 'en'
+LANGUAGE_CODE = 'pt-br'
 
 # All translation files are in one place
 LOCALE_PATHS = (os.path.join(SITE_ROOT, 'locale'),)
