@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Users, Dumbbell, FileText, Plus, MessageCircle, Instagram, ArrowUpRight, Search, Activity, 
-  UserPlus, CheckCircle2, Eye, User, Scale, Droplet, Target, Calendar, CreditCard, Trash2, RefreshCw, AlertTriangle, TrendingDown, DollarSign, Sparkles 
+  UserPlus, CheckCircle2, Eye, User, Scale, Droplet, Target, Calendar, CreditCard, Trash2, RefreshCw, AlertTriangle, AlertCircle, TrendingDown, DollarSign, Sparkles 
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -18,6 +18,15 @@ export default function DashboardPage() {
     receitas: 0,
   });
   const [loading, setLoading] = useState(true);
+
+  // Toast & Confirm Modal States
+  const [toast, setToast] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
   const [quickSearch, setQuickSearch] = useState('');
 
   // Student Profile Detail View Modal State
@@ -132,7 +141,7 @@ export default function DashboardPage() {
       setShowAddModal(false);
       loadData();
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'error');
     } finally {
       setCreating(false);
     }
@@ -180,7 +189,7 @@ export default function DashboardPage() {
       const data = await res.json();
 
       if (res.status === 409 || data.duplicate) {
-        alert(data.error || 'Já existe uma cobrança vinculada a este aluno para este período!');
+        showToast(data.error || 'Já existe uma cobrança vinculada a este aluno para este período!', 'warning');
         setShowRenewModal(false);
         loadData();
         return;
@@ -188,11 +197,11 @@ export default function DashboardPage() {
 
       if (!res.ok) throw new Error(data.error || 'Erro ao criar cobrança');
 
-      alert('Cobrança criada com sucesso!');
+      showToast('Cobrança criada com sucesso!', 'success');
       setShowRenewModal(false);
       loadData();
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'error');
     } finally {
       setRenewing(false);
     }
@@ -200,7 +209,7 @@ export default function DashboardPage() {
 
   const openWhatsAppForBilling = (student) => {
     const rawPhone = student.whatsapp?.replace(/\D/g, '');
-    if (!rawPhone) return alert('Aluno não possui número de WhatsApp cadastrado!');
+    if (!rawPhone) return showToast('Aluno não possui número de WhatsApp cadastrado!', 'warning');
 
     const name = student.first_name || student.username;
     const amountVal = student.current_billing?.amount || student.latest_billing_amount || '150.00';
@@ -218,29 +227,44 @@ export default function DashboardPage() {
     window.open(waUrl, '_blank');
   };
 
-  const handleDelete = async (id, name) => {
-    if (!confirm(`Tem certeza que deseja excluir o aluno ${name}?`)) return;
-    try {
-      const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Erro ao excluir aluno');
-      setViewingStudent(null);
-      loadData();
-    } catch (err) {
-      alert(err.message);
-    }
+  const handleDelete = (id, name) => {
+    setConfirmModal({
+      title: 'Excluir Aluno',
+      message: `Tem certeza que deseja excluir o aluno ${name}? Esta ação não poderá ser desfeita.`,
+      confirmText: 'Excluir Aluno',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Erro ao excluir aluno');
+          showToast('Aluno excluído com sucesso!', 'success');
+          setViewingStudent(null);
+          loadData();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      }
+    });
   };
 
-  const handleCancelEnrollment = async (studentId, studentName) => {
-    if (!confirm(`Tem certeza que deseja CANCELAR A MATRÍCULA de ${studentName}? Todas as mensalidades futuras pendentes serão canceladas.`)) return;
-    try {
-      const res = await fetch(`/api/students/${studentId}/cancel-enrollment`, { method: 'POST' });
-      if (!res.ok) throw new Error('Erro ao cancelar matrícula');
-      alert('Matrícula cancelada com sucesso!');
-      setViewingStudent(null);
-      loadData();
-    } catch (err) {
-      alert(err.message);
-    }
+  const handleCancelEnrollment = (studentId, studentName) => {
+    setConfirmModal({
+      title: 'Cancelar Matrícula',
+      message: `Tem certeza que deseja CANCELAR A MATRÍCULA de ${studentName}? Todas as mensalidades futuras pendentes serão canceladas.`,
+      confirmText: 'Cancelar Matrícula',
+      danger: true,
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/students/${studentId}/cancel-enrollment`, { method: 'POST' });
+          if (!res.ok) throw new Error('Erro ao cancelar matrícula');
+          showToast('Matrícula cancelada com sucesso!', 'success');
+          setViewingStudent(null);
+          loadData();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      }
+    });
   };
 
   const filteredStudents = students.filter((s) => {
@@ -1133,6 +1157,71 @@ export default function DashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className={`px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-xl border flex items-center gap-3 text-xs font-bold max-w-md ${
+            toast.type === 'error'
+              ? 'bg-rose-950/90 border-rose-500/40 text-rose-200'
+              : toast.type === 'warning'
+              ? 'bg-amber-950/90 border-amber-500/40 text-amber-200'
+              : 'bg-emerald-950/90 border-emerald-500/40 text-emerald-200'
+          }`}>
+            {toast.type === 'error' ? (
+              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+            ) : toast.type === 'warning' ? (
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            )}
+            <span className="flex-1">{toast.message}</span>
+            <button onClick={() => setToast(null)} className="text-white/60 hover:text-white ml-2">✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* HIG Confirmation Modal */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass-panel w-full max-w-md rounded-3xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                confirmModal.danger ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+              }`}>
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-white">{confirmModal.title}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{confirmModal.message}</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-300 bg-slate-800/80 hover:bg-slate-700 transition-all cursor-pointer"
+              >
+                {confirmModal.cancelText || 'Cancelar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const action = confirmModal.onConfirm;
+                  setConfirmModal(null);
+                  if (action) action();
+                }}
+                className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-md ${
+                  confirmModal.danger ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
+                }`}
+              >
+                {confirmModal.confirmText || 'Confirmar'}
+              </button>
+            </div>
           </div>
         </div>
       )}

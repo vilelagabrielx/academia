@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  TrendingDown, Plus, CheckCircle2, AlertCircle, Clock, DollarSign, Search, Filter, 
+  TrendingDown, Plus, CheckCircle2, AlertCircle, AlertTriangle, Clock, DollarSign, Search, Filter, 
   Trash2, Upload, Calendar, Check, Repeat, FileText, ChevronLeft, ChevronRight, Eye, Sparkles, TrendingUp, ShieldAlert, Award
 } from 'lucide-react';
 
@@ -19,6 +19,15 @@ const PAYMENT_METHODS = ['Pix', 'Cartão de Crédito', 'Boleto', 'Dinheiro', 'Tr
 
 export default function ExpensesPage() {
   const getCurrentMonthStr = () => new Date().toISOString().slice(0, 7);
+
+  // Toast & Confirm Modal States
+  const [toast, setToast] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const [summary, setSummary] = useState({ 
     total_paid: 0, 
@@ -122,7 +131,7 @@ export default function ExpensesPage() {
   const handleCreateExpense = async (e) => {
     e.preventDefault();
     if (!newExpense.description || !newExpense.amount || !newExpense.due_date) {
-      return alert('Preencha os campos obrigatórios (Descrição, Valor e Data)!');
+      return showToast('Preencha os campos obrigatórios (Descrição, Valor e Data)!', 'warning');
     }
     setCreating(true);
     try {
@@ -134,6 +143,7 @@ export default function ExpensesPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao cadastrar despesa');
 
+      showToast('Despesa cadastrada com sucesso!', 'success');
       setShowCreateModal(false);
       setNewExpense({
         description: '',
@@ -152,7 +162,7 @@ export default function ExpensesPage() {
       });
       loadData();
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'error');
     } finally {
       setCreating(false);
     }
@@ -175,6 +185,7 @@ export default function ExpensesPage() {
       });
       if (!res.ok) throw new Error('Erro ao registrar baixa da despesa');
 
+      showToast('Baixa de despesa registrada com sucesso!', 'success');
       setShowPayModal(false);
       setSelectedPayExpense(null);
       setPayProofBase64('');
@@ -182,38 +193,60 @@ export default function ExpensesPage() {
       setPayNotes('');
       loadData();
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'error');
     } finally {
       setPaying(false);
     }
   };
 
-  const handleDeleteExpense = async (exp) => {
-    const isRec = Boolean(exp.recurrence_id);
-    let deleteRec = false;
-
-    if (isRec) {
-      const choice = confirm(`Esta despesa faz parte de uma recorrência.\n\nClique OK para cancelar esta e todas as próximas ocorrências.\nClique Cancelar para apagar SOMENTE esta despesa.`);
-      deleteRec = choice;
-    } else {
-      if (!confirm(`Tem certeza que deseja excluir a despesa "${exp.description}"?`)) return;
-    }
-
+  const executeDeleteExpense = async (id, deleteRecurrence) => {
     try {
-      const res = await fetch(`/api/expenses/${exp.id}?delete_recurrence=${deleteRec}`, {
+      const res = await fetch(`/api/expenses/${id}?delete_recurrence=${deleteRecurrence}`, {
         method: 'DELETE'
       });
       if (!res.ok) throw new Error('Erro ao excluir despesa');
+      showToast('Despesa excluída com sucesso!', 'success');
       loadData();
     } catch (err) {
-      alert(err.message);
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleDeleteExpense = (exp) => {
+    const isRec = Boolean(exp.recurrence_id);
+    if (isRec) {
+      setConfirmModal({
+        title: 'Excluir Despesa Recorrente',
+        message: `A despesa "${exp.description}" faz parte de uma recorrência. Escolha como deseja proceder:`,
+        cancelText: 'Fechar',
+        customOptions: [
+          {
+            label: 'Apagar SOMENTE esta',
+            className: 'bg-slate-800 text-slate-200 hover:bg-slate-700',
+            onClick: () => executeDeleteExpense(exp.id, false)
+          },
+          {
+            label: 'Cancelar ESTA e PRÓXIMAS',
+            className: 'bg-rose-600 text-white hover:bg-rose-500 shadow-rose-600/30',
+            onClick: () => executeDeleteExpense(exp.id, true)
+          }
+        ]
+      });
+    } else {
+      setConfirmModal({
+        title: 'Excluir Despesa',
+        message: `Tem certeza que deseja excluir a despesa "${exp.description}"?`,
+        confirmText: 'Excluir Despesa',
+        danger: true,
+        onConfirm: () => executeDeleteExpense(exp.id, false)
+      });
     }
   };
 
   const handleFileUpload = (e, setBase64, setFilename) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return alert('Arquivo muito grande! Máximo 5MB.');
+    if (file.size > 5 * 1024 * 1024) return showToast('Arquivo muito grande! Máximo 5MB.', 'warning');
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -774,6 +807,87 @@ export default function ExpensesPage() {
                 <a href={selectedProof.proof_base64} download={selectedProof.proof_filename || 'comprovante.pdf'} className="px-4 py-3 rounded-2xl bg-slate-800 text-cyan-400 font-bold underline">
                   Baixar Documento / PDF ({selectedProof.proof_filename || 'comprovante.pdf'})
                 </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification */}
+      {toast && (
+        <div className="fixed top-6 right-6 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className={`px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-xl border flex items-center gap-3 text-xs font-bold max-w-md ${
+            toast.type === 'error'
+              ? 'bg-rose-950/90 border-rose-500/40 text-rose-200'
+              : toast.type === 'warning'
+              ? 'bg-amber-950/90 border-amber-500/40 text-amber-200'
+              : 'bg-emerald-950/90 border-emerald-500/40 text-emerald-200'
+          }`}>
+            {toast.type === 'error' ? (
+              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+            ) : toast.type === 'warning' ? (
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            )}
+            <span className="flex-1">{toast.message}</span>
+            <button onClick={() => setToast(null)} className="text-white/60 hover:text-white ml-2">✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* HIG Confirmation Modal */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass-panel w-full max-w-md rounded-3xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                confirmModal.danger ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+              }`}>
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-white">{confirmModal.title}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{confirmModal.message}</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-800 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-300 bg-slate-800/80 hover:bg-slate-700 transition-all cursor-pointer"
+              >
+                {confirmModal.cancelText || 'Cancelar'}
+              </button>
+              {confirmModal.customOptions ? (
+                confirmModal.customOptions.map((opt, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setConfirmModal(null);
+                      opt.onClick();
+                    }}
+                    className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-md ${opt.className}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const action = confirmModal.onConfirm;
+                    setConfirmModal(null);
+                    if (action) action();
+                  }}
+                  className={`px-4 py-2.5 rounded-xl font-bold text-xs text-white transition-all cursor-pointer shadow-md ${
+                    confirmModal.danger ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-600/30' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
+                  }`}
+                >
+                  {confirmModal.confirmText || 'Confirmar'}
+                </button>
               )}
             </div>
           </div>
