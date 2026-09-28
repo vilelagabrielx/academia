@@ -485,7 +485,7 @@ export async function createStudent(data = {}) {
   }
 
   // Check if first billing creation requested
-  const shouldCreateBilling = create_first_billing || Boolean(initial_amount && due_date);
+  const shouldCreateBilling = Boolean(create_first_billing);
   const amountToUse = billing_amount || initial_amount;
   const dateToUse = billing_due_date || due_date;
 
