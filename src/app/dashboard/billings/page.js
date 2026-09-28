@@ -281,6 +281,19 @@ export default function FinancialPage() {
   };
 
   // Student Billing Actions
+  const handleOpenWaModal = (b) => {
+    setSelectedWaBilling(b);
+    const name = b.first_name ? `${b.first_name} ${b.last_name || ''}`.trim() : b.username;
+    const amountStr = parseFloat(b.amount || 0).toFixed(2);
+    const dueDateStr = String(b.due_date || '').split('T')[0].split('-').reverse().join('/');
+    const isOverdue = b.status === 'overdue' || b.status === 'atrasado';
+    const statusText = isOverdue ? 'está em atraso' : 'está pendente';
+    
+    const msg = `Olá, ${name}! Sua mensalidade da Iron Solder Gym no valor de R$ ${amountStr}, com vencimento em ${dueDateStr}, ${statusText}.\n\nChave Pix para pagamento: (21) 96623-9956\n\nCaso já tenha realizado o pagamento, por favor envie o comprovante. Obrigado!`;
+    setWaMessage(msg);
+    setShowWaModal(true);
+  };
+
   const handleCreateBillingSubmit = async (e) => {
     e.preventDefault();
     if (!newBilling.user_id) return showToast('Selecione um aluno!', 'warning');
@@ -739,6 +752,14 @@ export default function FinancialPage() {
                             {b.status !== 'paid' && b.status !== 'cancelled' && (
                               <>
                                 <button
+                                  onClick={() => handleOpenWaModal(b)}
+                                  className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold rounded-lg text-[10px] transition-all cursor-pointer flex items-center gap-1"
+                                  title="Cobrar via WhatsApp"
+                                >
+                                  <MessageCircle className="w-3 h-3 text-emerald-400" />
+                                  <span>Cobrar Wpp</span>
+                                </button>
+                                <button
                                   onClick={() => { setSelectedPaidBilling(b); setShowPaidBillingModal(true); }}
                                   className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-[10px] shadow-sm transition-all cursor-pointer"
                                 >
@@ -812,14 +833,28 @@ export default function FinancialPage() {
                       </div>
                     </div>
 
-                    {b.status !== 'paid' && (
-                      <div className="pt-2 border-t border-slate-800/80 flex gap-2">
+                    {b.status !== 'paid' && b.status !== 'cancelled' && (
+                      <div className="pt-2 border-t border-slate-800/80 flex gap-1.5">
+                        <button
+                          onClick={() => handleOpenWaModal(b)}
+                          className="flex-1 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Cobrar Wpp</span>
+                        </button>
                         <button
                           onClick={() => { setSelectedPaidBilling(b); setShowPaidBillingModal(true); }}
-                          className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer"
+                          className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5 text-slate-950 shrink-0" />
-                          <span>Dar Baixa no Pagamento</span>
+                          <span>Dar Baixa</span>
+                        </button>
+                        <button
+                          onClick={() => { setSelectedCancelBilling(b); setCancelBillingReason(''); setShowCancelBillingModal(true); }}
+                          className="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 font-bold rounded-xl text-xs transition-all flex items-center justify-center cursor-pointer"
+                          title="Cancelar"
+                        >
+                          Cancelar
                         </button>
                       </div>
                     )}
@@ -1248,10 +1283,20 @@ export default function FinancialPage() {
                   Cancelar
                 </button>
                 <a
-                  href={`https://wa.me/${String(selectedWaBilling.whatsapp || '').replace(/\D/g, '')}?text=${encodeURIComponent(waMessage)}`}
+                  href={`https://wa.me/${String(selectedWaBilling?.whatsapp || '').replace(/\D/g, '').startsWith('55') ? String(selectedWaBilling?.whatsapp || '').replace(/\D/g, '') : `55${String(selectedWaBilling?.whatsapp || '').replace(/\D/g, '')}`}?text=${encodeURIComponent(waMessage)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => setShowWaModal(false)}
+                  onClick={async () => {
+                    setShowWaModal(false);
+                    if (selectedWaBilling?.id) {
+                      try {
+                        await fetch(`/api/billings/${selectedWaBilling.id}/charge`, { method: 'POST' });
+                        loadData();
+                      } catch (e) {
+                        console.error('Erro ao registrar cobrança:', e);
+                      }
+                    }
+                  }}
                   className="px-5 py-2 rounded-xl font-black text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
                 >
                   <MessageCircle className="w-4 h-4" />
