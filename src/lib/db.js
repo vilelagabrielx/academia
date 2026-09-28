@@ -65,159 +65,143 @@ export function initDbSchema() {
   if (!schemaInitPromise) {
     schemaInitPromise = (async () => {
       try {
-        await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;`);
-        await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS recurrence_id VARCHAR(64);`);
-        await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS cancel_reason TEXT;`);
-        await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;`);
-        await query(`ALTER TABLE gym_expenses ADD COLUMN IF NOT EXISTS cancel_reason TEXT;`);
-        await query(`ALTER TABLE gym_expenses ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;`);
+        await query(`
+          ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;
+          ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS recurrence_id VARCHAR(64);
+          ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS cancel_reason TEXT;
+          ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;
+          ALTER TABLE gym_expenses ADD COLUMN IF NOT EXISTS cancel_reason TEXT;
+          ALTER TABLE gym_expenses ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;
 
-    // Core userprofile extensions for Musculação, Shape & Performance
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS fase_shape VARCHAR(50);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS nivel_treino VARCHAR(50);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS frequencia_semanal VARCHAR(50);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS divisao_treino VARCHAR(50);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS objetivo_principal VARCHAR(50);`);
-    await query(`ALTER TABLE core_userprofile ALTER COLUMN fase_shape DROP DEFAULT;`);
-    await query(`ALTER TABLE core_userprofile ALTER COLUMN nivel_treino DROP DEFAULT;`);
-    await query(`ALTER TABLE core_userprofile ALTER COLUMN frequencia_semanal DROP DEFAULT;`);
-    await query(`ALTER TABLE core_userprofile ALTER COLUMN divisao_treino DROP DEFAULT;`);
-    await query(`ALTER TABLE core_userprofile ALTER COLUMN objetivo_principal DROP DEFAULT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS objetivos_secundarios TEXT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS pontos_fracos TEXT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS lesoes_restricoes TEXT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS altura NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS observacoes_treinador TEXT;`);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS fase_shape VARCHAR(50);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS nivel_treino VARCHAR(50);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS frequencia_semanal VARCHAR(50);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS divisao_treino VARCHAR(50);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS objetivo_principal VARCHAR(50);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS objetivos_secundarios TEXT;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS pontos_fracos TEXT;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS lesoes_restricoes TEXT;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS altura NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS observacoes_treinador TEXT;
 
-    // Metas Corporais & Redes Sociais
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS instagram VARCHAR(100);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS peso_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS bf_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS braco_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS antebraco_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS ombro_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS peitoral_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS cintura_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS abdomen_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dorsal_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS coxa_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS gluteo_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS panturrilha_meta NUMERIC(5,2);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS pescoco_meta NUMERIC(5,2);`);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS instagram VARCHAR(100);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS peso_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS bf_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS braco_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS antebraco_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS ombro_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS peitoral_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS cintura_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS abdomen_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dorsal_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS coxa_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS gluteo_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS panturrilha_meta NUMERIC(5,2);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS pescoco_meta NUMERIC(5,2);
 
-    // Anamnese Clínica, Saúde & Segurança
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS restricoes_articulares TEXT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS condicoes_cardio_metabolicas TEXT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS cirurgias_reabilitacao TEXT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS status_atestado VARCHAR(50);`);
-    await query(`ALTER TABLE core_userprofile ALTER COLUMN status_atestado DROP DEFAULT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS atestado_file_base64 TEXT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS medicamentos_uso_continuo TEXT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dor_cronica_nivel INTEGER DEFAULT 0;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dor_cronica_regiao VARCHAR(100);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS horas_sono_media NUMERIC(3,1);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS qualidade_sono_estresse VARCHAR(50);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS recursos_ergogenicos TEXT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS contato_emergencia_nome VARCHAR(150);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS contato_emergencia_parentesco VARCHAR(50);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS contato_emergencia_telefone VARCHAR(50);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS birth_date DATE;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS data_nascimento DATE;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS prazo_meta VARCHAR(50);`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dia_vencimento_recorrente INTEGER DEFAULT 5;`);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS restricoes_articulares TEXT;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS condicoes_cardio_metabolicas TEXT;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS cirurgias_reabilitacao TEXT;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS status_atestado VARCHAR(50);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS atestado_file_base64 TEXT;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS medicamentos_uso_continuo TEXT;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dor_cronica_nivel INTEGER DEFAULT 0;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dor_cronica_regiao VARCHAR(100);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS horas_sono_media NUMERIC(3,1);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS qualidade_sono_estresse VARCHAR(50);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS recursos_ergogenicos TEXT;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS contato_emergencia_nome VARCHAR(150);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS contato_emergencia_parentesco VARCHAR(50);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS contato_emergencia_telefone VARCHAR(50);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS birth_date DATE;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS data_nascimento DATE;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS prazo_meta VARCHAR(50);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dia_vencimento_recorrente INTEGER DEFAULT 5;
 
-    // Evaluation history table
-    await query(`
-      CREATE TABLE IF NOT EXISTS gym_medidas_historico (
-        id SERIAL PRIMARY KEY,
-        aluno_id INTEGER NOT NULL,
-        data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        registrado_por VARCHAR(150),
-        peso NUMERIC(5,2),
-        bf_percentual NUMERIC(5,2),
-        pescoco NUMERIC(5,2),
-        ombro NUMERIC(5,2),
-        peitoral_torax NUMERIC(5,2),
-        dorsal_largura NUMERIC(5,2),
-        dorsal_espessura NUMERIC(5,2),
-        cintura NUMERIC(5,2),
-        abdomen NUMERIC(5,2),
-        quadril NUMERIC(5,2),
-        braco_direito NUMERIC(5,2),
-        braco_esquerdo NUMERIC(5,2),
-        braco_contraido NUMERIC(5,2),
-        braco_direito_contraido NUMERIC(5,2),
-        braco_esquerdo_contraido NUMERIC(5,2),
-        antebraco_direito NUMERIC(5,2),
-        antebraco_esquerdo NUMERIC(5,2),
-        coxa_direita NUMERIC(5,2),
-        coxa_esquerda NUMERIC(5,2),
-        gluteo NUMERIC(5,2),
-        panturrilha_direita NUMERIC(5,2),
-        panturrilha_esquerda NUMERIC(5,2),
-        observacoes TEXT,
-        resumo_alteracao TEXT
-      );
-    `);
-    await query(`ALTER TABLE gym_medidas_historico ADD COLUMN IF NOT EXISTS braco_direito_contraido NUMERIC(5,2);`);
-    await query(`ALTER TABLE gym_medidas_historico ADD COLUMN IF NOT EXISTS braco_esquerdo_contraido NUMERIC(5,2);`);
+          CREATE TABLE IF NOT EXISTS gym_medidas_historico (
+            id SERIAL PRIMARY KEY,
+            aluno_id INTEGER NOT NULL,
+            data_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            registrado_por VARCHAR(150),
+            peso NUMERIC(5,2),
+            bf_percentual NUMERIC(5,2),
+            pescoco NUMERIC(5,2),
+            ombro NUMERIC(5,2),
+            peitoral_torax NUMERIC(5,2),
+            dorsal_largura NUMERIC(5,2),
+            dorsal_espessura NUMERIC(5,2),
+            cintura NUMERIC(5,2),
+            abdomen NUMERIC(5,2),
+            quadril NUMERIC(5,2),
+            braco_direito NUMERIC(5,2),
+            braco_esquerdo NUMERIC(5,2),
+            braco_contraido NUMERIC(5,2),
+            braco_direito_contraido NUMERIC(5,2),
+            braco_esquerdo_contraido NUMERIC(5,2),
+            antebraco_direito NUMERIC(5,2),
+            antebraco_esquerdo NUMERIC(5,2),
+            coxa_direita NUMERIC(5,2),
+            coxa_esquerda NUMERIC(5,2),
+            gluteo NUMERIC(5,2),
+            panturrilha_direita NUMERIC(5,2),
+            panturrilha_esquerda NUMERIC(5,2),
+            observacoes TEXT,
+            resumo_alteracao TEXT
+          );
 
-    // Meta history table
-    await query(`
-      CREATE TABLE IF NOT EXISTS gym_metas_historico (
-        id SERIAL PRIMARY KEY,
-        aluno_id INTEGER NOT NULL,
-        data_alteracao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        campo_meta VARCHAR(50),
-        valor_anterior NUMERIC(5,2),
-        valor_novo NUMERIC(5,2)
-      );
-    `);
+          ALTER TABLE gym_medidas_historico ADD COLUMN IF NOT EXISTS braco_direito_contraido NUMERIC(5,2);
+          ALTER TABLE gym_medidas_historico ADD COLUMN IF NOT EXISTS braco_esquerdo_contraido NUMERIC(5,2);
 
-    // Expense & Recurrence tables
-    await query(`
-      CREATE TABLE IF NOT EXISTS gym_expense_recurrences (
-        id VARCHAR(64) PRIMARY KEY,
-        description VARCHAR(255) NOT NULL,
-        category VARCHAR(100) NOT NULL,
-        payment_method VARCHAR(50) DEFAULT 'Pix',
-        base_amount NUMERIC(10, 2) NOT NULL,
-        frequency VARCHAR(20) NOT NULL DEFAULT 'MONTHLY',
-        due_day INTEGER NOT NULL DEFAULT 5,
-        start_date DATE NOT NULL,
-        end_date DATE,
-        status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
+          CREATE TABLE IF NOT EXISTS gym_metas_historico (
+            id SERIAL PRIMARY KEY,
+            aluno_id INTEGER NOT NULL,
+            data_alteracao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            campo_meta VARCHAR(50),
+            valor_anterior NUMERIC(5,2),
+            valor_novo NUMERIC(5,2)
+          );
 
-    await query(`
-      CREATE TABLE IF NOT EXISTS gym_expenses (
-        id VARCHAR(64) PRIMARY KEY,
-        recurrence_id VARCHAR(64),
-        description VARCHAR(255) NOT NULL,
-        category VARCHAR(100) NOT NULL,
-        amount NUMERIC(10, 2) NOT NULL,
-        due_date DATE NOT NULL,
-        payment_date TIMESTAMP,
-        status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-        payment_method VARCHAR(50) DEFAULT 'Pix',
-        notes TEXT,
-        proof_base64 TEXT,
-        proof_filename VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT unique_recurrence_per_due_date UNIQUE (recurrence_id, due_date)
-      );
-    `);
+          CREATE TABLE IF NOT EXISTS gym_expense_recurrences (
+            id VARCHAR(64) PRIMARY KEY,
+            description VARCHAR(255) NOT NULL,
+            category VARCHAR(100) NOT NULL,
+            payment_method VARCHAR(50) DEFAULT 'Pix',
+            base_amount NUMERIC(10, 2) NOT NULL,
+            frequency VARCHAR(20) NOT NULL DEFAULT 'MONTHLY',
+            due_day INTEGER NOT NULL DEFAULT 5,
+            start_date DATE NOT NULL,
+            end_date DATE,
+            status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
 
-        // Indexes for fast queries
-        await query(`CREATE INDEX IF NOT EXISTS idx_gym_expenses_due_date ON gym_expenses(due_date);`);
-        await query(`CREATE INDEX IF NOT EXISTS idx_gym_expenses_status ON gym_expenses(status);`);
-        await query(`CREATE INDEX IF NOT EXISTS idx_gym_expenses_category ON gym_expenses(category);`);
-        await query(`CREATE INDEX IF NOT EXISTS idx_gym_billing_due_date ON gym_billing(due_date);`);
-        await query(`CREATE INDEX IF NOT EXISTS idx_gym_billing_status ON gym_billing(status);`);
-        await query(`CREATE INDEX IF NOT EXISTS idx_gym_billing_user_id ON gym_billing(user_id);`);
+          CREATE TABLE IF NOT EXISTS gym_expenses (
+            id VARCHAR(64) PRIMARY KEY,
+            recurrence_id VARCHAR(64),
+            description VARCHAR(255) NOT NULL,
+            category VARCHAR(100) NOT NULL,
+            amount NUMERIC(10, 2) NOT NULL,
+            due_date DATE NOT NULL,
+            payment_date TIMESTAMP,
+            status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+            payment_method VARCHAR(50) DEFAULT 'Pix',
+            notes TEXT,
+            proof_base64 TEXT,
+            proof_filename VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT unique_recurrence_per_due_date UNIQUE (recurrence_id, due_date)
+          );
+
+          CREATE INDEX IF NOT EXISTS idx_gym_expenses_due_date ON gym_expenses(due_date);
+          CREATE INDEX IF NOT EXISTS idx_gym_expenses_status ON gym_expenses(status);
+          CREATE INDEX IF NOT EXISTS idx_gym_expenses_category ON gym_expenses(category);
+          CREATE INDEX IF NOT EXISTS idx_gym_billing_due_date ON gym_billing(due_date);
+          CREATE INDEX IF NOT EXISTS idx_gym_billing_status ON gym_billing(status);
+          CREATE INDEX IF NOT EXISTS idx_gym_billing_user_id ON gym_billing(user_id);
+          CREATE INDEX IF NOT EXISTS idx_gym_medidas_aluno ON gym_medidas_historico(aluno_id);
+          CREATE INDEX IF NOT EXISTS idx_core_userprofile_user ON core_userprofile(user_id);
+        `);
       } catch (err) {
         console.error('Error initializing DB schema extensions:', err);
       }
@@ -309,23 +293,26 @@ export async function getStudents(search = '') {
     }
     sql += ` ORDER BY u.date_joined DESC`;
 
-    const [studentsRes, evalsRes, billingsRes] = await Promise.all([
-      query(sql, params),
+    const studentsRes = await query(sql, params);
+    const students = studentsRes.rows;
+    if (students.length === 0) return [];
+
+    const studentIds = students.map((s) => s.id);
+
+    const [evalsRes, billingsRes] = await Promise.all([
       query(`
         SELECT * FROM (
           SELECT *, ROW_NUMBER() OVER (PARTITION BY aluno_id ORDER BY data_registro DESC, id DESC) as rn
           FROM gym_medidas_historico
+          WHERE aluno_id = ANY($1::int[])
         ) t WHERE rn <= 2
-      `),
+      `, [studentIds]),
       query(`
         SELECT * FROM gym_billing 
-        WHERE status != 'cancelled' 
+        WHERE user_id = ANY($1::int[]) AND status != 'cancelled' 
         ORDER BY due_date DESC, id DESC
-      `)
+      `, [studentIds])
     ]);
-
-    const students = studentsRes.rows;
-    if (students.length === 0) return [];
 
     const evalMap = new Map();
     for (const eRow of evalsRes.rows) {
