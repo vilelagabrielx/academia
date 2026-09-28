@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Dumbbell, UserCheck, ShieldCheck, ArrowRight, Lock, User, AlertCircle,
-  Check, Star, Shield, Zap, Award, Flame, MessageCircle, Instagram
+  Check, Zap, Award, Flame, MessageCircle, Instagram
 } from 'lucide-react';
 
 export default function LandingAndLoginPage() {
@@ -76,69 +76,73 @@ export default function LandingAndLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col justify-between selection:bg-[#D4AF37] selection:text-black">
+    <div className="min-h-screen bg-[#0D0D0D] text-white flex flex-col justify-between selection:bg-[#D4AF37] selection:text-black font-sans antialiased">
 
-      {/* Navbar Header */}
-      <header className="border-b border-[#D4AF37]/20 bg-[#121212]/90 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-[#1F1F1F] border border-[#D4AF37]/40 p-1 flex items-center justify-center shadow-lg shadow-black/60">
+      {/* Navbar Header (Otimizada para iPhone - Notch & Dynamic Island) */}
+      <header className="border-b border-[#D4AF37]/20 bg-[#121212]/95 backdrop-blur-xl sticky top-0 z-40 pt-[env(safe-area-inset-top,0px)]">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2">
+          {/* Logo & Marca */}
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-[#1F1F1F] border border-[#D4AF37]/40 p-1 flex items-center justify-center shrink-0 shadow-lg shadow-black/60">
               <img src="/logo.png" alt="Iron Solder Gym Logo" className="w-full h-full object-contain" />
             </div>
-            <div>
-              <span className="font-bebas text-2xl sm:text-3xl tracking-wider text-white block leading-none">
+            <div className="min-w-0">
+              <span className="font-bebas text-lg sm:text-2xl md:text-3xl tracking-wider text-white block leading-none truncate">
                 IRON SOLDER GYM
               </span>
-              <span className="text-[10px] text-[#D4AF37] uppercase tracking-widest font-bold block">
+              <span className="text-[9px] sm:text-[10px] text-[#D4AF37] uppercase tracking-widest font-bold hidden sm:block truncate">
                 Foco &bull; Disciplina &bull; Resultados
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Botões do Topo (Responsivos para Tela de Celular) */}
+          <div className="flex items-center gap-2 shrink-0">
             <a
               href="#login"
-              className="px-4 py-2 rounded-xl text-xs font-bold text-[#D4AF37] border border-[#D4AF37]/40 hover:bg-[#D4AF37]/10 transition-all"
+              className="px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-[#D4AF37] border border-[#D4AF37]/40 hover:bg-[#D4AF37]/10 active:scale-95 transition-all touch-manipulation"
             >
-              Área de Membros
+              <span className="sm:hidden">Membros</span>
+              <span className="hidden sm:inline">Área de Membros</span>
             </a>
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-[#D4AF37] hover:bg-[#C5A059] text-black font-extrabold px-5 py-2.5 rounded-xl shadow-lg shadow-[#D4AF37]/20 flex items-center gap-2 transition-all text-xs uppercase tracking-wider"
+              className="bg-[#D4AF37] hover:bg-[#C5A059] active:scale-95 text-black font-extrabold px-3.5 sm:px-5 py-2.5 rounded-xl shadow-lg shadow-[#D4AF37]/20 flex items-center gap-1.5 transition-all text-xs uppercase tracking-wider touch-manipulation"
             >
-              <MessageCircle className="w-4 h-4" />
-              <span>Matricule-se</span>
+              <MessageCircle className="w-4 h-4 shrink-0" />
+              <span className="hidden xs:inline">Matricule-se</span>
             </a>
           </div>
         </div>
       </header>
 
       {/* Main Hero Banner */}
-      <main className="flex-1 space-y-16 py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <section className="text-center relative py-8 sm:py-12 px-4 sm:px-6 rounded-3xl glass-panel-gold border border-[#D4AF37]/30 overflow-hidden space-y-6 sm:space-y-8 bg-gradient-to-b from-[#1F1F1F] via-[#121212] to-[#0D0D0D]">
+      <main className="flex-1 space-y-10 sm:space-y-16 py-6 sm:py-12 px-3.5 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        {/* Banner Hero Principal */}
+        <section className="text-center relative py-8 sm:py-14 px-4 sm:px-8 rounded-2xl sm:rounded-3xl glass-panel-gold border border-[#D4AF37]/30 overflow-hidden space-y-6 sm:space-y-8 bg-gradient-to-b from-[#1F1F1F] via-[#121212] to-[#0D0D0D]">
 
           {/* Logo Centralizada */}
           <div className="flex justify-center">
-            <div className="w-24 h-24 sm:w-36 sm:h-36 rounded-2xl bg-[#121212] border-2 border-[#D4AF37] p-2 flex items-center justify-center shadow-2xl shadow-black/80">
+            <div className="w-20 h-20 sm:w-36 sm:h-36 rounded-2xl bg-[#121212] border-2 border-[#D4AF37] p-2 flex items-center justify-center shadow-2xl shadow-black/80">
               <img src="/logo.png" alt="Iron Solder Gym" className="w-full h-full object-contain" />
             </div>
           </div>
 
           {/* Chamada de Impacto */}
-          <div className="space-y-4 max-w-3xl mx-auto">
-            <h1 className="font-bebas text-4xl sm:text-7xl font-extrabold tracking-wider text-white uppercase leading-none">
+          <div className="space-y-3 sm:space-y-4 max-w-3xl mx-auto">
+            <h1 className="font-bebas text-3xl sm:text-6xl md:text-7xl font-extrabold tracking-wider text-white uppercase leading-[0.95]">
               OS MELHORES PLANOS ESTÃO AQUI
             </h1>
-            <p className="text-[#A6A6A6] text-sm sm:text-base font-montserrat max-w-xl mx-auto">
+            <p className="text-[#A6A6A6] text-xs sm:text-base font-montserrat max-w-xl mx-auto leading-relaxed px-2">
               Ambiente de alto rendimento com equipamentos modernos, acompanhamento profissional e estrutura completa para você superar todos os seus limites.
             </p>
 
             {/* Preço em Destaque */}
-            <div className="inline-block bg-[#1F1F1F] border border-[#D4AF37]/50 px-6 py-3 rounded-2xl shadow-xl">
-              <span className="text-xs text-[#A6A6A6] uppercase tracking-widest block font-bold">Mensalidades acessíveis</span>
-              <span className="font-bebas text-3xl sm:text-4xl text-[#D4AF37] tracking-wide block">
+            <div className="w-full sm:w-auto inline-block bg-[#1F1F1F]/90 border border-[#D4AF37]/50 px-5 sm:px-6 py-2.5 sm:py-3 rounded-2xl shadow-xl backdrop-blur-md">
+              <span className="text-[10px] sm:text-xs text-[#A6A6A6] uppercase tracking-widest block font-bold">Mensalidades acessíveis</span>
+              <span className="font-bebas text-2xl sm:text-4xl text-[#D4AF37] tracking-wide block">
                 A PARTIR DE R$ XX,XX / MÊS
               </span>
             </div>
@@ -150,95 +154,95 @@ export default function LandingAndLoginPage() {
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 bg-[#D4AF37] hover:bg-[#C5A059] text-black font-extrabold px-8 py-4 rounded-2xl text-base sm:text-lg shadow-xl shadow-[#D4AF37]/25 transition-all hover:scale-105 uppercase tracking-wider cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 bg-[#D4AF37] hover:bg-[#C5A059] active:scale-95 text-black font-black px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-lg shadow-xl shadow-[#D4AF37]/25 transition-all hover:scale-[1.02] uppercase tracking-wider cursor-pointer min-h-[50px] touch-manipulation"
             >
-              <MessageCircle className="w-6 h-6" />
+              <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
               <span>Matricule-se pelo WhatsApp</span>
             </a>
           </div>
         </section>
 
-        {/* Seção de Diferenciais / Benefícios (Grade de Ícones) */}
-        <section className="space-y-8">
+        {/* Seção de Diferenciais / Benefícios */}
+        <section className="space-y-6 sm:space-y-8">
           <div className="text-center space-y-2">
-            <h2 className="font-bebas text-4xl sm:text-5xl text-white tracking-wider uppercase">
+            <h2 className="font-bebas text-3xl sm:text-5xl text-white tracking-wider uppercase">
               POR QUE TREINAR NA IRON SOLDER GYM?
             </h2>
-            <div className="w-24 h-1 bg-[#D4AF37] mx-auto rounded-full"></div>
+            <div className="w-16 sm:w-24 h-1 bg-[#D4AF37] mx-auto rounded-full"></div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="glass-panel p-6 rounded-2xl border border-[#D4AF37]/20 hover:border-[#D4AF37] transition-all space-y-3 bg-[#1F1F1F]/80">
-              <div className="w-12 h-12 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center font-bold">
-                <Dumbbell className="w-6 h-6" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-[#D4AF37]/20 hover:border-[#D4AF37] transition-all space-y-3 bg-[#1F1F1F]/80 active:scale-[0.98] touch-manipulation">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center font-bold">
+                <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h3 className="font-bebas text-2xl text-white tracking-wide">Acesso Livre à Musculação</h3>
+              <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide">Acesso Livre à Musculação</h3>
               <p className="text-xs text-[#A6A6A6] leading-relaxed">
                 Treine com total liberdade na nossa área de musculação estruturada para hipertrofia e definição.
               </p>
             </div>
 
-            <div className="glass-panel p-6 rounded-2xl border border-[#D4AF37]/20 hover:border-[#D4AF37] transition-all space-y-3 bg-[#1F1F1F]/80">
-              <div className="w-12 h-12 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center font-bold">
-                <Zap className="w-6 h-6" />
+            <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-[#D4AF37]/20 hover:border-[#D4AF37] transition-all space-y-3 bg-[#1F1F1F]/80 active:scale-[0.98] touch-manipulation">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center font-bold">
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h3 className="font-bebas text-2xl text-white tracking-wide">Equipamentos de Ponta</h3>
+              <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide">Equipamentos de Ponta</h3>
               <p className="text-xs text-[#A6A6A6] leading-relaxed">
-                Maquinário moderno, biomecânica precisa e manutenção constante para garatir o máximo desempenho.
+                Maquinário moderno, biomecânica precisa e manutenção constante para garantir o máximo desempenho.
               </p>
             </div>
 
-            <div className="glass-panel p-6 rounded-2xl border border-[#D4AF37]/20 hover:border-[#D4AF37] transition-all space-y-3 bg-[#1F1F1F]/80">
-              <div className="w-12 h-12 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center font-bold">
-                <Award className="w-6 h-6" />
+            <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-[#D4AF37]/20 hover:border-[#D4AF37] transition-all space-y-3 bg-[#1F1F1F]/80 active:scale-[0.98] touch-manipulation">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center font-bold">
+                <Award className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h3 className="font-bebas text-2xl text-white tracking-wide">Acompanhamento Profissional</h3>
+              <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide">Acompanhamento Profissional</h3>
               <p className="text-xs text-[#A6A6A6] leading-relaxed">
                 Profissionais qualificados para montagem de fichas e orientação diária no cumprimento dos seus treinos.
               </p>
             </div>
 
-            <div className="glass-panel p-6 rounded-2xl border border-[#D4AF37]/20 hover:border-[#D4AF37] transition-all space-y-3 bg-[#1F1F1F]/80">
-              <div className="w-12 h-12 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center font-bold">
-                <Flame className="w-6 h-6" />
+            <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-[#D4AF37]/20 hover:border-[#D4AF37] transition-all space-y-3 bg-[#1F1F1F]/80 active:scale-[0.98] touch-manipulation">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] flex items-center justify-center font-bold">
+                <Flame className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <h3 className="font-bebas text-2xl text-white tracking-wide">Ambiente Exclusivo</h3>
+              <h3 className="font-bebas text-xl sm:text-2xl text-white tracking-wide">Ambiente Exclusivo</h3>
               <p className="text-xs text-[#A6A6A6] leading-relaxed">
-                Vibe focada na disciplina, energia motivação constante para você superar suas próprias metas todos os dias.
+                Vibe focada na disciplina, energia e motivação constante para você superar suas próprias metas todos os dias.
               </p>
             </div>
           </div>
         </section>
 
         {/* Seção de Planos e Valores */}
-        <section className="space-y-8">
+        <section className="space-y-6 sm:space-y-8">
           <div className="text-center space-y-2">
-            <h2 className="font-bebas text-4xl sm:text-5xl text-white tracking-wider uppercase">
+            <h2 className="font-bebas text-3xl sm:text-5xl text-white tracking-wider uppercase">
               PLANOS & MODALIDADES
             </h2>
-            <p className="text-xs text-[#A6A6A6] uppercase tracking-widest font-semibold">Escolha a melhor opção para a sua rotina</p>
+            <p className="text-[11px] sm:text-xs text-[#A6A6A6] uppercase tracking-widest font-semibold">Escolha a melhor opção para a sua rotina</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8">
             {/* Plano Mensal */}
             <div className="glass-panel p-5 sm:p-8 rounded-3xl border border-[#D4AF37]/30 hover:border-[#D4AF37] transition-all flex flex-col justify-between space-y-6 bg-[#1F1F1F]">
               <div className="space-y-4">
-                <span className="px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold uppercase tracking-wider">
+                <span className="px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold uppercase tracking-wider inline-block">
                   Plano Mensal
                 </span>
                 <div>
-                  <span className="font-bebas text-5xl text-white tracking-tight">R$ XX,XX</span>
+                  <span className="font-bebas text-4xl sm:text-5xl text-white tracking-tight">R$ XX,XX</span>
                   <span className="text-xs text-[#A6A6A6] block">/ mês sem fidelidade</span>
                 </div>
                 <ul className="space-y-2 text-xs text-[#A6A6A6]">
                   <li className="flex items-center gap-2 text-white">
-                    <Check className="w-4 h-4 text-[#D4AF37]" /> Acesso Livre à Musculação
+                    <Check className="w-4 h-4 text-[#D4AF37] shrink-0" /> Acesso Livre à Musculação
                   </li>
                   <li className="flex items-center gap-2 text-white">
-                    <Check className="w-4 h-4 text-[#D4AF37]" /> Montagem de Ficha de Treino
+                    <Check className="w-4 h-4 text-[#D4AF37] shrink-0" /> Montagem de Ficha de Treino
                   </li>
                   <li className="flex items-center gap-2 text-white">
-                    <Check className="w-4 h-4 text-[#D4AF37]" /> Acompanhamento de Cargas no App
+                    <Check className="w-4 h-4 text-[#D4AF37] shrink-0" /> Acompanhamento de Cargas no App
                   </li>
                 </ul>
               </div>
@@ -246,7 +250,7 @@ export default function LandingAndLoginPage() {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3 rounded-xl bg-[#2A2A2A] hover:bg-[#D4AF37] hover:text-black font-extrabold text-xs uppercase tracking-wider text-white text-center border border-[#D4AF37]/40 transition-all block"
+                className="w-full py-3.5 rounded-xl bg-[#2A2A2A] hover:bg-[#D4AF37] hover:text-black active:scale-95 font-extrabold text-xs uppercase tracking-wider text-white text-center border border-[#D4AF37]/40 transition-all block min-h-[46px] flex items-center justify-center touch-manipulation"
               >
                 Quero o Plano Mensal
               </a>
@@ -254,29 +258,29 @@ export default function LandingAndLoginPage() {
 
             {/* Plano VIP Recorrente (Destaque) */}
             <div className="glass-panel p-5 sm:p-8 rounded-3xl border-2 border-[#D4AF37] shadow-2xl shadow-[#D4AF37]/15 flex flex-col justify-between space-y-6 bg-gradient-to-b from-[#2A2A2A] to-[#1F1F1F] relative">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#D4AF37] text-black font-extrabold px-4 py-1 rounded-full text-[10px] uppercase tracking-widest shadow-md">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#D4AF37] text-black font-black px-4 py-1 rounded-full text-[10px] uppercase tracking-widest shadow-md shrink-0 whitespace-nowrap">
                 MAIS RECOMENDADO
               </div>
               <div className="space-y-4 pt-2">
-                <span className="px-3 py-1 rounded-full bg-[#D4AF37] text-black text-xs font-black uppercase tracking-wider">
+                <span className="px-3 py-1 rounded-full bg-[#D4AF37] text-black text-xs font-black uppercase tracking-wider inline-block">
                   Mensalidade VIP Recorrente
                 </span>
                 <div>
-                  <span className="font-bebas text-5xl text-[#D4AF37] tracking-tight">R$ XX,XX</span>
+                  <span className="font-bebas text-4xl sm:text-5xl text-[#D4AF37] tracking-tight">R$ XX,XX</span>
                   <span className="text-xs text-white block">/ mês no débito automático / Pix</span>
                 </div>
                 <ul className="space-y-2 text-xs text-white">
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-[#D4AF37]" /> Acesso Total sem Restrição
+                    <Check className="w-4 h-4 text-[#D4AF37] shrink-0" /> Acesso Total sem Restrição
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-[#D4AF37]" /> Ficha Digital Personalizada no Sistema
+                    <Check className="w-4 h-4 text-[#D4AF37] shrink-0" /> Ficha Digital Personalizada no Sistema
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-[#D4AF37]" /> Timer de Descanso & Histórico Completo
+                    <Check className="w-4 h-4 text-[#D4AF37] shrink-0" /> Timer de Descanso & Histórico Completo
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-[#D4AF37]" /> Lembrete Automático de Renovação
+                    <Check className="w-4 h-4 text-[#D4AF37] shrink-0" /> Lembrete Automático de Renovação
                   </li>
                 </ul>
               </div>
@@ -284,7 +288,7 @@ export default function LandingAndLoginPage() {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3.5 rounded-xl bg-[#D4AF37] hover:bg-[#C5A059] text-black font-black text-xs uppercase tracking-wider text-center transition-all shadow-lg shadow-[#D4AF37]/20 block"
+                className="w-full py-3.5 rounded-xl bg-[#D4AF37] hover:bg-[#C5A059] active:scale-95 text-black font-black text-xs uppercase tracking-wider text-center transition-all shadow-lg shadow-[#D4AF37]/20 block min-h-[46px] flex items-center justify-center touch-manipulation"
               >
                 Matricular com Desconto
               </a>
@@ -293,22 +297,22 @@ export default function LandingAndLoginPage() {
             {/* Plano Trimestral */}
             <div className="glass-panel p-5 sm:p-8 rounded-3xl border border-[#D4AF37]/30 hover:border-[#D4AF37] transition-all flex flex-col justify-between space-y-6 bg-[#1F1F1F]">
               <div className="space-y-4">
-                <span className="px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold uppercase tracking-wider">
+                <span className="px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-bold uppercase tracking-wider inline-block">
                   Plano Trimestral
                 </span>
                 <div>
-                  <span className="font-bebas text-5xl text-white tracking-tight">R$ XX,XX</span>
+                  <span className="font-bebas text-4xl sm:text-5xl text-white tracking-tight">R$ XX,XX</span>
                   <span className="text-xs text-[#A6A6A6] block">/ mês (plano de 3 meses)</span>
                 </div>
                 <ul className="space-y-2 text-xs text-[#A6A6A6]">
                   <li className="flex items-center gap-2 text-white">
-                    <Check className="w-4 h-4 text-[#D4AF37]" /> Economia Garantida
+                    <Check className="w-4 h-4 text-[#D4AF37] shrink-0" /> Economia Garantida
                   </li>
                   <li className="flex items-center gap-2 text-white">
-                    <Check className="w-4 h-4 text-[#D4AF37]" /> Avaliação Física Inclusa
+                    <Check className="w-4 h-4 text-[#D4AF37] shrink-0" /> Avaliação Física Inclusa
                   </li>
                   <li className="flex items-center gap-2 text-white">
-                    <Check className="w-4 h-4 text-[#D4AF37]" /> Ficha Atualizada Periodicamente
+                    <Check className="w-4 h-4 text-[#D4AF37] shrink-0" /> Ficha Atualizada Periodicamente
                   </li>
                 </ul>
               </div>
@@ -316,7 +320,7 @@ export default function LandingAndLoginPage() {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3 rounded-xl bg-[#2A2A2A] hover:bg-[#D4AF37] hover:text-black font-extrabold text-xs uppercase tracking-wider text-white text-center border border-[#D4AF37]/40 transition-all block"
+                className="w-full py-3.5 rounded-xl bg-[#2A2A2A] hover:bg-[#D4AF37] hover:text-black active:scale-95 font-extrabold text-xs uppercase tracking-wider text-white text-center border border-[#D4AF37]/40 transition-all block min-h-[46px] flex items-center justify-center touch-manipulation"
               >
                 Quero o Trimestral
               </a>
@@ -325,13 +329,13 @@ export default function LandingAndLoginPage() {
         </section>
 
         {/* Portal de Login de Membros (Professor / Aluno) */}
-        <section id="login" className="pt-4 sm:pt-8">
-          <div className="max-w-md mx-auto glass-panel p-5 sm:p-8 rounded-3xl border-2 border-[#D4AF37]/40 bg-[#121212] shadow-2xl space-y-6">
+        <section id="login" className="pt-2 sm:pt-8 scroll-mt-24">
+          <div className="max-w-md mx-auto glass-panel p-4 sm:p-8 rounded-3xl border-2 border-[#D4AF37]/40 bg-[#121212] shadow-2xl space-y-5 sm:space-y-6">
             <div className="text-center space-y-2">
-              <div className="w-16 h-16 rounded-2xl bg-[#1F1F1F] border border-[#D4AF37] p-1 mx-auto flex items-center justify-center">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#1F1F1F] border border-[#D4AF37] p-1 mx-auto flex items-center justify-center shadow-lg">
                 <img src="/logo.png" alt="Iron Solder Gym" className="w-full h-full object-contain" />
               </div>
-              <h3 className="font-bebas text-3xl text-white tracking-wide">ÁREA DE MEMBROS</h3>
+              <h3 className="font-bebas text-2xl sm:text-3xl text-white tracking-wide">ÁREA DE MEMBROS</h3>
               <p className="text-xs text-[#A6A6A6]">Acesse seus treinos ou painel administrativo</p>
             </div>
 
@@ -340,7 +344,7 @@ export default function LandingAndLoginPage() {
               <button
                 type="button"
                 onClick={() => setRole('trainer')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${role === 'trainer'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer min-h-[44px] touch-manipulation ${role === 'trainer'
                   ? 'bg-[#D4AF37] text-black font-extrabold shadow-md'
                   : 'text-[#A6A6A6] hover:text-white'
                   }`}
@@ -351,7 +355,7 @@ export default function LandingAndLoginPage() {
               <button
                 type="button"
                 onClick={() => setRole('student')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${role === 'student'
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all cursor-pointer min-h-[44px] touch-manipulation ${role === 'student'
                   ? 'bg-[#D4AF37] text-black font-extrabold shadow-md'
                   : 'text-[#A6A6A6] hover:text-white'
                   }`}
@@ -362,13 +366,13 @@ export default function LandingAndLoginPage() {
             </div>
 
             {role === 'student' ? (
-              <div className="py-8 text-center space-y-3 bg-[#1F1F1F]/60 rounded-2xl border border-slate-800 p-6">
+              <div className="py-6 text-center space-y-3 bg-[#1F1F1F]/60 rounded-2xl border border-slate-800 p-5">
                 <div className="w-12 h-12 rounded-full bg-slate-800/80 border border-slate-700 mx-auto flex items-center justify-center text-slate-500">
                   <UserCheck className="w-6 h-6 opacity-60" />
                 </div>
                 <h4 className="font-bold text-slate-300 text-sm">Área do Aluno</h4>
                 <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto font-medium">
-                  No futuro o aluno acessaria por aqui e teria acesso a treinos dietas conteudos ETC
+                  No futuro o aluno acessaria por aqui e teria acesso a treinos dietas conteúdos ETC
                 </p>
               </div>
             ) : (
@@ -393,7 +397,7 @@ export default function LandingAndLoginPage() {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="admin"
-                        className="w-full bg-[#1F1F1F] border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#D4AF37] transition-all"
+                        className="w-full bg-[#1F1F1F] border border-slate-800 rounded-xl pl-10 pr-4 py-3.5 text-base sm:text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#D4AF37] transition-all"
                       />
                     </div>
                   </div>
@@ -410,7 +414,7 @@ export default function LandingAndLoginPage() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full bg-[#1F1F1F] border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#D4AF37] transition-all"
+                        className="w-full bg-[#1F1F1F] border border-slate-800 rounded-xl pl-10 pr-4 py-3.5 text-base sm:text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#D4AF37] transition-all"
                       />
                     </div>
                   </div>
@@ -418,7 +422,7 @@ export default function LandingAndLoginPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full mt-2 bg-[#D4AF37] hover:bg-[#C5A059] text-black font-extrabold py-3.5 px-4 rounded-xl shadow-lg shadow-[#D4AF37]/20 flex items-center justify-center gap-2 transition-all uppercase tracking-wider cursor-pointer"
+                    className="w-full mt-2 bg-[#D4AF37] hover:bg-[#C5A059] active:scale-95 text-black font-black py-3.5 px-4 rounded-xl shadow-lg shadow-[#D4AF37]/20 flex items-center justify-center gap-2 transition-all uppercase tracking-wider cursor-pointer min-h-[50px] touch-manipulation"
                   >
                     {loading ? (
                       <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
@@ -436,23 +440,23 @@ export default function LandingAndLoginPage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[#D4AF37]/20 bg-[#121212] py-8 text-center text-xs text-[#A6A6A6] mt-12">
+      {/* Footer com Safe Area Bottom para iPhone */}
+      <footer className="border-t border-[#D4AF37]/20 bg-[#121212] py-8 text-center text-xs text-[#A6A6A6] mt-10 pb-[calc(2.5rem+env(safe-area-inset-bottom,0px))]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#1F1F1F] border border-[#D4AF37]/40 p-0.5">
+              <div className="w-8 h-8 rounded-lg bg-[#1F1F1F] border border-[#D4AF37]/40 p-0.5 shrink-0">
                 <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <span className="font-bebas text-xl text-white tracking-wider">IRON SOLDER GYM</span>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 xs:gap-4 flex-wrap justify-center">
               <a
                 href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1F1F1F] border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black font-bold transition-all text-xs"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1F1F1F] border border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black font-bold transition-all text-xs touch-manipulation"
               >
                 <Instagram className="w-4 h-4" />
                 <span>@iron_soldergym</span>
@@ -462,7 +466,7 @@ export default function LandingAndLoginPage() {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all text-xs"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 font-bold transition-all text-xs touch-manipulation"
               >
                 <MessageCircle className="w-4 h-4" />
                 <span>(21) 96623-9956</span>
@@ -476,15 +480,15 @@ export default function LandingAndLoginPage() {
         </div>
       </footer>
 
-      {/* Botão Flutuante do WhatsApp */}
+      {/* Botão Flutuante do WhatsApp Otimizado para iPhone (safe-area bottom) */}
       <a
         href={whatsappUrl}
         target="_blank"
         rel="noopener noreferrer"
         title="Fale conosco no WhatsApp"
-        className="fixed bottom-6 right-6 z-50 bg-emerald-500 hover:bg-emerald-400 text-slate-950 p-4 rounded-full shadow-2xl shadow-emerald-500/40 hover:scale-110 transition-all flex items-center justify-center cursor-pointer border-2 border-white"
+        className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] right-4 sm:right-6 z-50 bg-emerald-500 hover:bg-emerald-400 active:scale-90 text-slate-950 p-3.5 sm:p-4 rounded-full shadow-2xl shadow-emerald-500/50 transition-all flex items-center justify-center cursor-pointer border-2 border-white touch-manipulation"
       >
-        <MessageCircle className="w-7 h-7 fill-current" />
+        <MessageCircle className="w-6 h-6 sm:w-7 sm:h-7 fill-current" />
       </a>
 
     </div>
