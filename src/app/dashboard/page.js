@@ -4,8 +4,32 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Users, Dumbbell, FileText, Plus, MessageCircle, Instagram, ArrowUpRight, Search, Activity, 
-  UserPlus, CheckCircle2, Eye, User, Scale, Droplet, Target, Calendar, CreditCard, Trash2, RefreshCw, AlertTriangle, AlertCircle, TrendingDown, DollarSign, Sparkles 
+  UserPlus, CheckCircle2, Eye, User, Scale, Droplet, Target, Calendar, CreditCard, Trash2, RefreshCw, AlertTriangle, AlertCircle, TrendingDown, DollarSign, Sparkles,
+  Heart, Award, History, ArrowLeftRight, ShieldAlert, ChevronRight, ChevronLeft, Zap
 } from 'lucide-react';
+
+export function parseHealthAlerts(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) {
+    return val.filter((i) => i && typeof i === 'string' && i.trim() !== '' && i !== '[]' && i !== '{}');
+  }
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!trimmed || trimmed === '[]' || trimmed === '{}' || trimmed === 'null' || trimmed === 'undefined') {
+      return [];
+    }
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((i) => i && typeof i === 'string' && i.trim() !== '' && i !== '[]' && i !== '{}');
+        }
+      } catch (e) {}
+    }
+    return [trimmed];
+  }
+  return [];
+}
 
 export default function DashboardPage() {
   const [students, setStudents] = useState([]);
@@ -29,8 +53,128 @@ export default function DashboardPage() {
   };
   const [quickSearch, setQuickSearch] = useState('');
 
-  // Student Profile Detail View Modal State
+  // Student Profile Detail View Modal State & History
   const [viewingStudent, setViewingStudent] = useState(null);
+  const [studentHistory, setStudentHistory] = useState({ evaluations: [], metas_history: [], prs: [], workout_logs: [] });
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [activeTab, setActiveTab] = useState('resumo'); // 'resumo' | 'medidas' | 'desempenho' | 'historico'
+
+  // New Evaluation Modal State
+  const [showNewEvalModal, setShowNewEvalModal] = useState(false);
+  const [evalSubmitting, setEvalSubmitting] = useState(false);
+  const [evalSuccessToast, setEvalSuccessToast] = useState(null);
+  const [evalFormData, setEvalFormData] = useState({
+    data_registro: new Date().toISOString().split('T')[0],
+    peso: '',
+    bf_percentual: '',
+    pescoco: '',
+    ombro: '',
+    peitoral_torax: '',
+    dorsal_largura: '',
+    dorsal_espessura: '',
+    cintura: '',
+    abdomen: '',
+    quadril: '',
+    braco_direito: '',
+    braco_direito_contraido: '',
+    braco_esquerdo: '',
+    braco_esquerdo_contraido: '',
+    braco_contraido: '',
+    antebraco_direito: '',
+    antebraco_esquerdo: '',
+    coxa_direita: '',
+    coxa_esquerda: '',
+    gluteo: '',
+    panturrilha_direita: '',
+    panturrilha_esquerda: '',
+    observacoes: ''
+  });
+
+  // Comparison Modal State
+  const [showComparisonModal, setShowComparisonModal] = useState(false);
+  const [compEvalIndex1, setCompEvalIndex1] = useState(1);
+  const [compEvalIndex2, setCompEvalIndex2] = useState(0);
+
+  // 3-Step Permanent Cascade Deletion Modal State
+  const [hardDeleteModal, setHardDeleteModal] = useState(null);
+
+  const calculateAge = (birthDateStr) => {
+    if (!birthDateStr) return null;
+    const birth = new Date(birthDateStr);
+    if (isNaN(birth.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age >= 0 ? age : null;
+  };
+
+  const getMeasurementStatus = (key, currentVal, prevVal, faseShape = 'Bulking') => {
+    if (currentVal == null || prevVal == null || currentVal === '' || prevVal === '') return null;
+    const curr = parseFloat(currentVal);
+    const prev = parseFloat(prevVal);
+    if (isNaN(curr) || isNaN(prev)) return null;
+
+    const diff = curr - prev;
+    const tolerance = 0.2;
+
+    if (Math.abs(diff) <= tolerance) {
+      return { status: 'estavel', label: 'Estável', color: 'text-slate-400', badgeBg: 'bg-slate-800 text-slate-300 border-slate-700', icon: '⚪', diffStr: '0' };
+    }
+
+    const isReductionMetric = ['cintura', 'abdomen', 'bf_percentual'].includes(key);
+
+    if (key === 'peso') {
+      if (faseShape === 'Bulking') {
+        if (diff > 0) return { status: 'evolucao', label: 'Evolução', color: 'text-emerald-400', badgeBg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', icon: '🟢', diffStr: `+${diff.toFixed(1)}` };
+        return { status: 'regressao', label: 'Regressão', color: 'text-rose-400', badgeBg: 'bg-rose-500/10 text-rose-400 border-rose-500/20', icon: '🔴', diffStr: `${diff.toFixed(1)}` };
+      } else if (faseShape === 'Cutting') {
+        if (diff < 0) return { status: 'evolucao', label: 'Evolução', color: 'text-emerald-400', badgeBg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', icon: '🟢', diffStr: `${diff.toFixed(1)}` };
+        return { status: 'regressao', label: 'Regressão', color: 'text-rose-400', badgeBg: 'bg-rose-500/10 text-rose-400 border-rose-500/20', icon: '🔴', diffStr: `+${diff.toFixed(1)}` };
+      } else {
+        return { status: 'estavel', label: 'Estável', color: 'text-slate-400', badgeBg: 'bg-slate-800 text-slate-300 border-slate-700', icon: '⚪', diffStr: diff > 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}` };
+      }
+    }
+
+    if (isReductionMetric) {
+      if (diff < 0) {
+        return { status: 'evolucao', label: 'Evolução', color: 'text-emerald-400', badgeBg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', icon: '🟢', diffStr: `${diff.toFixed(1)}` };
+      } else {
+        return { status: 'regressao', label: 'Regressão', color: 'text-rose-400', badgeBg: 'bg-rose-500/10 text-rose-400 border-rose-500/20', icon: '🔴', diffStr: `+${diff.toFixed(1)}` };
+      }
+    } else {
+      if (diff > 0) {
+        return { status: 'evolucao', label: 'Evolução', color: 'text-emerald-400', badgeBg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', icon: '🟢', diffStr: `+${diff.toFixed(1)}` };
+      } else {
+        return { status: 'regressao', label: 'Regressão', color: 'text-rose-400', badgeBg: 'bg-rose-500/10 text-rose-400 border-rose-500/20', icon: '🔴', diffStr: `${diff.toFixed(1)}` };
+      }
+    }
+  };
+
+  const latestEval = studentHistory.evaluations[0] || null;
+  const prevEval = studentHistory.evaluations[1] || null;
+
+  const openStudentProfile = async (student) => {
+    setViewingStudent(student);
+    setActiveTab('resumo');
+    setLoadingHistory(true);
+    try {
+      const res = await fetch(`/api/students/${student.id}/history`);
+      if (res.ok) {
+        const hData = await res.json();
+        setStudentHistory({
+          evaluations: hData.evaluations || [],
+          metas_history: hData.metas_history || [],
+          prs: hData.prs || [],
+          workout_logs: hData.workout_logs || []
+        });
+      }
+    } catch (err) {
+      console.error('Error loading student history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   // Quick Add Student Modal State (com opção de 1ª cobrança)
   const [showAddModal, setShowAddModal] = useState(false);
@@ -227,24 +371,63 @@ export default function DashboardPage() {
     window.open(waUrl, '_blank');
   };
 
+  const handleCreateEvaluation = async (e) => {
+    e.preventDefault();
+    if (!viewingStudent) return;
+    setEvalSubmitting(true);
+
+    try {
+      const res = await fetch(`/api/students/${viewingStudent.id}/evaluations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(evalFormData)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao salvar avaliação');
+
+      const evalRes = data.result || {};
+      const evalCount = studentHistory.evaluations.length;
+      const toastText = evalCount === 0 
+        ? '✅ Primeira avaliação registrada com sucesso!'
+        : `✅ Avaliação registrada! (${evalRes.evolutions || 0} evoluções, ${evalRes.stables || 0} estáveis, ${evalRes.regressions || 0} regressões)`;
+
+      setEvalSuccessToast(toastText);
+      setTimeout(() => setEvalSuccessToast(null), 5000);
+
+      setShowNewEvalModal(false);
+      openStudentProfile(viewingStudent);
+      loadData();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setEvalSubmitting(false);
+    }
+  };
+
   const handleDelete = (id, name) => {
-    setConfirmModal({
-      title: 'Excluir Aluno',
-      message: `Tem certeza que deseja excluir o aluno ${name}? Esta ação não poderá ser desfeita.`,
-      confirmText: 'Excluir Aluno',
-      danger: true,
-      onConfirm: async () => {
-        try {
-          const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
-          if (!res.ok) throw new Error('Erro ao excluir aluno');
-          showToast('Aluno excluído com sucesso!', 'success');
-          setViewingStudent(null);
-          loadData();
-        } catch (err) {
-          showToast(err.message, 'error');
-        }
-      }
+    setHardDeleteModal({
+      id,
+      name: name || 'Aluno',
+      step: 1,
+      textInput: '',
+      submitting: false
     });
+  };
+
+  const executeHardDelete = async () => {
+    if (!hardDeleteModal) return;
+    setHardDeleteModal((prev) => ({ ...prev, submitting: true }));
+    try {
+      const res = await fetch(`/api/students/${hardDeleteModal.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Erro ao excluir aluno em cascata');
+      showToast('Aluno e todos os seus registros em cascata foram excluídos permanentemente!', 'success');
+      setViewingStudent(null);
+      setHardDeleteModal(null);
+      loadData();
+    } catch (err) {
+      showToast(err.message, 'error');
+      setHardDeleteModal((prev) => ({ ...prev, submitting: false }));
+    }
   };
 
   const handleCancelEnrollment = (studentId, studentName) => {
@@ -463,7 +646,7 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={student.id}
-                    onClick={() => setViewingStudent(student)}
+                    onClick={() => openStudentProfile(student)}
                     className="p-4 rounded-2xl bg-[#1C1C1E]/80 border border-white/10 shadow-lg active:scale-[0.99] transition-all space-y-3 cursor-pointer"
                   >
                     <div className="flex items-center justify-between">
@@ -539,7 +722,7 @@ export default function DashboardPage() {
                       )}
 
                       <button
-                        onClick={() => setViewingStudent(student)}
+                        onClick={() => openStudentProfile(student)}
                         className="py-2 px-3 rounded-xl bg-white/10 text-white border border-white/10 text-xs font-semibold active:scale-95 transition-all"
                       >
                         <Eye className="w-4 h-4" />
@@ -579,7 +762,7 @@ export default function DashboardPage() {
                             ? 'bg-amber-950/10 hover:bg-amber-950/20 border-l-4 border-l-amber-400'
                             : 'hover:bg-white/5'
                         }`}
-                        onClick={() => setViewingStudent(student)}
+                        onClick={() => openStudentProfile(student)}
                       >
                         <td className="py-3.5 px-4 font-semibold text-white flex items-center gap-3">
                           {student.photo_base64 ? (
@@ -670,7 +853,7 @@ export default function DashboardPage() {
                           )}
 
                           <button
-                            onClick={() => setViewingStudent(student)}
+                            onClick={() => openStudentProfile(student)}
                             title="Ver Ficha Completa"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all cursor-pointer"
                           >
@@ -688,70 +871,162 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* MODAL STUDENT PROFILE DETAILS */}
+      {/* Toast Notification for Eval */}
+      {evalSuccessToast && (
+        <div className="fixed top-6 right-6 z-50 bg-emerald-500 text-slate-950 px-5 py-3 rounded-2xl font-extrabold shadow-2xl flex items-center gap-2 border border-emerald-400 animate-bounce">
+          <CheckCircle2 className="w-5 h-5" />
+          <span>{evalSuccessToast}</span>
+        </div>
+      )}
+
+      {/* MODAL STUDENT PROFILE DETAILS — FICHA DO ALUNO COMPLETA */}
       {viewingStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="glass-panel w-full max-w-2xl rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-4xl rounded-3xl p-4 sm:p-6 border border-slate-800 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
+            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <User className="w-5 h-5 text-emerald-400" />
-                Ficha do Aluno
-              </h3>
+              <div className="flex items-center gap-2">
+                <Dumbbell className="w-6 h-6 text-emerald-400" />
+                <div>
+                  <h3 className="text-lg font-extrabold text-white">Ficha do Aluno — Musculação & Evolução</h3>
+                  <span className="text-xs text-slate-400">Acompanhamento completo de Shape, Metas, Saúde e Performance</span>
+                </div>
+              </div>
               <button
                 onClick={() => setViewingStudent(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-xl transition-all"
               >
                 ✕
               </button>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/30 p-6 rounded-2xl border border-slate-800">
+            {/* Student Header Card with Health Badges */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 bg-gradient-to-r from-slate-900 via-slate-900/90 to-emerald-950/40 p-5 rounded-2xl border border-slate-800">
               {viewingStudent.photo_base64 ? (
                 <img
                   src={viewingStudent.photo_base64}
                   alt={viewingStudent.username}
-                  className="w-24 h-24 rounded-full object-cover border-4 border-emerald-500 shadow-xl shrink-0"
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-emerald-500 shadow-xl shrink-0"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-slate-800 border-4 border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-3xl shrink-0">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-3xl shrink-0">
                   {viewingStudent.first_name?.[0] || viewingStudent.username[0]?.toUpperCase()}
                 </div>
               )}
 
               <div className="text-center sm:text-left space-y-2 flex-1">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-2xl font-extrabold text-white">
-                      {viewingStudent.first_name} {viewingStudent.last_name}
-                    </h2>
-                    {viewingStudent.billing_status === 'sem_cobranca' && (
-                      <span className="px-2.5 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 font-extrabold text-[10px] uppercase tracking-wider">
-                        🔴 Sem cobrança vinculada
-                      </span>
-                    )}
-                    {viewingStudent.billing_status === 'atrasada' && (
-                      <span className="px-2.5 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-400 font-extrabold text-[10px] uppercase tracking-wider">
-                        🔴 Cobrança Atrasada
-                      </span>
-                    )}
-                    {viewingStudent.billing_status === 'em_dia' && (
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-extrabold text-[10px] uppercase tracking-wider">
-                        🟢 Cobrança Em Dia
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs text-slate-400 font-mono block mt-1">@{viewingStudent.username}</span>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                  <h2 className="text-2xl font-black text-white tracking-tight">
+                    {viewingStudent.first_name} {viewingStudent.last_name}
+                  </h2>
+                  <span className="text-xs text-slate-400 font-mono">@{viewingStudent.username}</span>
+                  {calculateAge(viewingStudent.birth_date || viewingStudent.data_nascimento) !== null && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-extrabold border border-emerald-500/30">
+                      🎉 {calculateAge(viewingStudent.birth_date || viewingStudent.data_nascimento)} anos
+                    </span>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
+                {/* Badges Section */}
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1">
+                  {viewingStudent.fase_shape && (
+                    <span className="px-2.5 py-1 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-extrabold text-[11px] shadow-sm">
+                      [{viewingStudent.fase_shape}]
+                    </span>
+                  )}
+                  {viewingStudent.nivel_treino && (
+                    <span className="px-2.5 py-1 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 font-extrabold text-[11px]">
+                      [{viewingStudent.nivel_treino}]
+                    </span>
+                  )}
+                  {(viewingStudent.objetivo_principal || viewingStudent.goal) && (
+                    <span className="px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-extrabold text-[11px]">
+                      [{viewingStudent.objetivo_principal || viewingStudent.goal}]
+                    </span>
+                  )}
+                  {viewingStudent.status_atestado && (
+                    <span className={`px-2.5 py-1 rounded-xl font-extrabold text-[11px] border ${
+                      viewingStudent.status_atestado === 'Liberado Total'
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                        : viewingStudent.status_atestado === 'Liberado com Restrições'
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                        : 'bg-rose-500/20 border-rose-500/40 text-rose-300 animate-pulse'
+                    }`}>
+                      Atestado: {viewingStudent.status_atestado}
+                    </span>
+                  )}
+                </div>
+
+                {/* Health Alert Badges */}
+                {(() => {
+                  const modalRestricoes = parseHealthAlerts(viewingStudent.restricoes_articulares);
+                  const modalCardio = parseHealthAlerts(viewingStudent.condicoes_cardio_metabolicas);
+                  if (modalRestricoes.length === 0 && modalCardio.length === 0 && !viewingStudent.cirurgias_reabilitacao) return null;
+                  return (
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1">
+                      {modalRestricoes.length > 0 && (
+                        <span className="px-2.5 py-1 rounded-xl bg-orange-500/20 border border-orange-500/40 text-orange-300 font-extrabold text-[11px] flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
+                          Restrições: {modalRestricoes.join(', ')}
+                        </span>
+                      )}
+
+                      {modalCardio.length > 0 && (
+                        <span className="px-2.5 py-1 rounded-xl bg-red-600/20 border border-red-500/50 text-red-300 font-extrabold text-[11px] flex items-center gap-1">
+                          <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
+                          Cardio: {modalCardio.join(', ')}
+                        </span>
+                      )}
+
+                      {viewingStudent.cirurgias_reabilitacao && (
+                        <span className="px-2.5 py-1 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 font-extrabold text-[11px]">
+                          Cirurgia: {viewingStudent.cirurgias_reabilitacao}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Contato de Emergência Box - Destaque Principal */}
+                {viewingStudent.contato_emergencia_nome && (
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-amber-900/20 to-slate-900 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-200 mt-2 shadow-lg shadow-amber-500/10">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0">
+                        <Heart className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      </div>
+                      <div>
+                        <span className="font-extrabold text-amber-300 uppercase tracking-wider text-[10px] block">Contato de Emergência (Indispensável)</span>
+                        <span className="font-bold text-white text-xs">
+                          {viewingStudent.contato_emergencia_nome}
+                          {viewingStudent.contato_emergencia_parentesco ? ` (${viewingStudent.contato_emergencia_parentesco})` : ''}
+                        </span>
+                      </div>
+                    </div>
+                    {viewingStudent.contato_emergencia_telefone && (
+                      <a
+                        href={`https://wa.me/${viewingStudent.contato_emergencia_telefone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black flex items-center gap-1.5 text-xs shadow-md transition-all cursor-pointer"
+                        title="Ligar ou enviar mensagem para contato de emergência"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>{viewingStudent.contato_emergencia_telefone}</span>
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 pt-1">
                   {viewingStudent.whatsapp && (
                     <a
                       href={`https://wa.me/${viewingStudent.whatsapp.replace(/\D/g, '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 text-xs font-semibold"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 text-xs font-semibold"
                     >
-                      <MessageCircle className="w-4 h-4" />
+                      <MessageCircle className="w-3.5 h-3.5" />
                       <span>{viewingStudent.whatsapp}</span>
                     </a>
                   )}
@@ -761,14 +1036,13 @@ export default function DashboardPage() {
                       href={viewingStudent.instagram.startsWith('http') ? viewingStudent.instagram : `https://instagram.com/${viewingStudent.instagram.replace(/^@/, '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-950 via-pink-950 to-amber-950 border border-pink-500/50 text-pink-200 hover:text-white hover:border-pink-400 transition-all text-xs font-bold shadow-lg shadow-pink-500/20"
+                      className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-950 via-pink-950 to-amber-950 border border-pink-500/50 text-pink-200 hover:text-white hover:border-pink-400 transition-all text-xs font-bold shadow-lg shadow-pink-500/20 group"
                     >
-                      <div className="w-5 h-5 rounded-lg bg-gradient-to-tr from-amber-500 via-pink-500 to-purple-600 flex items-center justify-center text-white shrink-0">
+                      <div className="w-5 h-5 rounded-lg bg-gradient-to-tr from-amber-500 via-pink-500 to-purple-600 flex items-center justify-center text-white shadow-sm shrink-0">
                         <Instagram className="w-3.5 h-3.5" />
                       </div>
-                      <span>{viewingStudent.instagram.startsWith('@') ? viewingStudent.instagram : `@${viewingStudent.instagram}`}</span>
-                      <span className="text-[9px] bg-pink-500/20 text-pink-300 px-1.5 py-0.5 rounded border border-pink-500/40 uppercase font-black">
-                        Destaque 🌟
+                      <span className="font-extrabold tracking-wide">
+                        {viewingStudent.instagram.startsWith('@') ? viewingStudent.instagram : `@${viewingStudent.instagram}`}
                       </span>
                     </a>
                   )}
@@ -776,70 +1050,280 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
-              <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-1">
-                <span className="text-slate-500 font-semibold flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-emerald-400" /> Idade:
-                </span>
-                <span className="text-sm font-bold text-white block">
-                  {viewingStudent.age ? `${viewingStudent.age} anos` : 'Não informada'}
-                </span>
-              </div>
-
-              <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-1">
-                <span className="text-slate-500 font-semibold flex items-center gap-1.5">
-                  <Scale className="w-3.5 h-3.5 text-cyan-400" /> Peso Atual:
-                </span>
-                <span className="text-sm font-bold text-white block">
-                  {viewingStudent.current_weight ? `${viewingStudent.current_weight} kg` : 'Não informado'}
-                </span>
-              </div>
-
-              <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-1">
-                <span className="text-slate-500 font-semibold flex items-center gap-1.5">
-                  <Droplet className="w-3.5 h-3.5 text-rose-400" /> Tipo Sanguíneo:
-                </span>
-                <span className="text-sm font-bold text-white block">
-                  {viewingStudent.blood_type || 'Não informado'}
-                </span>
-              </div>
-
-              <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-1">
-                <span className="text-slate-500 font-semibold flex items-center gap-1.5">
-                  <Target className="w-3.5 h-3.5 text-purple-400" /> Objetivo:
-                </span>
-                <span className="text-sm font-bold text-white block">
-                  {viewingStudent.goal || 'Geral'}
-                </span>
-              </div>
-
-              <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-1 sm:col-span-2">
-                <span className="text-slate-500 font-semibold flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-amber-400" /> Dias da Semana:
-                </span>
-                <span className="text-sm font-bold text-white block">
-                  {viewingStudent.training_days || 'Não definido'}
-                </span>
-              </div>
+            {/* Navigation Tabs inside Modal */}
+            <div className="flex border-b border-slate-800 gap-2 overflow-x-auto text-xs">
+              <button
+                onClick={() => setActiveTab('resumo')}
+                className={`pb-2.5 px-4 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === 'resumo'
+                    ? 'border-emerald-400 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Activity className="w-4 h-4" />
+                Resumo & Shape
+              </button>
+              <button
+                onClick={() => setActiveTab('medidas')}
+                className={`pb-2.5 px-4 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === 'medidas'
+                    ? 'border-emerald-400 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Scale className="w-4 h-4" />
+                Aferição Corporal
+              </button>
+              <button
+                onClick={() => setActiveTab('desempenho')}
+                className={`pb-2.5 px-4 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === 'desempenho'
+                    ? 'border-emerald-400 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Award className="w-4 h-4" />
+                Performance & PRs
+              </button>
+              <button
+                onClick={() => setActiveTab('historico')}
+                className={`pb-2.5 px-4 font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === 'historico'
+                    ? 'border-emerald-400 text-emerald-400'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <History className="w-4 h-4" />
+                Timeline de Avaliações
+              </button>
             </div>
 
-            <div className="flex flex-wrap justify-between items-center gap-3 pt-4 border-t border-slate-800">
-              <div className="flex gap-2">
+            {/* TAB CONTENT 1: RESUMO & SHAPE */}
+            {activeTab === 'resumo' && (
+              <div className="space-y-6 text-xs">
+                {/* Visual Indicators Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="glass-panel p-4 rounded-2xl border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 font-semibold block uppercase">Peso Atual</span>
+                    <span className="text-xl font-black text-white block mt-1">
+                      {latestEval?.peso ? `${latestEval.peso} kg` : viewingStudent.current_weight ? `${viewingStudent.current_weight} kg` : '—'}
+                    </span>
+                  </div>
+
+                  <div className="glass-panel p-4 rounded-2xl border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 font-semibold block uppercase">% Gordura (BF)</span>
+                    <span className="text-xl font-black text-cyan-400 block mt-1">
+                      {latestEval?.bf_percentual ? `${latestEval.bf_percentual}%` : '—'}
+                    </span>
+                  </div>
+
+                  <div className="glass-panel p-4 rounded-2xl border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 font-semibold block uppercase">Braço D. Contraído</span>
+                    <span className="text-xl font-black text-purple-400 block mt-1">
+                      {latestEval?.braco_direito_contraido || latestEval?.braco_contraido || latestEval?.braco_direito ? `${latestEval.braco_direito_contraido || latestEval.braco_contraido || latestEval.braco_direito} cm` : '—'}
+                    </span>
+                  </div>
+
+                  <div className="glass-panel p-4 rounded-2xl border border-slate-800 text-center">
+                    <span className="text-[10px] text-slate-400 font-semibold block uppercase">Cintura</span>
+                    <span className="text-xl font-black text-emerald-400 block mt-1">
+                      {latestEval?.cintura ? `${latestEval.cintura} cm` : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Observações do Treinador */}
+                {viewingStudent.observacoes_treinador && (
+                  <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-1">
+                    <span className="font-bold text-slate-300 text-xs flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-emerald-400" /> Observações do Treinador:
+                    </span>
+                    <p className="text-xs text-slate-300 italic pl-5">{viewingStudent.observacoes_treinador}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB CONTENT 2: MEDIDAS CORPORAIS */}
+            {activeTab === 'medidas' && (
+              <div className="space-y-6 text-xs">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-emerald-400" />
+                    Avaliação Corporal Detalhada
+                  </h4>
+                  <button
+                    onClick={() => setShowNewEvalModal(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 shadow-md"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Nova Avaliação</span>
+                  </button>
+                </div>
+
+                {/* Bilateral Arms Contrast Callout */}
+                {latestEval?.braco_direito_contraido && latestEval?.braco_esquerdo_contraido && Math.abs(parseFloat(latestEval.braco_direito_contraido) - parseFloat(latestEval.braco_esquerdo_contraido)) >= 0.5 && (
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                    <span>
+                      ⚠️ Assimetria em Braço Contraído: Direito ({latestEval.braco_direito_contraido} cm) vs. Esquerdo ({latestEval.braco_esquerdo_contraido} cm) — Diferença de {Math.abs(parseFloat(latestEval.braco_direito_contraido) - parseFloat(latestEval.braco_esquerdo_contraido)).toFixed(1)} cm.
+                    </span>
+                  </div>
+                )}
+
+                {/* Complete Measurements Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { key: 'braco_direito', label: 'Braço D. Relaxado', val: latestEval?.braco_direito, prev: prevEval?.braco_direito },
+                    { key: 'braco_direito_contraido', label: 'Braço D. Contraído', val: latestEval?.braco_direito_contraido || latestEval?.braco_contraido, prev: prevEval?.braco_direito_contraido || prevEval?.braco_contraido },
+                    { key: 'braco_esquerdo', label: 'Braço E. Relaxado', val: latestEval?.braco_esquerdo, prev: prevEval?.braco_esquerdo },
+                    { key: 'braco_esquerdo_contraido', label: 'Braço E. Contraído', val: latestEval?.braco_esquerdo_contraido, prev: prevEval?.braco_esquerdo_contraido },
+                    { key: 'antebraco_direito', label: 'Antebraço D', val: latestEval?.antebraco_direito, prev: prevEval?.antebraco_direito },
+                    { key: 'antebraco_esquerdo', label: 'Antebraço E', val: latestEval?.antebraco_esquerdo, prev: prevEval?.antebraco_esquerdo },
+                    { key: 'ombro', label: 'Ombros', val: latestEval?.ombro, prev: prevEval?.ombro },
+                    { key: 'peitoral_torax', label: 'Peitoral / Tórax', val: latestEval?.peitoral_torax, prev: prevEval?.peitoral_torax },
+                    { key: 'dorsal_largura', label: 'Dorsal Largura', val: latestEval?.dorsal_largura, prev: prevEval?.dorsal_largura },
+                    { key: 'dorsal_espessura', label: 'Dorsal Espessura', val: latestEval?.dorsal_espessura, prev: prevEval?.dorsal_espessura },
+                    { key: 'cintura', label: 'Cintura', val: latestEval?.cintura, prev: prevEval?.cintura },
+                    { key: 'abdomen', label: 'Abdômen', val: latestEval?.abdomen, prev: prevEval?.abdomen },
+                    { key: 'quadril', label: 'Quadril', val: latestEval?.quadril, prev: prevEval?.quadril },
+                    { key: 'coxa_direita', label: 'Coxa Medial D', val: latestEval?.coxa_direita, prev: prevEval?.coxa_direita },
+                    { key: 'coxa_esquerda', label: 'Coxa Medial E', val: latestEval?.coxa_esquerda, prev: prevEval?.coxa_esquerda },
+                    { key: 'gluteo', label: 'Glúteo', val: latestEval?.gluteo, prev: prevEval?.gluteo },
+                    { key: 'panturrilha_direita', label: 'Panturrilha D', val: latestEval?.panturrilha_direita, prev: prevEval?.panturrilha_direita },
+                    { key: 'panturrilha_esquerda', label: 'Panturrilha E', val: latestEval?.panturrilha_esquerda, prev: prevEval?.panturrilha_esquerda },
+                    { key: 'pescoco', label: 'Pescoço', val: latestEval?.pescoco, prev: prevEval?.pescoco },
+                  ].map((m) => {
+                    const st = getMeasurementStatus(m.key, m.val, m.prev, viewingStudent.fase_shape || 'Bulking');
+
+                    return (
+                      <div key={m.key} className="glass-panel p-3.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                        <div>
+                          <span className="text-slate-400 font-semibold block text-[11px]">{m.label}</span>
+                          <span className="text-sm font-black text-white">{m.val ? `${m.val} cm` : '—'}</span>
+                        </div>
+                        {st && (
+                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${st.badgeBg}`}>
+                            {st.icon} {st.diffStr} cm
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT 3: PERFORMANCE */}
+            {activeTab === 'desempenho' && (
+              <div className="space-y-6 text-xs">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Dumbbell className="w-4 h-4 text-emerald-400" />
+                    Recordes Pessoais & Evolução de Carga
+                  </h4>
+                </div>
+
+                {studentHistory.prs.length === 0 ? (
+                  <div className="glass-panel p-8 rounded-2xl border border-slate-800 text-center text-slate-500">
+                    <Dumbbell className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                    <p>Nenhum log de treino registrado ainda para este aluno.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {studentHistory.prs.map((pr, idx) => (
+                      <div key={idx} className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-white text-xs flex items-center gap-1.5">
+                            <Award className="w-4 h-4 text-[#D4AF37]" />
+                            {pr.exercise_name || `Exercício #${pr.exercise_id}`}
+                          </span>
+                        </div>
+                        <div className="flex items-baseline justify-between pt-1">
+                          <span className="text-xl font-black text-emerald-400">{pr.max_weight} kg</span>
+                          <span className="text-[10px] text-slate-400 font-semibold">{pr.max_reps} reps</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB CONTENT 4: HISTÓRICO DE AVALIAÇÕES */}
+            {activeTab === 'historico' && (
+              <div className="space-y-6 text-xs">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <History className="w-4 h-4 text-emerald-400" />
+                    Timeline de Avaliações Corporais
+                  </h4>
+                </div>
+
+                {studentHistory.evaluations.length === 0 ? (
+                  <div className="glass-panel p-8 rounded-2xl border border-slate-800 text-center text-slate-500">
+                    <Scale className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                    <p>Nenhuma avaliação registrada ainda.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {studentHistory.evaluations.map((evalItem, index) => (
+                      <div key={evalItem.id || index} className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-3">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                          <span className="font-extrabold text-white flex items-center gap-2">
+                            📅 {new Date(evalItem.data_registro).toLocaleDateString('pt-BR')}
+                            {index === 0 && (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase">
+                                Última / Atual
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                          <div><span className="text-slate-400 block text-[10px]">Peso:</span><span className="font-bold text-white">{evalItem.peso ? `${evalItem.peso} kg` : '—'}</span></div>
+                          <div><span className="text-slate-400 block text-[10px]">BF:</span><span className="font-bold text-white">{evalItem.bf_percentual ? `${evalItem.bf_percentual}%` : '—'}</span></div>
+                          <div><span className="text-slate-400 block text-[10px]">Braço D Contraído:</span><span className="font-bold text-white">{evalItem.braco_direito_contraido || evalItem.braco_contraido || evalItem.braco_direito ? `${evalItem.braco_direito_contraido || evalItem.braco_contraido || evalItem.braco_direito} cm` : '—'}</span></div>
+                          <div><span className="text-slate-400 block text-[10px]">Cintura:</span><span className="font-bold text-white">{evalItem.cintura ? `${evalItem.cintura} cm` : '—'}</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Modal Bottom Actions Bar */}
+            <div className="flex flex-wrap justify-between items-center gap-2 pt-4 border-t border-slate-800">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setShowNewEvalModal(true)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-extrabold text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-md cursor-pointer"
+                >
+                  + Nova Avaliação
+                </button>
+                <Link
+                  href={`/dashboard/students?search=${encodeURIComponent(viewingStudent.username || viewingStudent.first_name)}`}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700"
+                >
+                  Editar Cadastro
+                </Link>
                 <button
                   onClick={() => handleCancelEnrollment(viewingStudent.id, viewingStudent.first_name)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 cursor-pointer"
+                  title="Desativar aluno e inativar a matrícula"
                 >
-                  Cancelar Matrícula
+                  Desativar Aluno
                 </button>
                 <button
-                  onClick={() => handleDelete(viewingStudent.id, viewingStudent.first_name)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 bg-slate-800 hover:text-white"
+                  onClick={() => handleDelete(viewingStudent.id, viewingStudent.first_name || viewingStudent.username)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 cursor-pointer"
+                  title="Excluir aluno e todos os dados em cascata (requer 3 confirmações)"
                 >
-                  Excluir
+                  Apagar em Cascata
                 </button>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => {
                     const st = viewingStudent;
@@ -850,14 +1334,284 @@ export default function DashboardPage() {
                 >
                   Renovar cobrança
                 </button>
-                <Link
-                  href={`/dashboard/students?id=${viewingStudent.id}`}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700"
-                >
-                  Editar Cadastro
-                </Link>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: NOVA AFERIÇÃO / AVALIAÇÃO CORPORAL */}
+      {showNewEvalModal && viewingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-2xl rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <Scale className="w-5 h-5 text-emerald-400" />
+                Nova Aferição Corporal para {viewingStudent.first_name}
+              </h3>
+              <button onClick={() => setShowNewEvalModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleCreateEvaluation} className="space-y-4 text-xs">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Data da Avaliação *</label>
+                  <input
+                    type="date"
+                    required
+                    value={evalFormData.data_registro}
+                    onChange={(e) => setEvalFormData({ ...evalFormData, data_registro: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">Peso (kg)</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    value={evalFormData.peso}
+                    onChange={(e) => setEvalFormData({ ...evalFormData, peso: e.target.value })}
+                    placeholder="75.5"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-300 mb-1">% Gordura (BF)</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    value={evalFormData.bf_percentual}
+                    onChange={(e) => setEvalFormData({ ...evalFormData, bf_percentual: e.target.value })}
+                    placeholder="13.0"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Tronco */}
+              <div className="p-3 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
+                <span className="font-bold text-emerald-400 block">Tronco & Proporção</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div><label className="block text-slate-400 mb-1">Pescoço (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.pescoco} onChange={(e) => setEvalFormData({ ...evalFormData, pescoco: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Ombros (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.ombro} onChange={(e) => setEvalFormData({ ...evalFormData, ombro: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Peitoral (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.peitoral_torax} onChange={(e) => setEvalFormData({ ...evalFormData, peitoral_torax: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Dorsal Largura (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.dorsal_largura} onChange={(e) => setEvalFormData({ ...evalFormData, dorsal_largura: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Dorsal Espessura (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.dorsal_espessura} onChange={(e) => setEvalFormData({ ...evalFormData, dorsal_espessura: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Cintura (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.cintura} onChange={(e) => setEvalFormData({ ...evalFormData, cintura: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Abdômen (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.abdomen} onChange={(e) => setEvalFormData({ ...evalFormData, abdomen: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Quadril (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.quadril} onChange={(e) => setEvalFormData({ ...evalFormData, quadril: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                </div>
+              </div>
+
+              {/* Membros Superiores */}
+              <div className="p-3 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
+                <span className="font-bold text-cyan-400 block">Braços & Antebraços</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div><label className="block text-slate-400 mb-1">Braço D. Relaxado</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.braco_direito} onChange={(e) => setEvalFormData({ ...evalFormData, braco_direito: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-cyan-300 font-bold mb-1">Braço D. Contraído</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.braco_direito_contraido} onChange={(e) => setEvalFormData({ ...evalFormData, braco_direito_contraido: e.target.value, braco_contraido: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white font-bold" /></div>
+                  <div><label className="block text-slate-400 mb-1">Braço E. Relaxado</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.braco_esquerdo} onChange={(e) => setEvalFormData({ ...evalFormData, braco_esquerdo: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-cyan-300 font-bold mb-1">Braço E. Contraído</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.braco_esquerdo_contraido} onChange={(e) => setEvalFormData({ ...evalFormData, braco_esquerdo_contraido: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white font-bold" /></div>
+                </div>
+              </div>
+
+              {/* Membros Inferiores */}
+              <div className="p-3 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
+                <span className="font-bold text-purple-400 block">Pernas & Glúteos (Coxa Medial)</span>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <div><label className="block text-slate-400 mb-1">Coxa Medial D</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.coxa_direita} onChange={(e) => setEvalFormData({ ...evalFormData, coxa_direita: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Coxa Medial E</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.coxa_esquerda} onChange={(e) => setEvalFormData({ ...evalFormData, coxa_esquerda: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Glúteo (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.gluteo} onChange={(e) => setEvalFormData({ ...evalFormData, gluteo: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Panturrilha D (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.panturrilha_direita} onChange={(e) => setEvalFormData({ ...evalFormData, panturrilha_direita: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                  <div><label className="block text-slate-400 mb-1">Panturrilha E (cm)</label><input type="number" inputMode="decimal" step="0.1" value={evalFormData.panturrilha_esquerda} onChange={(e) => setEvalFormData({ ...evalFormData, panturrilha_esquerda: e.target.value })} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-300 mb-1">Observações da Avaliação</label>
+                <input
+                  type="text"
+                  value={evalFormData.observacoes}
+                  onChange={(e) => setEvalFormData({ ...evalFormData, observacoes: e.target.value })}
+                  placeholder="Ex: Aluno em pumps pós treino..."
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowNewEvalModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={evalSubmitting}
+                  className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 shadow-md"
+                >
+                  {evalSubmitting ? 'Salvando...' : 'Salvar Avaliação'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3-STEP HARD CASCADE DELETE */}
+      {hardDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/90 backdrop-blur-lg">
+          <div className="glass-panel w-full max-w-xl rounded-3xl p-6 border border-rose-500/40 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-rose-500/20 pb-3">
+              <div className="flex items-center gap-2 text-rose-400">
+                <AlertTriangle className="w-6 h-6 animate-pulse" />
+                <h3 className="text-base font-black text-white">
+                  Exclusão Definitiva em Cascata (Passo {hardDeleteModal.step}/3)
+                </h3>
+              </div>
+              <button
+                onClick={() => setHardDeleteModal(null)}
+                className="text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Progress Stepper */}
+            <div className="flex items-center justify-between gap-2 px-1">
+              <div className={`h-2 flex-1 rounded-full transition-all ${hardDeleteModal.step >= 1 ? 'bg-rose-500 shadow-sm shadow-rose-500/50' : 'bg-slate-800'}`} />
+              <div className={`h-2 flex-1 rounded-full transition-all ${hardDeleteModal.step >= 2 ? 'bg-rose-500 shadow-sm shadow-rose-500/50' : 'bg-slate-800'}`} />
+              <div className={`h-2 flex-1 rounded-full transition-all ${hardDeleteModal.step >= 3 ? 'bg-rose-500 shadow-sm shadow-rose-500/50' : 'bg-slate-800'}`} />
+            </div>
+
+            {/* PASSO 1: ALERTA DE IMPACTO DE CASCATA */}
+            {hardDeleteModal.step === 1 && (
+              <div className="space-y-4">
+                <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-xs space-y-2 text-rose-200">
+                  <p className="font-extrabold text-white text-sm">
+                    🚨 ATENÇÃO: Operação Destrutiva e Irreversível!
+                  </p>
+                  <p>
+                    Você iniciou o processo para apagar o cadastro de <strong className="text-white font-bold">{hardDeleteModal.name}</strong>. Esta ação apagará <strong className="text-white font-bold">TODOS OS REGISTROS EM CASCATA</strong>:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-slate-300 pl-1">
+                    <li>Histórico completo de avaliações físicas e medidas corporais</li>
+                    <li>Fichas de treino, registros de cargas e PRs (recordes)</li>
+                    <li>Ficha de saúde, anamnese e atestados armazenados</li>
+                    <li>Todas as cobranças e mensalidades vinculadas</li>
+                    <li>Conta de acesso e perfil completo do usuário</li>
+                  </ul>
+                </div>
+
+                <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs text-amber-300 flex items-start gap-2">
+                  <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Recomendação:</strong> Se o aluno apenas cancelou a mensalidade ou trancou o plano, o ideal é usar a opção <strong>DESATIVAR ALUNO</strong> para preservar seu histórico.
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-end gap-2.5 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const id = hardDeleteModal.id;
+                      const name = hardDeleteModal.name;
+                      setHardDeleteModal(null);
+                      handleCancelEnrollment(id, name);
+                    }}
+                    className="px-4 py-2.5 rounded-xl font-bold text-xs text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all cursor-pointer"
+                  >
+                    Preferencial: Apenas Desativar Aluno
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHardDeleteModal((prev) => ({ ...prev, step: 2 }))}
+                    className="px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-rose-600 hover:bg-rose-500 shadow-md shadow-rose-600/30 transition-all cursor-pointer"
+                  >
+                    Entendi os riscos ➔ Ir para Passo 2 (2/3)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASSO 2: DIGITAÇÃO DE CONFIRMAÇÃO */}
+            {hardDeleteModal.step === 2 && (
+              <div className="space-y-4 text-xs">
+                <p className="text-slate-300 leading-relaxed">
+                  Para liberar o botão de exclusão final em cascata, digite exatamente a palavra <strong className="text-rose-400 font-black tracking-wider uppercase">EXCLUIR</strong> no campo abaixo:
+                </p>
+
+                <div>
+                  <label className="block font-bold text-slate-400 mb-1">
+                    Confirmação de Segurança (2/3) *
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={hardDeleteModal.textInput}
+                    onChange={(e) => setHardDeleteModal((prev) => ({ ...prev, textInput: e.target.value }))}
+                    placeholder="Digite EXCLUIR em maiúsculas"
+                    className="w-full bg-slate-950 border border-slate-700 focus:border-rose-500 rounded-xl p-3 text-white font-bold placeholder-slate-600 focus:outline-none tracking-widest text-center text-sm"
+                  />
+                </div>
+
+                <div className="flex justify-between items-center gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setHardDeleteModal((prev) => ({ ...prev, step: 1 }))}
+                    className="px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer"
+                  >
+                    ← Voltar ao Passo 1
+                  </button>
+                  <button
+                    type="button"
+                    disabled={hardDeleteModal.textInput.trim().toUpperCase() !== 'EXCLUIR'}
+                    onClick={() => setHardDeleteModal((prev) => ({ ...prev, step: 3 }))}
+                    className="px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-rose-600/30 transition-all cursor-pointer"
+                  >
+                    Confirmar Digitação ➔ Passo 3 (3/3)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASSO 3: CONFIRMAÇÃO FINAL E DEFINITIVA */}
+            {hardDeleteModal.step === 3 && (
+              <div className="space-y-4 text-xs">
+                <div className="p-4 bg-rose-600/20 border-2 border-rose-500 rounded-2xl text-rose-200 text-center space-y-2">
+                  <p className="font-black text-rose-400 text-sm uppercase tracking-wide">
+                    💣 CONFIRMAÇÃO FINAL DEFINITIVA (3/3)
+                  </p>
+                  <p className="text-white font-bold text-sm">
+                    Esta é a sua ÚLTIMA CHANCE para cancelar!
+                  </p>
+                  <p className="text-slate-300">
+                    Você tem certeza absoluta de que deseja apagar o aluno <strong className="text-white font-extrabold">{hardDeleteModal.name}</strong> e <strong className="text-rose-300">TODOS os seus dados vinculados em cascata</strong> do sistema?
+                  </p>
+                </div>
+
+                <div className="flex justify-between items-center gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setHardDeleteModal(null)}
+                    className="px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer"
+                  >
+                    Cancelar Operação
+                  </button>
+                  <button
+                    type="button"
+                    disabled={hardDeleteModal.submitting}
+                    onClick={executeHardDelete}
+                    className="px-5 py-2.5 rounded-xl font-black text-xs text-white bg-gradient-to-r from-rose-700 via-red-600 to-rose-700 hover:from-rose-600 hover:to-red-500 shadow-xl shadow-rose-600/40 disabled:opacity-50 cursor-pointer animate-pulse"
+                  >
+                    {hardDeleteModal.submitting ? 'EXCLUINDO EM CASCATA...' : '💥 SIM, EXCLUIR EM CASCATA DEFINITIVAMENTE'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
