@@ -1719,6 +1719,8 @@ export async function ensureStudentBillingsGenerated(targetMonthStr) {
     FROM auth_user u
     JOIN core_userprofile p ON p.user_id = u.id
     WHERE p.enrollment_status = 'active'
+      AND u.is_staff = false 
+      AND u.is_superuser = false
   `);
 
   for (const s of studentsRes.rows) {
