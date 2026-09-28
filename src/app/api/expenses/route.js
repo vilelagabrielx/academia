@@ -17,8 +17,10 @@ export async function GET(request) {
     const search = searchParams.get('search') || '';
     const monthYear = searchParams.get('month_year') || null;
 
-    const summary = await getExpenseSummary({ month_year: monthYear, search, category });
-    const expenses = await getExpenses({ status, category, search, month_year: monthYear });
+    const [summary, expenses] = await Promise.all([
+      getExpenseSummary({ month_year: monthYear, search, category }),
+      getExpenses({ status, category, search, month_year: monthYear })
+    ]);
 
     return NextResponse.json({ summary, expenses });
   } catch (error) {

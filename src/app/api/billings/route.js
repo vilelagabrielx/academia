@@ -17,8 +17,10 @@ export async function GET(request) {
     const search = searchParams.get('search') || '';
     const monthYear = searchParams.get('month_year') || null;
 
-    const summary = await getBillingSummary({ month_year: monthYear, search, user_id: userId });
-    const billings = await getBillings({ status, user_id: userId, search, month_year: monthYear });
+    const [summary, billings] = await Promise.all([
+      getBillingSummary({ month_year: monthYear, search, user_id: userId }),
+      getBillings({ status, user_id: userId, search, month_year: monthYear })
+    ]);
 
     return NextResponse.json({ summary, billings });
   } catch (error) {

@@ -59,14 +59,18 @@ export async function authenticateUser(usernameOrEmail, password) {
 }
 
 // Schema Helper & Safe Monthly Date Generator
-export async function initDbSchema() {
-  try {
-    await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;`);
-    await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS recurrence_id VARCHAR(64);`);
-    await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS cancel_reason TEXT;`);
-    await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;`);
-    await query(`ALTER TABLE gym_expenses ADD COLUMN IF NOT EXISTS cancel_reason TEXT;`);
-    await query(`ALTER TABLE gym_expenses ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;`);
+let schemaInitPromise = null;
+
+export function initDbSchema() {
+  if (!schemaInitPromise) {
+    schemaInitPromise = (async () => {
+      try {
+        await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;`);
+        await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS recurrence_id VARCHAR(64);`);
+        await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS cancel_reason TEXT;`);
+        await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;`);
+        await query(`ALTER TABLE gym_expenses ADD COLUMN IF NOT EXISTS cancel_reason TEXT;`);
+        await query(`ALTER TABLE gym_expenses ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;`);
 
     // Core userprofile extensions for Musculação, Shape & Performance
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS fase_shape VARCHAR(50);`);
@@ -206,9 +210,20 @@ export async function initDbSchema() {
         CONSTRAINT unique_recurrence_per_due_date UNIQUE (recurrence_id, due_date)
       );
     `);
-  } catch (err) {
-    console.error('Error initializing DB schema extensions:', err);
+
+        // Indexes for fast queries
+        await query(`CREATE INDEX IF NOT EXISTS idx_gym_expenses_due_date ON gym_expenses(due_date);`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_gym_expenses_status ON gym_expenses(status);`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_gym_expenses_category ON gym_expenses(category);`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_gym_billing_due_date ON gym_billing(due_date);`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_gym_billing_status ON gym_billing(status);`);
+        await query(`CREATE INDEX IF NOT EXISTS idx_gym_billing_user_id ON gym_billing(user_id);`);
+      } catch (err) {
+        console.error('Error initializing DB schema extensions:', err);
+      }
+    })();
   }
+  return schemaInitPromise;
 }
 
 export function getSafeMonthlyDate(baseDateStr, monthOffset) {
@@ -229,6 +244,20 @@ export function getSafeMonthlyDate(baseDateStr, monthOffset) {
   const safeDayStr = String(safeDay).padStart(2, '0');
 
   return `${targetYear}-${safeMonthStr}-${safeDayStr}`;
+}
+
+export function getMonthDateRange(month_year) {
+  if (!month_year || month_year === 'all') return null;
+  const parts = String(month_year).trim().split('-');
+  if (parts.length < 2) return null;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  if (isNaN(year) || isNaN(month)) return null;
+  const lastDay = new Date(year, month, 0).getDate();
+  const monthPadded = String(month).padStart(2, '0');
+  const startDate = `${parts[0]}-${monthPadded}-01`;
+  const endDate = `${parts[0]}-${monthPadded}-${String(lastDay).padStart(2, '0')}`;
+  return { startDate, endDate };
 }
 
 export async function checkExistingBilling(userId, dueDateStr) {
@@ -1142,9 +1171,10 @@ export async function getBillingSummary({ month_year, search, user_id } = {}) {
   `;
   const params = [];
 
-  if (month_year && month_year !== 'all') {
-    params.push(`${month_year}%`);
-    sql += ` AND b.due_date::text LIKE $${params.length}`;
+  const dateRange = getMonthDateRange(month_year);
+  if (dateRange) {
+    params.push(dateRange.startDate, dateRange.endDate);
+    sql += ` AND b.due_date >= $${params.length - 1} AND b.due_date <= $${params.length}`;
   }
 
   if (user_id) {
@@ -1200,9 +1230,10 @@ export async function getBillings({ status, user_id, search, month_year } = {}) 
   `;
   const params = [];
 
-  if (month_year && month_year !== 'all') {
-    params.push(`${month_year}%`);
-    sql += ` AND b.due_date::text LIKE $${params.length}`;
+  const dateRange = getMonthDateRange(month_year);
+  if (dateRange) {
+    params.push(dateRange.startDate, dateRange.endDate);
+    sql += ` AND b.due_date >= $${params.length - 1} AND b.due_date <= $${params.length}`;
   }
 
   if (status) {
@@ -1592,10 +1623,15 @@ export async function renewStudentEnrollment(studentId, { amount = 60.00, startD
 // EXPENSE MODULE & RECURRENCE ENGINE (Motor JIT / Lazy Evaluation)
 // ==========================================
 
+const generatedExpenseMonths = new Set();
+
 export async function ensureExpensesGenerated(targetMonthStr) {
   await initDbSchema();
   if (!targetMonthStr || targetMonthStr === 'all') {
     targetMonthStr = new Date().toISOString().slice(0, 7);
+  }
+  if (generatedExpenseMonths.has(targetMonthStr)) {
+    return;
   }
   const parts = targetMonthStr.split('-');
   const yearStr = parts[0];
@@ -1637,6 +1673,7 @@ export async function ensureExpensesGenerated(targetMonthStr) {
       rule.notes || `Despesa Recorrente (${monthStr}/${yearStr})`
     ]);
   }
+  generatedExpenseMonths.add(targetMonthStr);
 }
 
 export async function ensureStudentBillingsGenerated(targetMonthStr) {
@@ -1668,9 +1705,9 @@ export async function ensureStudentBillingsGenerated(targetMonthStr) {
 
     const existing = await query(`
       SELECT id FROM gym_billing 
-      WHERE user_id = $1 AND due_date::text LIKE $2
+      WHERE user_id = $1 AND due_date >= $2 AND due_date <= $3
       LIMIT 1
-    `, [s.user_id, `${targetMonthStr}%`]);
+    `, [s.user_id, `${targetMonthStr}-01`, `${targetMonthStr}-${String(lastDay).padStart(2, '0')}`]);
 
     if (existing.rows.length === 0) {
       const dueDay = s.dia_vencimento_recorrente || 5;
@@ -1705,9 +1742,10 @@ export async function getExpenseSummary({ month_year, search, category } = {}) {
   `;
   const params = [];
 
-  if (month_year && month_year !== 'all') {
-    params.push(`${month_year}%`);
-    sql += ` AND due_date::text LIKE $${params.length}`;
+  const dateRange = getMonthDateRange(month_year);
+  if (dateRange) {
+    params.push(dateRange.startDate, dateRange.endDate);
+    sql += ` AND due_date >= $${params.length - 1} AND due_date <= $${params.length}`;
   }
 
   if (category) {
@@ -1730,9 +1768,9 @@ export async function getExpenseSummary({ month_year, search, category } = {}) {
     WHERE 1=1
   `;
   const topCatParams = [];
-  if (month_year && month_year !== 'all') {
-    topCatParams.push(`${month_year}%`);
-    topCatSql += ` AND due_date::text LIKE $${topCatParams.length}`;
+  if (dateRange) {
+    topCatParams.push(dateRange.startDate, dateRange.endDate);
+    topCatSql += ` AND due_date >= $${topCatParams.length - 1} AND due_date <= $${topCatParams.length}`;
   }
   topCatSql += ` GROUP BY category ORDER BY sum_cat DESC LIMIT 1`;
   const topCatRes = await query(topCatSql, topCatParams);
@@ -1762,9 +1800,10 @@ export async function getExpenses({ month_year, status, category, search } = {})
   let sql = `SELECT * FROM gym_expenses WHERE 1=1`;
   const params = [];
 
-  if (month_year && month_year !== 'all') {
-    params.push(`${month_year}%`);
-    sql += ` AND due_date::text LIKE $${params.length}`;
+  const dateRange = getMonthDateRange(month_year);
+  if (dateRange) {
+    params.push(dateRange.startDate, dateRange.endDate);
+    sql += ` AND due_date >= $${params.length - 1} AND due_date <= $${params.length}`;
   }
 
   if (status) {
