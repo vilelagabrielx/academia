@@ -36,6 +36,29 @@ const CONDICOES_CARDIO_OPTIONS = [
   'Arritmia cardíaca'
 ];
 
+export function parseHealthAlerts(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) {
+    return val.filter((i) => i && typeof i === 'string' && i.trim() !== '' && i !== '[]' && i !== '{}');
+  }
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!trimmed || trimmed === '[]' || trimmed === '{}' || trimmed === 'null' || trimmed === 'undefined') {
+      return [];
+    }
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((i) => i && typeof i === 'string' && i.trim() !== '' && i !== '[]' && i !== '{}');
+        }
+      } catch (e) {}
+    }
+    return [trimmed];
+  }
+  return [];
+}
+
 export default function StudentsPage() {
   const [students, setStudents] = useState([]);
   const [search, setSearch] = useState('');
@@ -149,28 +172,28 @@ export default function StudentsPage() {
     data_nascimento: '',
     birth_date: '',
     age: '',
-    height: '175',
+    height: '',
     current_weight: '',
-    blood_type: 'O+',
-    goal: 'Hipertrofia',
-    training_days: 'Segunda, Quarta, Sexta',
+    blood_type: '',
+    goal: '',
+    training_days: '',
 
     // Ficha Avançada & Objetivos
-    fase_shape: 'Bulking',
-    nivel_treino: 'Intermediário',
-    frequencia_semanal: '5x por semana',
-    divisao_treino: 'Push / Pull / Legs',
-    objetivo_principal: 'Hipertrofia',
+    fase_shape: '',
+    nivel_treino: '',
+    frequencia_semanal: '',
+    divisao_treino: '',
+    objetivo_principal: '',
     objetivos_secundarios: '',
     pontos_fracos: [],
-    altura: '175',
+    altura: '',
     observacoes_treinador: '',
 
     // Saúde Clínica & Segurança
     restricoes_articulares: [],
     condicoes_cardio_metabolicas: [],
     cirurgias_reabilitacao: '',
-    status_atestado: 'Pendente',
+    status_atestado: '',
     atestado_file_base64: '',
     medicamentos_uso_continuo: '',
     dor_cronica_nivel: '',
@@ -183,7 +206,7 @@ export default function StudentsPage() {
     contato_emergencia_telefone: '',
 
     // Metas corporais & Contexto Temporal
-    prazo_meta: '90 dias (3 meses)',
+    prazo_meta: '',
     peso_meta: '',
     bf_meta: '',
     braco_meta: '',
@@ -441,26 +464,26 @@ export default function StudentsPage() {
       data_nascimento: '',
       birth_date: '',
       age: '',
-      height: '175',
+      height: '',
       current_weight: '',
-      blood_type: 'O+',
-      goal: 'Hipertrofia',
-      training_days: 'Segunda, Quarta, Sexta',
+      blood_type: '',
+      goal: '',
+      training_days: '',
 
-      fase_shape: 'Bulking',
-      nivel_treino: 'Intermediário',
-      frequencia_semanal: '5x por semana',
-      divisao_treino: 'Push / Pull / Legs',
-      objetivo_principal: 'Hipertrofia',
+      fase_shape: '',
+      nivel_treino: '',
+      frequencia_semanal: '',
+      divisao_treino: '',
+      objetivo_principal: '',
       objetivos_secundarios: '',
       pontos_fracos: [],
-      altura: '175',
+      altura: '',
       observacoes_treinador: '',
 
       restricoes_articulares: [],
       condicoes_cardio_metabolicas: [],
       cirurgias_reabilitacao: '',
-      status_atestado: 'Pendente',
+      status_atestado: '',
       atestado_file_base64: '',
       medicamentos_uso_continuo: '',
       dor_cronica_nivel: '',
@@ -472,7 +495,7 @@ export default function StudentsPage() {
       contato_emergencia_parentesco: '',
       contato_emergencia_telefone: '',
 
-      prazo_meta: '90 dias (3 meses)',
+      prazo_meta: '',
       peso_meta: '',
       bf_meta: '',
       braco_meta: '',
@@ -812,15 +835,6 @@ export default function StudentsPage() {
       // Clear draft on successful save
       clearDraft();
 
-      // Immediate WhatsApp Billing Dispatch Trigger if checked or Fast Mode
-      if ((formData.send_whatsapp_now || wizardMode === 'fast') && formattedPhone) {
-        const amountStr = parseFloat(formData.billing_amount || '150.00').toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        const dueDateStr = new Date(formData.billing_due_date || new Date()).toLocaleDateString('pt-BR');
-        const msg = `Olá, ${formData.first_name}! Sua matrícula foi cadastrada com sucesso. Complete sua anamnese e ficha de treino aqui! ${formData.create_first_billing ? `Sua mensalidade de R$ ${amountStr} com vencimento em ${dueDateStr} está disponível.` : ''}`;
-        const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`;
-        window.open(waUrl, '_blank');
-      }
-
       setShowWizardModal(false);
       loadStudents();
       if (editingStudentId && viewingStudent?.id === editingStudentId) {
@@ -992,192 +1006,195 @@ export default function StudentsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-900/90 uppercase tracking-wider text-slate-400 font-semibold border-b border-slate-800">
+              <thead className="bg-[#1C1C1E] uppercase text-[10px] text-slate-400 font-semibold border-b border-white/10">
                 <tr>
                   <th className="py-3.5 px-4">Aluno / Perfil</th>
-                  <th className="py-3.5 px-4">Alertas de Saúde & Ficha</th>
+                  <th className="py-3.5 px-4">Alertas de Saúde</th>
                   <th className="py-3.5 px-4">Treino & Divisão</th>
-                  <th className="py-3.5 px-4 text-center">Situação Cobrança</th>
+                  <th className="py-3.5 px-4 text-center">Cobrança</th>
                   <th className="py-3.5 px-4 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-white/5">
                 {students.map((student) => {
                   const phone = student.whatsapp?.replace(/\D/g, '');
                   const waUrl = phone ? `https://wa.me/${phone.startsWith('55') ? phone : `55${phone}`}` : null;
                   const status = student.billing_status;
                   const computedAgeVal = calculateAge(student.birth_date || student.data_nascimento);
 
+                  const restricoesArr = parseHealthAlerts(student.restricoes_articulares);
+                  const cardioArr = parseHealthAlerts(student.condicoes_cardio_metabolicas);
+                  const hasHealthAlerts = restricoesArr.length > 0 || cardioArr.length > 0 || Boolean(student.contato_emergencia_nome);
+
                   return (
                     <tr
                       key={student.id}
-                      className={`transition-all cursor-pointer group ${
-                        status === 'sem_cobranca'
-                          ? 'bg-rose-950/20 hover:bg-rose-950/30 border-l-4 border-l-rose-500'
-                          : status === 'atrasada'
-                          ? 'bg-rose-950/10 hover:bg-rose-950/20 border-l-4 border-l-rose-400'
-                          : status === 'pendente'
-                          ? 'bg-amber-950/10 hover:bg-amber-950/20 border-l-4 border-l-amber-400'
-                          : 'hover:bg-slate-800/50'
-                      }`}
+                      className="hover:bg-white/5 transition-all cursor-pointer group"
                       onClick={() => openStudentProfile(student)}
                     >
+                      {/* Coluna 1: Aluno / Perfil (Limpa) */}
                       <td className="py-3.5 px-4 font-semibold text-white flex items-center gap-3">
                         {student.photo_base64 ? (
                           <img
                             src={student.photo_base64}
                             alt={student.username}
-                            className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500/40 group-hover:border-emerald-400"
+                            className="w-10 h-10 rounded-full object-cover border border-white/10 group-hover:border-emerald-400 transition-colors shrink-0"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400">
+                          <div className="w-10 h-10 rounded-full bg-[#2C2C2E] border border-white/10 flex items-center justify-center font-bold text-emerald-400 shrink-0">
                             {student.first_name?.[0] || student.username[0]?.toUpperCase()}
                           </div>
                         )}
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-sm text-white group-hover:text-emerald-400 transition-colors">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-white group-hover:text-emerald-400 transition-colors truncate">
                               {student.first_name} {student.last_name}
                             </span>
                             {computedAgeVal !== null && (
-                              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-bold">
-                                {computedAgeVal} anos
-                              </span>
-                            )}
-                            {student.restricoes_articulares && (
-                              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-extrabold text-[9px] border border-amber-500/30 flex items-center gap-1" title={typeof student.restricoes_articulares === 'string' ? student.restricoes_articulares : JSON.stringify(student.restricoes_articulares)}>
-                                <AlertTriangle className="w-3 h-3 text-amber-400" /> RESTRIÇÃO ARTICULAR
-                              </span>
-                            )}
-                            {student.condicoes_cardio_metabolicas && (
-                              <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-extrabold text-[9px] border border-rose-500/30 flex items-center gap-1" title={typeof student.condicoes_cardio_metabolicas === 'string' ? student.condicoes_cardio_metabolicas : JSON.stringify(student.condicoes_cardio_metabolicas)}>
-                                <ShieldAlert className="w-3 h-3 text-rose-400" /> CARDIO / METABÓLICO
-                              </span>
-                            )}
-                            {student.contato_emergencia_nome && (
-                              <span 
-                                className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-extrabold text-[9px] border border-amber-500/40 flex items-center gap-1"
-                                title={`Emergência: ${student.contato_emergencia_nome} (${student.contato_emergencia_parentesco || 'Contato'}) - Tel: ${student.contato_emergencia_telefone || 'N/A'}`}
-                              >
-                                <Heart className="w-3 h-3 text-amber-400 fill-amber-400/20" /> 
-                                EMERGÊNCIA: {student.contato_emergencia_nome}
+                              <span className="px-1.5 py-0.5 rounded bg-white/10 text-slate-300 text-[10px] font-semibold shrink-0">
+                                {computedAgeVal}a
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] text-slate-400 block font-mono">@{student.username}</span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[11px] text-slate-400 font-mono">@{student.username}</span>
                             {student.instagram && (
                               <a
                                 href={student.instagram.startsWith('http') ? student.instagram : `https://instagram.com/${student.instagram.replace(/^@/, '')}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:scale-105 transition-all shadow-sm shadow-pink-500/30 border border-pink-400/40"
+                                className="text-[11px] text-slate-400 hover:text-pink-400 transition-colors inline-flex items-center gap-1"
                                 title={`Instagram: ${student.instagram}`}
                               >
                                 <Instagram className="w-3 h-3" />
-                                <span>{student.instagram.startsWith('@') ? student.instagram : `@${student.instagram}`}</span>
+                                <span className="truncate">{student.instagram.startsWith('@') ? student.instagram : `@${student.instagram}`}</span>
                               </a>
                             )}
                           </div>
                         </div>
                       </td>
 
+                      {/* Coluna 2: Alertas de Saúde & Ficha */}
                       <td className="py-3.5 px-4">
-                        <div className="flex flex-wrap gap-1.5">
+                        {hasHealthAlerts ? (
+                          <div className="flex flex-col gap-1 items-start">
+                            {restricoesArr.length > 0 && (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 font-semibold text-[10px] border border-amber-500/20 inline-flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                                <span>Restrição: {restricoesArr.join(', ')}</span>
+                              </span>
+                            )}
+                            {cardioArr.length > 0 && (
+                              <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-300 font-semibold text-[10px] border border-rose-500/20 inline-flex items-center gap-1">
+                                <ShieldAlert className="w-3 h-3 text-rose-400 shrink-0" />
+                                <span>Cardio: {cardioArr.join(', ')}</span>
+                              </span>
+                            )}
+                            {student.contato_emergencia_nome && (
+                              <span className="px-2 py-0.5 rounded-full bg-white/5 text-slate-300 font-semibold text-[10px] border border-white/10 inline-flex items-center gap-1">
+                                <Heart className="w-3 h-3 text-rose-400 fill-rose-400/20 shrink-0" />
+                                <span>Emergência: {student.contato_emergencia_nome}</span>
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 text-[11px] italic">Sem restrições</span>
+                        )}
+                      </td>
+
+                      {/* Coluna 3: Treino & Divisão */}
+                      <td className="py-3.5 px-4">
+                        <span className="block font-semibold text-slate-200 text-xs">
+                          {student.divisao_treino || '—'}
+                        </span>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           {student.fase_shape && (
-                            <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-bold text-[10px]">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold text-[10px] border border-emerald-500/20">
                               {student.fase_shape}
                             </span>
                           )}
-                          <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 font-medium text-[10px]">
-                            {student.objetivo_principal || student.goal || 'Geral'}
-                          </span>
+                          {student.nivel_treino && (
+                            <span className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 font-semibold text-[10px] border border-purple-500/20">
+                              {student.nivel_treino}
+                            </span>
+                          )}
+                          {(student.objetivo_principal || student.goal) && (
+                            <span className="px-2 py-0.5 rounded-full bg-white/5 text-slate-300 font-medium text-[10px] border border-white/10">
+                              {student.objetivo_principal || student.goal}
+                            </span>
+                          )}
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4 text-xs">
-                        <span className="block font-semibold text-slate-200">
-                          {student.divisao_treino || 'Push / Pull / Legs'}
-                        </span>
-                        <span className="text-[10px] text-slate-400 block">
-                          {student.frequencia_semanal || student.training_days || '5x/semana'}
-                        </span>
-                      </td>
-
+                      {/* Coluna 4: Situação Cobrança */}
                       <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                         {status === 'sem_cobranca' && (
-                          <span className="px-2.5 py-1 rounded-full font-extrabold text-[11px] bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-flex items-center gap-1">
-                            🔴 Sem cobrança
+                          <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-rose-500/10 text-rose-300 border border-rose-500/20 inline-flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                            Sem cobrança
                           </span>
                         )}
-
                         {status === 'atrasada' && (
-                          <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 inline-flex items-center gap-1">
-                            🔴 Atrasada
+                          <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 inline-flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                            Atrasada
                           </span>
                         )}
-
                         {status === 'pendente' && (
-                          <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
-                            🟡 Pendente
+                          <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                            Pendente
                           </span>
                         )}
-
                         {status === 'em_dia' && (
-                          <span className="px-2.5 py-1 rounded-full font-bold text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
-                            🟢 Em dia
+                          <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            Em dia
                           </span>
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                        {(status === 'sem_cobranca' || status === 'em_dia') && (
+                      {/* Coluna 5: Ações Streamlined */}
+                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {waUrl && (
+                            <a
+                              href={waUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-all active:scale-95"
+                              title="WhatsApp"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </a>
+                          )}
+
                           <button
-                            onClick={() => handleOpenRenewModal(student)}
-                            title="Renovar ou Criar Cobrança"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-black bg-[#D4AF37] hover:bg-[#C5A059] transition-all cursor-pointer shadow-md"
+                            onClick={() => openStudentProfile(student)}
+                            title="Ver Ficha Completa"
+                            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-500/10 cursor-pointer"
                           >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            <span>Renovar</span>
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Ver Ficha</span>
                           </button>
-                        )}
 
-                        {(status === 'pendente' || status === 'atrasada') && (
                           <button
-                            onClick={() => openWhatsAppForBilling(student)}
-                            title="Enviar Lembrete por WhatsApp"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-all cursor-pointer shadow-md"
+                            onClick={() => handleOpenEditWizard(student)}
+                            title="Editar Aluno"
+                            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-all active:scale-95 cursor-pointer"
                           >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            <span>WhatsApp</span>
+                            <Edit3 className="w-4 h-4" />
                           </button>
-                        )}
 
-                        <button
-                          onClick={() => openStudentProfile(student)}
-                          title="Ver Ficha Completa"
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Ficha</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleOpenEditWizard(student)}
-                          title="Editar Cadastro / Ficha"
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-
-                        <button
-                          onClick={() => handleDelete(student.id, student.first_name || student.username)}
-                          title="Excluir Aluno"
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-red-500/10 border border-slate-700 transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          <button
+                            onClick={() => handleDelete(student.id, student.first_name || student.username)}
+                            title="Excluir Aluno"
+                            className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all active:scale-95 cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1267,27 +1284,34 @@ export default function StudentsPage() {
                 </div>
 
                 {/* Health Alert Badges */}
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1">
-                  {viewingStudent.restricoes_articulares && (
-                    <span className="px-2.5 py-1 rounded-xl bg-orange-500/20 border border-orange-500/40 text-orange-300 font-extrabold text-[11px] flex items-center gap-1">
-                      <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
-                      Restrições: {Array.isArray(viewingStudent.restricoes_articulares) ? viewingStudent.restricoes_articulares.join(', ') : viewingStudent.restricoes_articulares}
-                    </span>
-                  )}
+                {(() => {
+                  const modalRestricoes = parseHealthAlerts(viewingStudent.restricoes_articulares);
+                  const modalCardio = parseHealthAlerts(viewingStudent.condicoes_cardio_metabolicas);
+                  if (modalRestricoes.length === 0 && modalCardio.length === 0 && !viewingStudent.cirurgias_reabilitacao) return null;
+                  return (
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1">
+                      {modalRestricoes.length > 0 && (
+                        <span className="px-2.5 py-1 rounded-xl bg-orange-500/20 border border-orange-500/40 text-orange-300 font-extrabold text-[11px] flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
+                          Restrições: {modalRestricoes.join(', ')}
+                        </span>
+                      )}
 
-                  {viewingStudent.condicoes_cardio_metabolicas && (
-                    <span className="px-2.5 py-1 rounded-xl bg-red-600/20 border border-red-500/50 text-red-300 font-extrabold text-[11px] flex items-center gap-1">
-                      <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
-                      Cardio: {Array.isArray(viewingStudent.condicoes_cardio_metabolicas) ? viewingStudent.condicoes_cardio_metabolicas.join(', ') : viewingStudent.condicoes_cardio_metabolicas}
-                    </span>
-                  )}
+                      {modalCardio.length > 0 && (
+                        <span className="px-2.5 py-1 rounded-xl bg-red-600/20 border border-red-500/50 text-red-300 font-extrabold text-[11px] flex items-center gap-1">
+                          <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
+                          Cardio: {modalCardio.join(', ')}
+                        </span>
+                      )}
 
-                  {viewingStudent.cirurgias_reabilitacao && (
-                    <span className="px-2.5 py-1 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 font-extrabold text-[11px]">
-                      Cirurgia: {viewingStudent.cirurgias_reabilitacao}
-                    </span>
-                  )}
-                </div>
+                      {viewingStudent.cirurgias_reabilitacao && (
+                        <span className="px-2.5 py-1 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 font-extrabold text-[11px]">
+                          Cirurgia: {viewingStudent.cirurgias_reabilitacao}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Contato de Emergência Box - Destaque Principal */}
                 {viewingStudent.contato_emergencia_nome && (

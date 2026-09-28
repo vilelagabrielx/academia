@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Users, Dumbbell, FileText, Plus, MessageCircle, Instagram, ArrowUpRight, Search, Activity, 
-  UserPlus, CheckCircle2, Eye, User, Scale, Droplet, Target, Calendar, CreditCard, Trash2, RefreshCw, AlertTriangle, TrendingDown, DollarSign 
+  UserPlus, CheckCircle2, Eye, User, Scale, Droplet, Target, Calendar, CreditCard, Trash2, RefreshCw, AlertTriangle, TrendingDown, DollarSign, Sparkles 
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -258,20 +258,20 @@ export default function DashboardPage() {
               Painel de Gestão da Academia
             </h1>
             <p className="text-slate-400 mt-2 text-sm max-w-2xl">
-              Gerencie seus alunos, controle mensalidades, saídas de caixa e acompanhe o **Lucro Parcial Mensal**.
+              Gerencie seus alunos, controle mensalidades, saídas de caixa e acompanhe o <strong className="text-white font-semibold">Lucro Parcial Mensal</strong>.
             </p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-3 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-3 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
             >
               <UserPlus className="w-5 h-5" />
               <span>Novo Aluno</span>
             </button>
             <Link
               href="/dashboard/routines/new"
-              className="bg-slate-800 hover:bg-slate-700 text-white font-semibold px-5 py-3 rounded-xl border border-slate-700 flex items-center gap-2 transition-all"
+              className="bg-[#1C1C1E] hover:bg-white/10 text-slate-200 font-semibold px-5 py-3 rounded-xl border border-white/10 flex items-center gap-2 transition-all active:scale-95"
             >
               <Plus className="w-5 h-5" />
               <span>Criar Treino</span>
@@ -280,48 +280,44 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 💰 Destaques Financeiros (Total a Receber, Total de Despesas, Lucro Parcial Mensal) */}
+      {/* 💰 Destaques Financeiros (Total a Receber [Neutro], Total de Despesas [Rosa], Lucro Parcial Mensal [Verde]) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Card 1: Total a Receber */}
-        <Link href="/dashboard/billings" className="glass-panel p-5 rounded-2xl border border-cyan-500/30 bg-cyan-950/20 hover:border-cyan-500/60 transition-all flex items-center gap-4 group">
-          <div className="p-3.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 group-hover:scale-105 transition-transform">
+        {/* Card 1: Total a Receber (Cor Neutra) */}
+        <Link href="/dashboard/billings" className="glass-panel p-5 rounded-2xl border border-white/10 bg-[#161618] hover:border-white/20 transition-all flex items-center gap-4 group">
+          <div className="p-3.5 rounded-xl bg-white/5 text-slate-300 border border-white/10 group-hover:scale-105 transition-transform">
             <CreditCard className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[11px] text-cyan-300 uppercase tracking-wider font-bold block">Total a Receber</span>
-            <span className="text-2xl font-black text-cyan-300">
+            <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">Total a Receber</span>
+            <span className="text-2xl font-bold text-white">
               R$ {parseFloat(financeStats.total_receber || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </Link>
 
-        {/* Card 2: Total de Despesas */}
-        <Link href="/dashboard/expenses" className="glass-panel p-5 rounded-2xl border border-rose-500/30 bg-rose-950/20 hover:border-rose-500/60 transition-all flex items-center gap-4 group">
-          <div className="p-3.5 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30 group-hover:scale-105 transition-transform">
+        {/* Card 2: Total de Despesas (Rosa/Red) */}
+        <Link href="/dashboard/expenses" className="glass-panel p-5 rounded-2xl border border-white/10 bg-[#161618] hover:border-white/20 transition-all flex items-center gap-4 group">
+          <div className="p-3.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 group-hover:scale-105 transition-transform">
             <TrendingDown className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[11px] text-rose-300 uppercase tracking-wider font-bold block">Total de Despesas</span>
-            <span className="text-2xl font-black text-rose-400">
+            <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold block">Total de Despesas</span>
+            <span className="text-2xl font-bold text-rose-400">
               R$ {parseFloat(financeStats.total_despesas || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </Link>
 
-        {/* Card 3: Lucro Parcial Mensal */}
-        <div className={`glass-panel p-5 rounded-2xl border flex items-center gap-4 ${
-          financeStats.lucro_liquido >= 0
-            ? 'border-emerald-500/40 bg-emerald-950/20'
-            : 'border-rose-500/40 bg-rose-950/20'
-        }`}>
+        {/* Card 3: Lucro Parcial Mensal (Verde) */}
+        <div className="glass-panel p-5 rounded-2xl border border-white/10 bg-[#161618] flex items-center gap-4">
           <div className={`p-3.5 rounded-xl border ${
-            financeStats.lucro_liquido >= 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+            financeStats.lucro_liquido >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
           }`}>
             <DollarSign className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[11px] uppercase tracking-wider font-bold block text-emerald-300">Lucro Parcial Mensal</span>
-            <span className={`text-2xl font-black ${financeStats.lucro_liquido >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <span className="text-[11px] uppercase tracking-wider font-semibold block text-slate-400">Lucro Parcial Mensal</span>
+            <span className={`text-2xl font-bold ${financeStats.lucro_liquido >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
               R$ {parseFloat(financeStats.lucro_liquido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
@@ -330,7 +326,7 @@ export default function DashboardPage() {
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="glass-panel p-6 rounded-2xl border border-slate-800 flex items-center gap-4">
+        <div className="glass-panel p-6 rounded-2xl border border-white/10 bg-[#161618] flex items-center gap-4">
           <div className="p-4 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <Users className="w-7 h-7" />
           </div>
@@ -340,8 +336,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="glass-panel p-6 rounded-2xl border border-slate-800 flex items-center gap-4">
-          <div className="p-4 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+        <div className="glass-panel p-6 rounded-2xl border border-white/10 bg-[#161618] flex items-center gap-4">
+          <div className="p-4 rounded-xl bg-white/5 text-slate-300 border border-white/10">
             <FileText className="w-7 h-7" />
           </div>
           <div>
@@ -350,8 +346,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="glass-panel p-6 rounded-2xl border border-slate-800 flex items-center gap-4">
-          <div className="p-4 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+        <div className="glass-panel p-6 rounded-2xl border border-white/10 bg-[#161618] flex items-center gap-4">
+          <div className="p-4 rounded-xl bg-white/5 text-slate-300 border border-white/10">
             <Dumbbell className="w-7 h-7" />
           </div>
           <div>
@@ -360,6 +356,50 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Guia de Início Rápido / Ações de Arranque (Onboarding for Empty or New Account state) */}
+      {students.length === 0 && (
+        <div className="p-6 rounded-2xl bg-[#161618] border border-white/10 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">Guia de Início Rápido</h2>
+              <p className="text-xs text-slate-400">Comece organizando sua academia em poucos passos</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="p-4 rounded-xl bg-[#1C1C1E] hover:bg-white/10 border border-white/10 text-left transition-all group cursor-pointer active:scale-95 space-y-2"
+            >
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">1</div>
+              <span className="block font-bold text-xs text-white group-hover:text-emerald-400 transition-colors">Cadastrar 1º Aluno</span>
+              <span className="block text-[11px] text-slate-400">Adicione o perfil, contato e vencimento</span>
+            </button>
+
+            <Link
+              href="/dashboard/routines/new"
+              className="p-4 rounded-xl bg-[#1C1C1E] hover:bg-white/10 border border-white/10 text-left transition-all group cursor-pointer active:scale-95 space-y-2"
+            >
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">2</div>
+              <span className="block font-bold text-xs text-white group-hover:text-emerald-400 transition-colors">Montar Ficha de Treino</span>
+              <span className="block text-[11px] text-slate-400">Monte séries e rotinas personalizadas</span>
+            </Link>
+
+            <Link
+              href="/dashboard/billings"
+              className="p-4 rounded-xl bg-[#1C1C1E] hover:bg-white/10 border border-white/10 text-left transition-all group cursor-pointer active:scale-95 space-y-2"
+            >
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">3</div>
+              <span className="block font-bold text-xs text-white group-hover:text-emerald-400 transition-colors">Gerenciar Financeiro</span>
+              <span className="block text-[11px] text-slate-400">Lance entradas e despesas recorrentes</span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Students Quick Table Section */}
       <div className="glass-panel rounded-2xl border border-slate-800 p-6 space-y-6">

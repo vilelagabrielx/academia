@@ -65,11 +65,16 @@ export async function initDbSchema() {
     await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS recurrence_id VARCHAR(64);`);
 
     // Core userprofile extensions for Musculação, Shape & Performance
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS fase_shape VARCHAR(50) DEFAULT 'Recomposição';`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS nivel_treino VARCHAR(50) DEFAULT 'Intermediário';`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS frequencia_semanal VARCHAR(50) DEFAULT '5x por semana';`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS divisao_treino VARCHAR(50) DEFAULT 'Push / Pull / Legs';`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS objetivo_principal VARCHAR(50) DEFAULT 'Hipertrofia';`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS fase_shape VARCHAR(50);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS nivel_treino VARCHAR(50);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS frequencia_semanal VARCHAR(50);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS divisao_treino VARCHAR(50);`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS objetivo_principal VARCHAR(50);`);
+    await query(`ALTER TABLE core_userprofile ALTER COLUMN fase_shape DROP DEFAULT;`);
+    await query(`ALTER TABLE core_userprofile ALTER COLUMN nivel_treino DROP DEFAULT;`);
+    await query(`ALTER TABLE core_userprofile ALTER COLUMN frequencia_semanal DROP DEFAULT;`);
+    await query(`ALTER TABLE core_userprofile ALTER COLUMN divisao_treino DROP DEFAULT;`);
+    await query(`ALTER TABLE core_userprofile ALTER COLUMN objetivo_principal DROP DEFAULT;`);
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS objetivos_secundarios TEXT;`);
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS pontos_fracos TEXT;`);
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS lesoes_restricoes TEXT;`);
@@ -96,7 +101,8 @@ export async function initDbSchema() {
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS restricoes_articulares TEXT;`);
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS condicoes_cardio_metabolicas TEXT;`);
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS cirurgias_reabilitacao TEXT;`);
-    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS status_atestado VARCHAR(50) DEFAULT 'Liberado Total';`);
+    await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS status_atestado VARCHAR(50);`);
+    await query(`ALTER TABLE core_userprofile ALTER COLUMN status_atestado DROP DEFAULT;`);
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS atestado_file_base64 TEXT;`);
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS medicamentos_uso_continuo TEXT;`);
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dor_cronica_nivel INTEGER DEFAULT 0;`);

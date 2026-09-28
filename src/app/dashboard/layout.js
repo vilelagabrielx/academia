@@ -63,7 +63,7 @@ export default function DashboardLayout({ children }) {
                   href={item.href}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
                     isActive
-                      ? 'bg-[#D4AF37] text-black font-bold shadow-md shadow-[#D4AF37]/25 scale-[1.02]'
+                      ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/25 scale-[1.02]'
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -79,7 +79,7 @@ export default function DashboardLayout({ children }) {
             {user && (
               <div className="text-right">
                 <span className="text-xs font-bold text-white block">{user.first_name || user.username}</span>
-                <span className="text-[10px] text-[#D4AF37] block font-mono">{user.email || 'Professor'}</span>
+                <span className="text-[10px] text-emerald-400 block font-mono">{user.email || 'Professor'}</span>
               </div>
             )}
             <button
@@ -94,7 +94,7 @@ export default function DashboardLayout({ children }) {
           {/* Mobile Profile & Drawer Toggle */}
           <div className="flex md:hidden items-center gap-2">
             {user && (
-              <div className="w-8 h-8 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37] text-xs font-bold">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xs font-bold">
                 {(user.first_name || user.username || 'P')[0].toUpperCase()}
               </div>
             )}
@@ -102,7 +102,7 @@ export default function DashboardLayout({ children }) {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-xl text-slate-300 hover:text-white bg-white/5 border border-white/10 active:scale-95 transition-all"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5 text-[#D4AF37]" /> : <Menu className="w-5 h-5 text-[#D4AF37]" />}
+              {mobileMenuOpen ? <X className="w-5 h-5 text-emerald-400" /> : <Menu className="w-5 h-5 text-emerald-400" />}
             </button>
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function DashboardLayout({ children }) {
             <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between mb-3">
               <div>
                 <span className="text-xs font-bold text-white block">{user?.first_name || user?.username}</span>
-                <span className="text-[10px] text-[#D4AF37] font-mono">{user?.email || 'Professor / Administrador'}</span>
+                <span className="text-[10px] text-emerald-400 font-mono">{user?.email || 'Professor / Administrador'}</span>
               </div>
               <button
                 onClick={handleLogout}
@@ -133,7 +133,7 @@ export default function DashboardLayout({ children }) {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
                     isActive
-                      ? 'bg-[#D4AF37] text-black font-bold shadow-md shadow-[#D4AF37]/20'
+                      ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
                       : 'text-slate-300 hover:text-white bg-white/5'
                   }`}
                 >
@@ -163,17 +163,17 @@ export default function DashboardLayout({ children }) {
                 href={item.href}
                 className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 active:scale-90 ${
                   isActive
-                    ? 'text-[#D4AF37]'
+                    ? 'text-emerald-400'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <div className={`p-1.5 rounded-xl transition-all ${
-                  isActive ? 'bg-[#D4AF37]/15 ring-1 ring-[#D4AF37]/40 scale-110' : ''
+                  isActive ? 'bg-emerald-500/15 ring-1 ring-emerald-500/40 scale-110' : ''
                 }`}>
                   <Icon className="w-5 h-5" />
                 </div>
                 <span className={`text-[10px] tracking-tight font-medium mt-0.5 ${
-                  isActive ? 'font-bold text-[#D4AF37]' : 'text-slate-400'
+                  isActive ? 'font-bold text-emerald-400' : 'text-slate-400'
                 }`}>
                   {item.label}
                 </span>

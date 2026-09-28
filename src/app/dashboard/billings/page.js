@@ -25,32 +25,37 @@ const getBillingStatusBadge = (status) => {
   switch (s) {
     case 'paid':
       return (
-        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1">
-          🟢 Pago
+        <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span>Pago</span>
         </span>
       );
     case 'overdue':
       return (
-        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-rose-500/15 text-rose-400 border border-rose-500/30 inline-flex items-center gap-1">
-          🔴 Atrasado
+        <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+          <span>Atrasado</span>
         </span>
       );
     case 'charged':
       return (
-        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-purple-500/15 text-purple-300 border border-purple-500/30 inline-flex items-center gap-1">
-          🟣 Cobrado
+        <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-purple-500/10 text-purple-300 border border-purple-500/20 inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-300" />
+          <span>Cobrado</span>
         </span>
       );
     case 'cancelled':
       return (
-        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-slate-800 text-slate-400 border border-slate-700 inline-flex items-center gap-1">
-          ⚪ Cancelado
+        <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-white/5 text-slate-400 border border-white/10 inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+          <span>Cancelado</span>
         </span>
       );
     default:
       return (
-        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 inline-flex items-center gap-1">
-          🟡 Pendente
+        <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          <span>Pendente</span>
         </span>
       );
   }
@@ -61,20 +66,23 @@ const getExpenseStatusBadge = (status) => {
   switch (s) {
     case 'PAID':
       return (
-        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1">
-          🟢 Pago
+        <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span>Pago</span>
         </span>
       );
     case 'OVERDUE':
       return (
-        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-rose-500/15 text-rose-400 border border-rose-500/30 inline-flex items-center gap-1">
-          🔴 Atrasado
+        <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+          <span>Atrasado</span>
         </span>
       );
     default:
       return (
-        <span className="px-2.5 py-1 rounded-lg font-extrabold text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 inline-flex items-center gap-1">
-          🟡 Pendente
+        <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+          <span>Pendente</span>
         </span>
       );
   }
@@ -393,17 +401,8 @@ export default function FinancialPage() {
         {/* Master Quick Action Buttons */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
           <button
-            onClick={() => setActiveTab('fluxo')}
-            className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black px-3.5 py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 transition-all text-xs cursor-pointer border border-cyan-300"
-            title="Abrir o gráfico de lucro mensal e fluxo de caixa"
-          >
-            <TrendingUp className="w-4 h-4 text-slate-950 shrink-0" />
-            <span>📊 Gráfico de Lucro</span>
-          </button>
-
-          <button
             onClick={() => setShowCreateBillingModal(true)}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3.5 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all text-xs cursor-pointer"
+            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all text-xs cursor-pointer active:scale-95"
           >
             <Plus className="w-4 h-4 shrink-0" />
             <span>+ Cobrança Aluno</span>
@@ -411,19 +410,28 @@ export default function FinancialPage() {
 
           <button
             onClick={() => setShowCreateExpenseModal(true)}
-            className="w-full bg-rose-500 hover:bg-rose-400 text-slate-950 font-black px-3.5 py-2.5 rounded-xl shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 transition-all text-xs cursor-pointer"
+            className="w-full bg-[#1C1C1E] hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 font-semibold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all text-xs cursor-pointer active:scale-95"
           >
-            <TrendingDown className="w-4 h-4 shrink-0" />
-            <span>+ Nova Despesa</span>
+            <TrendingDown className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>Nova Despesa</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('fluxo')}
+            className="w-full bg-[#1C1C1E] hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 font-semibold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all text-xs cursor-pointer active:scale-95"
+            title="Abrir o gráfico de lucro mensal e fluxo de caixa"
+          >
+            <TrendingUp className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span>Gráfico de Lucro</span>
           </button>
         </div>
       </div>
 
       {/* Month / Temporal Navigation Bar (Filtro Global do Mês) */}
-      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-[#161618]/90 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shrink-0">
-            <Calendar className="w-5 h-5" />
+          <div className="p-2 rounded-xl bg-white/5 text-slate-300 border border-white/10 shrink-0">
+            <Calendar className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
             <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Período Financeiro Ativo</span>
@@ -434,11 +442,11 @@ export default function FinancialPage() {
         </div>
 
         <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 flex-1 sm:flex-initial justify-between">
+          <div className="flex items-center gap-1 bg-[#1C1C1E] p-1 rounded-xl border border-white/10 flex-1 sm:flex-initial justify-between">
             <button
               onClick={() => changeMonthBy(-1)}
               disabled={monthFilter === 'all'}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer transition-all"
+              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 disabled:opacity-30 cursor-pointer transition-all active:scale-95"
               title="Mês Anterior"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -454,7 +462,7 @@ export default function FinancialPage() {
             <button
               onClick={() => changeMonthBy(1)}
               disabled={monthFilter === 'all'}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer transition-all"
+              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 disabled:opacity-30 cursor-pointer transition-all active:scale-95"
               title="Próximo Mês"
             >
               <ChevronRight className="w-4 h-4" />
@@ -463,13 +471,13 @@ export default function FinancialPage() {
 
           <button
             onClick={() => setMonthFilter(monthFilter === 'all' ? getCurrentMonthStr() : 'all')}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer shrink-0 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border cursor-pointer shrink-0 active:scale-95 ${
               monthFilter === 'all'
-                ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md'
-                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-bold'
+                : 'bg-[#1C1C1E] text-slate-400 border-white/10 hover:text-white'
             }`}
           >
-            {monthFilter === 'all' ? '🗓️ Mês Atual' : '🌐 Todos'}
+            {monthFilter === 'all' ? 'Mês Atual' : 'Todos'}
           </button>
         </div>
       </div>
@@ -477,7 +485,7 @@ export default function FinancialPage() {
       {/* MASTER FINANCIAL OVERVIEW CARDS (2 colunas no Mobile, 4 no Desktop) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* Card 1: Total Recebido */}
-        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-800 flex items-center gap-2.5 bg-emerald-950/10">
+        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-white/10 flex items-center gap-2.5 bg-[#161618]">
           <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
             <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
@@ -490,20 +498,20 @@ export default function FinancialPage() {
         </div>
 
         {/* Card 2: Total a Receber */}
-        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-cyan-500/40 flex items-center gap-2.5 bg-cyan-950/20 shadow-md">
-          <div className="p-2.5 sm:p-3 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0">
+        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-white/10 flex items-center gap-2.5 bg-[#161618]">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 shrink-0">
             <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[9px] sm:text-[10px] text-cyan-300 uppercase tracking-wider font-bold block truncate">Total a Receber</span>
-            <span className="text-sm sm:text-lg font-black text-cyan-300 block truncate">
+            <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold block truncate">Total a Receber</span>
+            <span className="text-sm sm:text-lg font-bold text-cyan-300 block truncate">
               R$ {parseFloat(summary.total_receber || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </div>
 
         {/* Card 3: Total de Despesas */}
-        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-800 flex items-center gap-2.5 bg-rose-950/10">
+        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-white/10 flex items-center gap-2.5 bg-[#161618]">
           <div className="p-2.5 sm:p-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
             <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
@@ -516,212 +524,94 @@ export default function FinancialPage() {
         </div>
 
         {/* Card 4: Lucro Parcial Mensal */}
-        <div className={`glass-panel p-3.5 sm:p-4 rounded-2xl border flex items-center gap-2.5 ${
-          cashflow.lucro_liquido >= 0 ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-rose-500/40 bg-rose-950/20'
-        }`}>
+        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-white/10 flex items-center gap-2.5 bg-[#161618]">
           <div className={`p-2.5 sm:p-3 rounded-xl border shrink-0 ${
-            cashflow.lucro_liquido >= 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+            cashflow.lucro_liquido >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
           }`}>
             <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0">
-            <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-bold block text-emerald-300 truncate">Lucro Efetivo</span>
-            <span className={`text-sm sm:text-lg font-black block truncate ${cashflow.lucro_liquido >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold block text-slate-400 truncate">Lucro Efetivo</span>
+            <span className={`text-sm sm:text-lg font-bold block truncate ${cashflow.lucro_liquido >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
               R$ {parseFloat(cashflow.lucro_liquido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </div>
       </div>
 
-      {/* SUB-TABS NAVIGATION BAR (Segmented Control Touch-Optimized) */}
-      <div className="grid grid-cols-3 gap-1 p-1 bg-slate-900/90 rounded-2xl border border-slate-800 backdrop-blur-md sticky top-20 z-30 shadow-xl">
+      {/* SUB-TABS NAVIGATION BAR (Clean HIG Segmented Control) */}
+      <div className="grid grid-cols-3 gap-1.5 p-1.5 bg-[#161618]/90 rounded-2xl border border-white/10 backdrop-blur-xl sticky top-20 z-30 shadow-xl">
         <button
           onClick={() => setActiveTab('entradas')}
-          className={`py-2.5 px-2 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`py-2.5 px-3 rounded-xl text-xs font-semibold tracking-tight transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
             activeTab === 'entradas'
-              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-[#2C2C2E] text-white border-b-2 border-emerald-500 shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
-          <CreditCard className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">💳 Entradas ({billings.length})</span>
+          <CreditCard className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="truncate">Entradas ({billings.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('saidas')}
-          className={`py-2.5 px-2 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`py-2.5 px-3 rounded-xl text-xs font-semibold tracking-tight transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
             activeTab === 'saidas'
-              ? 'bg-rose-500 text-slate-950 shadow-md shadow-rose-500/20'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-[#2C2C2E] text-white border-b-2 border-rose-500 shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
-          <TrendingDown className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">🔻 Saídas ({expenses.length})</span>
+          <TrendingDown className="w-4 h-4 text-rose-400 shrink-0" />
+          <span className="truncate">Saídas ({expenses.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('fluxo')}
-          className={`py-2.5 px-2 sm:px-4 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`py-2.5 px-3 rounded-xl text-xs font-semibold tracking-tight transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
             activeTab === 'fluxo'
-              ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-              : 'text-slate-400 hover:text-white'
+              ? 'bg-[#2C2C2E] text-white border-b-2 border-cyan-500 shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
-          <Layers className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">📊 Fluxo & Lucro</span>
+          <Layers className="w-4 h-4 text-cyan-400 shrink-0" />
+          <span className="truncate">Fluxo & Lucro</span>
         </button>
       </div>
 
       {/* TAB 1: MENSALIDADES & ENTRADAS (COBRANÇAS DE ALUNOS) */}
       {activeTab === 'entradas' && (
         <div className="space-y-4 sm:space-y-6">
-          {/* Overdue Section */}
+          {/* Compact Overdue Alert Notice (Replaces Duplicate Table) */}
           {overdueBillings.length > 0 && (
-            <div className="glass-panel rounded-2xl border border-rose-500/40 p-4 sm:p-5 space-y-3 bg-rose-950/10 shadow-lg">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                <h2 className="text-sm sm:text-base font-extrabold text-rose-400 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400 shrink-0" />
-                  <span>🔴 Cobranças Atrasadas ({overdueBillings.length})</span>
-                </h2>
-                <span className="text-[10px] sm:text-xs text-slate-400">Notifique via WhatsApp em 1 clique</span>
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                <div>
+                  <span className="text-xs font-semibold text-white block">
+                    Atenção: {overdueBillings.length} {overdueBillings.length === 1 ? 'cobrança está em atraso' : 'cobranças estão em atraso'} no período selecionado.
+                  </span>
+                  <span className="text-[11px] text-slate-400 block">
+                    Gerencie e notifique via WhatsApp na lista unificada abaixo.
+                  </span>
+                </div>
               </div>
-
-              {/* Desktop Table View */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-rose-950/30 uppercase text-[10px] text-rose-300 font-semibold border-b border-rose-500/20">
-                    <tr>
-                      <th className="py-2.5 px-3">Aluno</th>
-                      <th className="py-2.5 px-3">Valor</th>
-                      <th className="py-2.5 px-3">Vencimento</th>
-                      <th className="py-2.5 px-3 text-right">Ação</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-rose-500/10">
-                    {overdueBillings.map((b) => (
-                      <tr key={b.id}>
-                        <td 
-                          className="py-2.5 px-3 font-bold text-white flex items-center gap-2.5 cursor-pointer group hover:text-emerald-400 transition-colors"
-                          onClick={() => openStudentProfile(b)}
-                          title="Clique para ver a ficha/perfil do aluno"
-                        >
-                          {b.photo_base64 ? (
-                            <img
-                              src={b.photo_base64}
-                              alt={b.first_name || b.username}
-                              className="w-7 h-7 rounded-full object-cover border border-rose-500/40 shrink-0 group-hover:border-emerald-400 transition-colors"
-                            />
-                          ) : (
-                            <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-xs shrink-0 group-hover:border-emerald-400">
-                              {b.first_name?.[0] || b.username?.[0]?.toUpperCase()}
-                            </div>
-                          )}
-                          <div className="flex flex-col">
-                            <span className="group-hover:underline">{b.first_name ? `${b.first_name} ${b.last_name || ''}` : b.username}</span>
-                            <span className="text-[9px] text-slate-400 font-mono font-normal">@{b.username}</span>
-                          </div>
-                        </td>
-                        <td className="py-2 px-3 font-extrabold text-rose-400">R$ {parseFloat(b.amount).toFixed(2)}</td>
-                        <td className="py-2 px-3 font-mono">{String(b.due_date).split('T')[0]}</td>
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => {
-                                setSelectedPaidBilling(b);
-                                setShowPaidBillingModal(true);
-                              }}
-                              className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-lg text-[10px] shadow-md transition-all cursor-pointer flex items-center gap-1"
-                              title="Dar baixa no pagamento desta mensalidade"
-                            >
-                              <CheckCircle2 className="w-3 h-3 text-slate-950" />
-                              <span>Dar Baixa</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedWaBilling(b);
-                                setWaMessage(`Olá ${b.first_name || 'Aluno'}! Constamos uma pendência de R$ ${parseFloat(b.amount).toFixed(2)} referente à mensalidade com vencimento em ${String(b.due_date).split('T')[0]}.`);
-                                setShowWaModal(true);
-                              }}
-                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold rounded-lg text-[10px] shadow-sm transition-all cursor-pointer flex items-center gap-1"
-                              title="Enviar lembrete por WhatsApp"
-                            >
-                              <MessageCircle className="w-3 h-3 text-emerald-400" />
-                              <span>WhatsApp</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile Touch Cards View */}
-              <div className="block md:hidden space-y-2.5 pt-1">
-                {overdueBillings.map((b) => (
-                  <div key={b.id} className="p-3 rounded-xl bg-slate-950/80 border border-rose-500/30 space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div 
-                        className="flex items-center gap-2.5 cursor-pointer group"
-                        onClick={() => openStudentProfile(b)}
-                      >
-                        {b.photo_base64 ? (
-                          <img
-                            src={b.photo_base64}
-                            alt={b.first_name || b.username}
-                            className="w-9 h-9 rounded-full object-cover border border-rose-500/40 shrink-0"
-                          />
-                        ) : (
-                          <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-xs shrink-0">
-                            {b.first_name?.[0] || b.username?.[0]?.toUpperCase()}
-                          </div>
-                        )}
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-white text-xs truncate">{b.first_name ? `${b.first_name} ${b.last_name || ''}` : b.username}</span>
-                          <span className="text-[9px] text-slate-400 font-mono">@{b.username}</span>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span className="text-xs font-black text-rose-400 block">R$ {parseFloat(b.amount).toFixed(2)}</span>
-                        <span className="text-[9px] text-slate-400 font-mono block">Venc: {String(b.due_date).split('T')[0]}</span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-rose-500/20">
-                      <button
-                        onClick={() => {
-                          setSelectedPaidBilling(b);
-                          setShowPaidBillingModal(true);
-                        }}
-                        className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5 text-slate-950 shrink-0" />
-                        <span>Dar Baixa</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setSelectedWaBilling(b);
-                          setWaMessage(`Olá ${b.first_name || 'Aluno'}! Constamos uma pendência de R$ ${parseFloat(b.amount).toFixed(2)} referente à mensalidade com vencimento em ${String(b.due_date).split('T')[0]}.`);
-                          setShowWaModal(true);
-                        }}
-                        className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold rounded-xl text-xs shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>WhatsApp</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <button
+                onClick={() => setStatusFilter(statusFilter === 'overdue' ? '' : 'overdue')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all shrink-0 active:scale-95 cursor-pointer ${
+                  statusFilter === 'overdue'
+                    ? 'bg-rose-500 text-slate-950 border-rose-400 font-bold'
+                    : 'bg-rose-500/15 text-rose-300 border-rose-500/30 hover:bg-rose-500/25'
+                }`}
+              >
+                {statusFilter === 'overdue' ? 'Mostrar Todas' : `Filtrar Atrasadas (${overdueBillings.length})`}
+              </button>
             </div>
           )}
 
           {/* Billings Container */}
-          <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+          <div className="glass-panel rounded-2xl border border-white/10 overflow-hidden shadow-xl bg-[#161618]">
             {/* Search & Filter Header */}
-            <div className="p-3.5 sm:p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-2.5">
+            <div className="p-3.5 sm:p-4 border-b border-white/10 flex flex-col sm:flex-row justify-between items-center gap-2.5">
               <div className="relative w-full sm:w-64">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
@@ -729,20 +619,20 @@ export default function FinancialPage() {
                   placeholder="Buscar aluno ou WhatsApp..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white w-full focus:border-emerald-500"
+                  className="bg-[#1C1C1E] border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-white w-full focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white w-full sm:w-auto focus:border-emerald-500"
+                className="bg-[#1C1C1E] border border-white/10 rounded-xl px-3 py-2 text-xs text-white w-full sm:w-auto focus:outline-none focus:border-emerald-500 cursor-pointer"
               >
-                <option value="">Todos os Status de Cobrança</option>
-                <option value="pending">🟡 Pendentes</option>
-                <option value="charged">🟣 Cobrados (Lembrete)</option>
-                <option value="paid">🟢 Pagos</option>
-                <option value="overdue">🔴 Atrasados</option>
+                <option value="">Todos os Status</option>
+                <option value="pending">Pendentes</option>
+                <option value="charged">Cobrados (Lembrete)</option>
+                <option value="paid">Pagos</option>
+                <option value="overdue">Atrasados</option>
               </select>
             </div>
 
