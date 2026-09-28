@@ -199,8 +199,21 @@ export function initDbSchema() {
           CREATE INDEX IF NOT EXISTS idx_gym_billing_due_date ON gym_billing(due_date);
           CREATE INDEX IF NOT EXISTS idx_gym_billing_status ON gym_billing(status);
           CREATE INDEX IF NOT EXISTS idx_gym_billing_user_id ON gym_billing(user_id);
+          CREATE INDEX IF NOT EXISTS idx_gym_billing_user_status ON gym_billing(user_id, status);
           CREATE INDEX IF NOT EXISTS idx_gym_medidas_aluno ON gym_medidas_historico(aluno_id);
+          CREATE INDEX IF NOT EXISTS idx_gym_metas_aluno ON gym_metas_historico(aluno_id);
           CREATE INDEX IF NOT EXISTS idx_core_userprofile_user ON core_userprofile(user_id);
+          CREATE INDEX IF NOT EXISTS idx_auth_user_staff_active ON auth_user(is_staff, is_active);
+          CREATE INDEX IF NOT EXISTS idx_manager_routine_user_id ON manager_routine(user_id);
+          CREATE INDEX IF NOT EXISTS idx_manager_day_routine_id ON manager_day(routine_id);
+          CREATE INDEX IF NOT EXISTS idx_manager_slot_day_id ON manager_slot(day_id);
+          CREATE INDEX IF NOT EXISTS idx_manager_slotentry_slot_id ON manager_slotentry(slot_id);
+          CREATE INDEX IF NOT EXISTS idx_manager_setsconfig_entry ON manager_setsconfig(slot_entry_id);
+          CREATE INDEX IF NOT EXISTS idx_manager_repsconfig_entry ON manager_repetitionsconfig(slot_entry_id);
+          CREATE INDEX IF NOT EXISTS idx_manager_weightconfig_entry ON manager_weightconfig(slot_entry_id);
+          CREATE INDEX IF NOT EXISTS idx_manager_restconfig_entry ON manager_restconfig(slot_entry_id);
+          CREATE INDEX IF NOT EXISTS idx_workoutsession_user_date ON manager_workoutsession(user_id, datetime_start);
+          CREATE INDEX IF NOT EXISTS idx_workoutlog_session_id ON manager_workoutlog(session_id);
         `);
       } catch (err) {
         console.error('Error initializing DB schema extensions:', err);
@@ -867,36 +880,60 @@ export async function getStudentCompleteHistory(alunoId) {
 }
 
 export async function deleteStudent(id) {
-  // Complete Cascade Deletion
-  await query(`DELETE FROM gym_billing WHERE user_id = $1`, [id]);
-  await query(`DELETE FROM gym_medidas_historico WHERE aluno_id = $1`, [id]);
-  await query(`DELETE FROM gym_metas_historico WHERE aluno_id = $1`, [id]);
-  await query(`DELETE FROM core_userprofile WHERE user_id = $1`, [id]);
-  await query(`DELETE FROM manager_workoutlog WHERE user_id = $1`, [id]);
-  await query(`DELETE FROM manager_workoutsession WHERE user_id = $1`, [id]);
+  // Set-based Cascade Deletion in a single transaction
+  await query(`
+    DELETE FROM gym_billing WHERE user_id = $1;
+    DELETE FROM gym_medidas_historico WHERE aluno_id = $1;
+    DELETE FROM gym_metas_historico WHERE aluno_id = $1;
+    DELETE FROM core_userprofile WHERE user_id = $1;
+    DELETE FROM manager_workoutlog WHERE user_id = $1;
+    DELETE FROM manager_workoutsession WHERE user_id = $1;
 
-  // Clean up routines and routine sub-configs
-  const routines = await query(`SELECT id FROM manager_routine WHERE user_id = $1`, [id]);
-  for (const r of routines.rows) {
-    const days = await query(`SELECT id FROM manager_day WHERE routine_id = $1`, [r.id]);
-    for (const d of days.rows) {
-      const slots = await query(`SELECT id FROM manager_slot WHERE day_id = $1`, [d.id]);
-      for (const s of slots.rows) {
-        const entries = await query(`SELECT id FROM manager_slotentry WHERE slot_id = $1`, [s.id]);
-        for (const e of entries.rows) {
-          await query(`DELETE FROM manager_setsconfig WHERE slot_entry_id = $1`, [e.id]);
-          await query(`DELETE FROM manager_repetitionsconfig WHERE slot_entry_id = $1`, [e.id]);
-          await query(`DELETE FROM manager_weightconfig WHERE slot_entry_id = $1`, [e.id]);
-          await query(`DELETE FROM manager_restconfig WHERE slot_entry_id = $1`, [e.id]);
-        }
-        await query(`DELETE FROM manager_slotentry WHERE slot_id = $1`, [s.id]);
-      }
-      await query(`DELETE FROM manager_slot WHERE day_id = $1`, [d.id]);
-    }
-    await query(`DELETE FROM manager_day WHERE routine_id = $1`, [r.id]);
-  }
-  await query(`DELETE FROM manager_routine WHERE user_id = $1`, [id]);
-  await query(`DELETE FROM auth_user WHERE id = $1`, [id]);
+    DELETE FROM manager_setsconfig WHERE slot_entry_id IN (
+      SELECT se.id FROM manager_slotentry se
+      JOIN manager_slot s ON s.id = se.slot_id
+      JOIN manager_day d ON d.id = s.day_id
+      JOIN manager_routine r ON r.id = d.routine_id
+      WHERE r.user_id = $1
+    );
+    DELETE FROM manager_repetitionsconfig WHERE slot_entry_id IN (
+      SELECT se.id FROM manager_slotentry se
+      JOIN manager_slot s ON s.id = se.slot_id
+      JOIN manager_day d ON d.id = s.day_id
+      JOIN manager_routine r ON r.id = d.routine_id
+      WHERE r.user_id = $1
+    );
+    DELETE FROM manager_weightconfig WHERE slot_entry_id IN (
+      SELECT se.id FROM manager_slotentry se
+      JOIN manager_slot s ON s.id = se.slot_id
+      JOIN manager_day d ON d.id = s.day_id
+      JOIN manager_routine r ON r.id = d.routine_id
+      WHERE r.user_id = $1
+    );
+    DELETE FROM manager_restconfig WHERE slot_entry_id IN (
+      SELECT se.id FROM manager_slotentry se
+      JOIN manager_slot s ON s.id = se.slot_id
+      JOIN manager_day d ON d.id = s.day_id
+      JOIN manager_routine r ON r.id = d.routine_id
+      WHERE r.user_id = $1
+    );
+    DELETE FROM manager_slotentry WHERE slot_id IN (
+      SELECT s.id FROM manager_slot s
+      JOIN manager_day d ON d.id = s.day_id
+      JOIN manager_routine r ON r.id = d.routine_id
+      WHERE r.user_id = $1
+    );
+    DELETE FROM manager_slot WHERE day_id IN (
+      SELECT d.id FROM manager_day d
+      JOIN manager_routine r ON r.id = d.routine_id
+      WHERE r.user_id = $1
+    );
+    DELETE FROM manager_day WHERE routine_id IN (
+      SELECT id FROM manager_routine WHERE user_id = $1
+    );
+    DELETE FROM manager_routine WHERE user_id = $1;
+    DELETE FROM auth_user WHERE id = $1;
+  `, [id]);
   cache.flush();
   return true;
 }
@@ -970,34 +1007,74 @@ export async function getRoutineFullDetail(routineId) {
 
   const daysRes = await query(`SELECT * FROM manager_day WHERE routine_id = $1 ORDER BY "order" ASC`, [routineId]);
   const days = daysRes.rows;
+  if (days.length === 0) {
+    routine.days = [];
+    return routine;
+  }
 
-  for (let day of days) {
-    const slotsRes = await query(`SELECT * FROM manager_slot WHERE day_id = $1 ORDER BY "order" ASC`, [day.id]);
-    day.slots = slotsRes.rows;
+  const dayIds = days.map(d => d.id);
+  const slotsRes = await query(
+    `SELECT * FROM manager_slot WHERE day_id = ANY($1::int[]) ORDER BY "order" ASC`,
+    [dayIds]
+  );
+  const slots = slotsRes.rows;
+  const slotMap = new Map();
+  const slotIds = [];
+  for (const s of slots) {
+    slotIds.push(s.id);
+    const arr = slotMap.get(s.day_id) || [];
+    arr.push(s);
+    slotMap.set(s.day_id, arr);
+  }
 
-    for (let slot of day.slots) {
-      const entriesRes = await query(
-        `SELECT se.*, t.name as exercise_name, t.description as exercise_description
-         FROM manager_slotentry se
-         JOIN exercises_translation t ON t.exercise_id = se.exercise_id AND t.language_id = 2
-         WHERE se.slot_id = $1
-         ORDER BY se."order" ASC`,
-        [slot.id]
-      );
-      slot.entries = entriesRes.rows;
+  let entries = [];
+  if (slotIds.length > 0) {
+    const entriesRes = await query(
+      `SELECT se.*, t.name as exercise_name, t.description as exercise_description
+       FROM manager_slotentry se
+       LEFT JOIN exercises_translation t ON t.exercise_id = se.exercise_id AND t.language_id = 2
+       WHERE se.slot_id = ANY($1::int[])
+       ORDER BY se."order" ASC`,
+      [slotIds]
+    );
+    entries = entriesRes.rows;
+  }
 
-      for (let entry of slot.entries) {
-        const setsConfig = await query(`SELECT * FROM manager_setsconfig WHERE slot_entry_id = $1`, [entry.id]);
-        const repsConfig = await query(`SELECT * FROM manager_repetitionsconfig WHERE slot_entry_id = $1`, [entry.id]);
-        const weightConfig = await query(`SELECT * FROM manager_weightconfig WHERE slot_entry_id = $1`, [entry.id]);
-        const restConfig = await query(`SELECT * FROM manager_restconfig WHERE slot_entry_id = $1`, [entry.id]);
+  const entryIds = entries.map(e => e.id);
+  const entriesBySlotMap = new Map();
+  for (const e of entries) {
+    const arr = entriesBySlotMap.get(e.slot_id) || [];
+    arr.push(e);
+    entriesBySlotMap.set(e.slot_id, arr);
+  }
 
-        entry.sets = setsConfig.rows[0]?.value || 3;
-        entry.reps = repsConfig.rows[0]?.value || 10;
-        entry.weight = weightConfig.rows[0]?.value || 0;
-        entry.rest = restConfig.rows[0]?.value || 60;
-      }
+  if (entryIds.length > 0) {
+    const [setsRes, repsRes, weightRes, restRes] = await Promise.all([
+      query(`SELECT slot_entry_id, value FROM manager_setsconfig WHERE slot_entry_id = ANY($1::int[])`, [entryIds]),
+      query(`SELECT slot_entry_id, value FROM manager_repetitionsconfig WHERE slot_entry_id = ANY($1::int[])`, [entryIds]),
+      query(`SELECT slot_entry_id, value FROM manager_weightconfig WHERE slot_entry_id = ANY($1::int[])`, [entryIds]),
+      query(`SELECT slot_entry_id, value FROM manager_restconfig WHERE slot_entry_id = ANY($1::int[])`, [entryIds]),
+    ]);
+
+    const setsMap = new Map(setsRes.rows.map(r => [r.slot_entry_id, r.value]));
+    const repsMap = new Map(repsRes.rows.map(r => [r.slot_entry_id, r.value]));
+    const weightMap = new Map(weightRes.rows.map(r => [r.slot_entry_id, r.value]));
+    const restMap = new Map(restRes.rows.map(r => [r.slot_entry_id, r.value]));
+
+    for (const e of entries) {
+      e.sets = setsMap.get(e.id) ?? 3;
+      e.reps = repsMap.get(e.id) ?? 10;
+      e.weight = weightMap.get(e.id) ?? 0;
+      e.rest = restMap.get(e.id) ?? 60;
     }
+  }
+
+  for (const slot of slots) {
+    slot.entries = entriesBySlotMap.get(slot.id) || [];
+  }
+
+  for (const day of days) {
+    day.slots = slotMap.get(day.id) || [];
   }
 
   routine.days = days;
