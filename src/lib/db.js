@@ -283,9 +283,6 @@ export async function getStudents(search = '') {
   const cacheKey = `students:search:${search.toLowerCase().trim()}`;
   return cache.getOrFetch(cacheKey, async () => {
     await initDbSchema();
-    await query(
-      `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status IN ('pending', 'charged')`
-    );
 
     let sql = `
       SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.is_staff, u.date_joined,
@@ -311,37 +308,56 @@ export async function getStudents(search = '') {
       sql += ` AND (u.first_name ILIKE $1 OR u.last_name ILIKE $1 OR u.username ILIKE $1 OR u.email ILIKE $1 OR p.whatsapp ILIKE $1 OR p.instagram ILIKE $1)`;
     }
     sql += ` ORDER BY u.date_joined DESC`;
-    const res = await query(sql, params);
-    const students = res.rows;
-    
+
+    const [studentsRes, evalsRes, billingsRes] = await Promise.all([
+      query(sql, params),
+      query(`
+        SELECT * FROM (
+          SELECT *, ROW_NUMBER() OVER (PARTITION BY aluno_id ORDER BY data_registro DESC, id DESC) as rn
+          FROM gym_medidas_historico
+        ) t WHERE rn <= 2
+      `),
+      query(`
+        SELECT * FROM gym_billing 
+        WHERE status != 'cancelled' 
+        ORDER BY due_date DESC, id DESC
+      `)
+    ]);
+
+    const students = studentsRes.rows;
+    if (students.length === 0) return [];
+
+    const evalMap = new Map();
+    for (const eRow of evalsRes.rows) {
+      const arr = evalMap.get(eRow.aluno_id) || [];
+      arr.push(eRow);
+      evalMap.set(eRow.aluno_id, arr);
+    }
+
+    const billingsMap = new Map();
+    for (const bRow of billingsRes.rows) {
+      const arr = billingsMap.get(bRow.user_id) || [];
+      arr.push(bRow);
+      billingsMap.set(bRow.user_id, arr);
+    }
+
     const todayStr = new Date().toISOString().split('T')[0];
-    const currentMonthStr = todayStr.slice(0, 7); // 'YYYY-MM'
+    const currentMonthStr = todayStr.slice(0, 7);
+    const expiredStudentIds = [];
 
     for (const s of students) {
       if (s.enrollment_status === 'active' && s.membership_expires_at && s.membership_expires_at < todayStr) {
         s.enrollment_status = 'renewal_needed';
-        await query(`UPDATE core_userprofile SET enrollment_status = 'renewal_needed' WHERE user_id = $1`, [s.id]);
+        expiredStudentIds.push(s.id);
       }
 
-      // Latest body evaluations
-      const evalRes = await query(
-        `SELECT * FROM gym_medidas_historico WHERE aluno_id = $1 ORDER BY data_registro DESC, id DESC LIMIT 2`,
-        [s.id]
-      );
-      s.latest_evaluation = evalRes.rows[0] || null;
-      s.previous_evaluation = evalRes.rows[1] || null;
+      const evals = evalMap.get(s.id) || [];
+      s.latest_evaluation = evals[0] || null;
+      s.previous_evaluation = evals[1] || null;
 
-      // Get all non-cancelled billings
-      const bRes = await query(
-        `SELECT * FROM gym_billing 
-         WHERE user_id = $1 AND status != 'cancelled' 
-         ORDER BY due_date DESC, id DESC`,
-        [s.id]
-      );
-      const allBillings = bRes.rows;
-
+      const allBillings = billingsMap.get(s.id) || [];
       const currentMonthBilling = allBillings.find(
-        (b) => b.due_date && b.due_date.toISOString().split('T')[0].slice(0, 7) === currentMonthStr
+        (b) => b.due_date && String(b.due_date).split('T')[0].slice(0, 7) === currentMonthStr
       );
 
       const latestBilling = allBillings[0] || null;
@@ -362,7 +378,7 @@ export async function getStudents(search = '') {
         s.billing_status = 'em_dia';
         s.billing_status_rank = 4;
         s.current_billing = currentMonthBilling;
-      } else if (currentMonthBilling.status === 'overdue' || currentMonthBilling.due_date.toISOString().split('T')[0] < todayStr) {
+      } else if (currentMonthBilling.status === 'overdue' || String(currentMonthBilling.due_date).split('T')[0] < todayStr) {
         s.billing_status = 'atrasada';
         s.billing_status_rank = 2;
         s.current_billing = currentMonthBilling;
@@ -371,6 +387,10 @@ export async function getStudents(search = '') {
         s.billing_status_rank = 3;
         s.current_billing = currentMonthBilling;
       }
+    }
+
+    if (expiredStudentIds.length > 0) {
+      query(`UPDATE core_userprofile SET enrollment_status = 'renewal_needed' WHERE user_id = ANY($1::int[])`, [expiredStudentIds]).catch(() => {});
     }
 
     // Priority Sort
