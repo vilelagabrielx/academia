@@ -1141,22 +1141,42 @@ export async function getStudentWorkoutHistory(user_id) {
 // BILLING MODULE (Módulo de Cobranças)
 // ==========================================
 
+// Throttled billing cleanup helper (runs at most once every 60s)
+let billingCleanupPromise = null;
+let lastBillingCleanupTime = 0;
+
+export async function cleanOverdueAndInactiveBillings() {
+  const now = Date.now();
+  if (now - lastBillingCleanupTime < 60000) return;
+  if (!billingCleanupPromise) {
+    billingCleanupPromise = (async () => {
+      try {
+        await query(`
+          UPDATE gym_billing SET status = 'overdue' 
+          WHERE (due_date < CURRENT_DATE AND status = 'pending')
+             OR (remind_at < CURRENT_DATE AND status = 'charged');
+          
+          DELETE FROM gym_billing 
+          WHERE status != 'paid' 
+            AND (
+              user_id NOT IN (SELECT id FROM auth_user)
+              OR user_id IN (SELECT id FROM auth_user WHERE is_active = false)
+              OR user_id IN (SELECT user_id FROM core_userprofile WHERE enrollment_status IN ('cancelled', 'inactive'))
+            );
+        `);
+        lastBillingCleanupTime = Date.now();
+      } catch (err) {
+        console.error('Error in billing cleanup:', err);
+      } finally {
+        billingCleanupPromise = null;
+      }
+    })();
+  }
+  return billingCleanupPromise;
+}
+
 export async function getBillingSummary({ month_year, search, user_id } = {}) {
-  await query(
-    `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status = 'pending'`
-  );
-  await query(
-    `UPDATE gym_billing SET status = 'overdue' WHERE remind_at < CURRENT_DATE AND status = 'charged'`
-  );
-  await query(`
-    DELETE FROM gym_billing 
-    WHERE status != 'paid' 
-      AND (
-        user_id NOT IN (SELECT id FROM auth_user)
-        OR user_id IN (SELECT id FROM auth_user WHERE is_active = false)
-        OR user_id IN (SELECT user_id FROM core_userprofile WHERE enrollment_status IN ('cancelled', 'inactive'))
-      )
-  `);
+  await cleanOverdueAndInactiveBillings();
 
   let sql = `
     SELECT 
@@ -1212,21 +1232,7 @@ export async function getBillingSummary({ month_year, search, user_id } = {}) {
 }
 
 export async function getBillings({ status, user_id, search, month_year } = {}) {
-  await query(
-    `UPDATE gym_billing SET status = 'overdue' WHERE due_date < CURRENT_DATE AND status = 'pending'`
-  );
-  await query(
-    `UPDATE gym_billing SET status = 'overdue' WHERE remind_at < CURRENT_DATE AND status = 'charged'`
-  );
-  await query(`
-    DELETE FROM gym_billing 
-    WHERE status != 'paid' 
-      AND (
-        user_id NOT IN (SELECT id FROM auth_user)
-        OR user_id IN (SELECT id FROM auth_user WHERE is_active = false)
-        OR user_id IN (SELECT user_id FROM core_userprofile WHERE enrollment_status IN ('cancelled', 'inactive'))
-      )
-  `);
+  await cleanOverdueAndInactiveBillings();
 
   let sql = `
     SELECT b.*, u.username, u.first_name, u.last_name, u.email, p.whatsapp, p.photo_base64
@@ -1633,7 +1639,6 @@ export async function renewStudentEnrollment(studentId, { amount = 60.00, startD
 const generatedExpenseMonths = new Set();
 
 export async function ensureExpensesGenerated(targetMonthStr) {
-  await initDbSchema();
   if (!targetMonthStr || targetMonthStr === 'all') {
     targetMonthStr = new Date().toISOString().slice(0, 7);
   }
@@ -1651,42 +1656,31 @@ export async function ensureExpensesGenerated(targetMonthStr) {
   const endOfMonth = `${yearStr}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const res = await query(`
-    SELECT * FROM gym_expense_recurrences
-    WHERE status = 'ACTIVE'
-      AND start_date <= $1
-      AND (end_date IS NULL OR end_date >= $2)
-  `, [endOfMonth, startOfMonth]);
+  await query(`
+    INSERT INTO gym_expenses (id, recurrence_id, description, category, amount, due_date, status, payment_method, notes)
+    SELECT 
+      'exp_' || floor(extract(epoch from now()) * 1000)::text || '_' || SUBSTRING(md5(random()::text) FROM 1 FOR 5),
+      r.id,
+      r.description,
+      r.category,
+      r.base_amount,
+      ($1 || '-' || LPAD(LEAST(COALESCE(r.due_day, 5), $2)::text, 2, '0'))::date,
+      CASE WHEN ($1 || '-' || LPAD(LEAST(COALESCE(r.due_day, 5), $2)::text, 2, '0')) < $3 THEN 'OVERDUE' ELSE 'PENDING' END,
+      COALESCE(r.payment_method, 'Pix'),
+      COALESCE(r.notes, 'Despesa Recorrente (' || $4 || '/' || $5 || ')')
+    FROM gym_expense_recurrences r
+    WHERE r.status = 'ACTIVE'
+      AND r.start_date <= $6::date
+      AND (r.end_date IS NULL OR r.end_date >= $7::date)
+    ON CONFLICT (recurrence_id, due_date) DO NOTHING
+  `, [`${yearStr}-${monthStr}`, lastDay, todayStr, monthStr, yearStr, endOfMonth, startOfMonth]);
 
-  for (const rule of res.rows) {
-    const safeDay = Math.min(rule.due_day || 5, lastDay);
-    const dueDateStr = `${yearStr}-${monthStr}-${String(safeDay).padStart(2, '0')}`;
-    const initialStatus = dueDateStr < todayStr ? 'OVERDUE' : 'PENDING';
-    const expenseId = `exp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-    await query(`
-      INSERT INTO gym_expenses (id, recurrence_id, description, category, amount, due_date, status, payment_method, notes)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      ON CONFLICT (recurrence_id, due_date) DO NOTHING
-    `, [
-      expenseId,
-      rule.id,
-      rule.description,
-      rule.category,
-      parseFloat(rule.base_amount),
-      dueDateStr,
-      initialStatus,
-      rule.payment_method || 'Pix',
-      rule.notes || `Despesa Recorrente (${monthStr}/${yearStr})`
-    ]);
-  }
   generatedExpenseMonths.add(targetMonthStr);
 }
 
 const generatedBillingMonths = new Set();
 
 export async function ensureStudentBillingsGenerated(targetMonthStr) {
-  await initDbSchema();
   if (!targetMonthStr || targetMonthStr === 'all') {
     targetMonthStr = new Date().toISOString().slice(0, 7);
   }
@@ -1701,40 +1695,30 @@ export async function ensureStudentBillingsGenerated(targetMonthStr) {
   const lastDay = new Date(year, month, 0).getDate();
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const studentsRes = await query(`
-    SELECT u.id as user_id, p.dia_vencimento_recorrente, u.date_joined
+  await query(`
+    INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes, is_recurring)
+    SELECT 
+      u.id, 
+      150.00, 
+      ($1 || '-' || LPAD(LEAST(COALESCE(p.dia_vencimento_recorrente, 5), $2)::text, 2, '0'))::date,
+      'Pix',
+      CASE WHEN ($1 || '-' || LPAD(LEAST(COALESCE(p.dia_vencimento_recorrente, 5), $2)::text, 2, '0')) < $3 THEN 'overdue' ELSE 'pending' END,
+      'Mensalidade Recorrente (' || $4 || '/' || $5 || ')',
+      true
     FROM auth_user u
     JOIN core_userprofile p ON p.user_id = u.id
     WHERE p.enrollment_status = 'active'
       AND u.is_staff = false 
       AND u.is_superuser = false
-  `);
+      AND u.date_joined <= ($1 || '-' || $2::text)::date
+      AND NOT EXISTS (
+        SELECT 1 FROM gym_billing b 
+        WHERE b.user_id = u.id 
+          AND b.due_date >= ($1 || '-01')::date 
+          AND b.due_date <= ($1 || '-' || $2::text)::date
+      )
+  `, [`${yearStr}-${monthStr}`, lastDay, todayStr, monthStr, yearStr]);
 
-  for (const s of studentsRes.rows) {
-    const joinedMonthStr = s.date_joined ? new Date(s.date_joined).toISOString().slice(0, 7) : '2000-01';
-    if (targetMonthStr < joinedMonthStr) {
-      // Não gera cobranças retroativas para meses anteriores à data de cadastro do aluno
-      continue;
-    }
-
-    const existing = await query(`
-      SELECT id FROM gym_billing 
-      WHERE user_id = $1 AND due_date >= $2 AND due_date <= $3
-      LIMIT 1
-    `, [s.user_id, `${targetMonthStr}-01`, `${targetMonthStr}-${String(lastDay).padStart(2, '0')}`]);
-
-    if (existing.rows.length === 0) {
-      const dueDay = s.dia_vencimento_recorrente || 5;
-      const safeDay = Math.min(dueDay, lastDay);
-      const dueDateStr = `${yearStr}-${monthStr}-${String(safeDay).padStart(2, '0')}`;
-      const status = dueDateStr < todayStr ? 'overdue' : 'pending';
-
-      await query(`
-        INSERT INTO gym_billing (user_id, amount, due_date, payment_method, status, notes, is_recurring)
-        VALUES ($1, 150.00, $2, 'Pix', $3, $4, true)
-      `, [s.user_id, dueDateStr, status, `Mensalidade Recorrente (${monthStr}/${yearStr})`]);
-    }
-  }
   generatedBillingMonths.add(targetMonthStr);
 }
 
@@ -1990,12 +1974,7 @@ export async function getMonthlyProfitHistory(monthsCount = 6) {
   const startMonthStr = `${startDateObj.getFullYear()}-${String(startDateObj.getMonth() + 1).padStart(2, '0')}-01`;
   const endMonthStr = `${endDateObj.getFullYear()}-${String(endDateObj.getMonth() + 1).padStart(2, '0')}-${String(endDateObj.getDate()).padStart(2, '0')}`;
 
-  for (let i = monthsCount - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    await ensureExpensesGenerated(monthKey);
-    await ensureStudentBillingsGenerated(monthKey);
-  }
+  // Generation for target/current month is handled by getCashFlowSummary; past months are already persisted.
 
   const [revRes, expRes] = await Promise.all([
     query(`
