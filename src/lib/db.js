@@ -1676,10 +1676,15 @@ export async function ensureExpensesGenerated(targetMonthStr) {
   generatedExpenseMonths.add(targetMonthStr);
 }
 
+const generatedBillingMonths = new Set();
+
 export async function ensureStudentBillingsGenerated(targetMonthStr) {
   await initDbSchema();
   if (!targetMonthStr || targetMonthStr === 'all') {
     targetMonthStr = new Date().toISOString().slice(0, 7);
+  }
+  if (generatedBillingMonths.has(targetMonthStr)) {
+    return;
   }
   const parts = targetMonthStr.split('-');
   const yearStr = parts[0];
@@ -1721,6 +1726,7 @@ export async function ensureStudentBillingsGenerated(targetMonthStr) {
       `, [s.user_id, dueDateStr, status, `Mensalidade Recorrente (${monthStr}/${yearStr})`]);
     }
   }
+  generatedBillingMonths.add(targetMonthStr);
 }
 
 export async function getExpenseSummary({ month_year, search, category } = {}) {
@@ -1968,61 +1974,80 @@ export async function deleteExpense(id, { delete_recurrence = false } = {}) {
 
 export async function getMonthlyProfitHistory(monthsCount = 6) {
   await initDbSchema();
-  const history = [];
   const now = new Date();
+  const startDateObj = new Date(now.getFullYear(), now.getMonth() - (monthsCount - 1), 1);
+  const endDateObj = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  const startMonthStr = `${startDateObj.getFullYear()}-${String(startDateObj.getMonth() + 1).padStart(2, '0')}-01`;
+  const endMonthStr = `${endDateObj.getFullYear()}-${String(endDateObj.getMonth() + 1).padStart(2, '0')}-${String(endDateObj.getDate()).padStart(2, '0')}`;
+
+  for (let i = monthsCount - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    await ensureExpensesGenerated(monthKey);
+    await ensureStudentBillingsGenerated(monthKey);
+  }
+
+  const [revRes, expRes] = await Promise.all([
+    query(`
+      SELECT 
+        TO_CHAR(due_date, 'YYYY-MM') as month_key,
+        COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) as receitas_pago,
+        COALESCE(SUM(amount), 0) as receitas_total
+      FROM gym_billing
+      WHERE due_date >= $1 AND due_date <= $2
+      GROUP BY TO_CHAR(due_date, 'YYYY-MM')
+    `, [startMonthStr, endMonthStr]),
+    query(`
+      SELECT 
+        TO_CHAR(due_date, 'YYYY-MM') as month_key,
+        COALESCE(SUM(CASE WHEN status = 'PAID' THEN amount ELSE 0 END), 0) as despesas_pago,
+        COALESCE(SUM(amount), 0) as despesas_total
+      FROM gym_expenses
+      WHERE due_date >= $1 AND due_date <= $2
+      GROUP BY TO_CHAR(due_date, 'YYYY-MM')
+    `, [startMonthStr, endMonthStr])
+  ]);
+
+  const revMap = new Map();
+  for (const row of revRes.rows) {
+    revMap.set(row.month_key, {
+      receitasPago: parseFloat(row.receitas_pago || 0),
+      receitasTotal: parseFloat(row.receitas_total || 0)
+    });
+  }
+
+  const expMap = new Map();
+  for (const row of expRes.rows) {
+    expMap.set(row.month_key, {
+      despesasPago: parseFloat(row.despesas_pago || 0),
+      despesasTotal: parseFloat(row.despesas_total || 0)
+    });
+  }
+
+  const history = [];
+  const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
   for (let i = monthsCount - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const yearStr = d.getFullYear();
-    const monthStr = String(d.getMonth() + 1).padStart(2, '0');
-    const monthKey = `${yearStr}-${monthStr}`;
-
-    await ensureExpensesGenerated(monthKey);
-    await ensureStudentBillingsGenerated(monthKey);
-
-    const revPaidRes = await query(`
-      SELECT COALESCE(SUM(amount), 0) as total
-      FROM gym_billing
-      WHERE status = 'paid' AND due_date::text LIKE $1
-    `, [`${monthKey}%`]);
-
-    const expPaidRes = await query(`
-      SELECT COALESCE(SUM(amount), 0) as total
-      FROM gym_expenses
-      WHERE status = 'PAID' AND due_date::text LIKE $1
-    `, [`${monthKey}%`]);
-
-    const revTotalRes = await query(`
-      SELECT COALESCE(SUM(amount), 0) as total
-      FROM gym_billing
-      WHERE due_date::text LIKE $1
-    `, [`${monthKey}%`]);
-
-    const expTotalRes = await query(`
-      SELECT COALESCE(SUM(amount), 0) as total
-      FROM gym_expenses
-      WHERE due_date::text LIKE $1
-    `, [`${monthKey}%`]);
-
-    const receitasPago = parseFloat(revPaidRes.rows[0].total || 0);
-    const despesasPago = parseFloat(expPaidRes.rows[0].total || 0);
-    const receitasTotal = parseFloat(revTotalRes.rows[0].total || 0);
-    const despesasTotal = parseFloat(expTotalRes.rows[0].total || 0);
-
-    const lucroPago = receitasPago - despesasPago;
-    const lucroProjetado = receitasTotal - despesasTotal;
-
-    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const monthKey = `${yearStr}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     const label = `${monthNames[d.getMonth()]} ${yearStr.toString().slice(-2)}`;
+
+    const rev = revMap.get(monthKey) || { receitasPago: 0, receitasTotal: 0 };
+    const exp = expMap.get(monthKey) || { despesasPago: 0, despesasTotal: 0 };
+
+    const lucroPago = rev.receitasPago - exp.despesasPago;
+    const lucroProjetado = rev.receitasTotal - exp.despesasTotal;
 
     history.push({
       month_key: monthKey,
       label,
-      receitas_pago: receitasPago,
-      despesas_pago: despesasPago,
+      receitas_pago: rev.receitasPago,
+      despesas_pago: exp.despesasPago,
       lucro_pago: lucroPago,
-      receitas_total: receitasTotal,
-      despesas_total: despesasTotal,
+      receitas_total: rev.receitasTotal,
+      despesas_total: exp.despesasTotal,
       lucro_projetado: lucroProjetado,
     });
   }
@@ -2033,37 +2058,39 @@ export async function getMonthlyProfitHistory(monthsCount = 6) {
 export async function getCashFlowSummary({ month_year } = {}) {
   const cacheKey = `cashflow:summary:${month_year || 'current'}`;
   return cache.getOrFetch(cacheKey, async () => {
-    await ensureExpensesGenerated(month_year);
-    await ensureStudentBillingsGenerated(month_year);
+    const targetMonth = month_year && month_year !== 'all' ? month_year : new Date().toISOString().slice(0, 7);
+    await ensureExpensesGenerated(targetMonth);
+    await ensureStudentBillingsGenerated(targetMonth);
 
-    const monthPattern = month_year && month_year !== 'all' ? `${month_year}%` : `${new Date().toISOString().slice(0, 7)}%`;
+    const dateRange = getMonthDateRange(targetMonth);
+    const dateParams = dateRange ? [dateRange.startDate, dateRange.endDate] : [`${targetMonth}-01`, `${targetMonth}-31`];
 
-    const revRes = await query(`
-      SELECT COALESCE(SUM(amount), 0) as total_receitas, COUNT(*) as count_receitas
-      FROM gym_billing
-      WHERE status = 'paid' AND due_date::text LIKE $1
-    `, [monthPattern]);
+    const [revRes, expRes, fixedRes, history] = await Promise.all([
+      query(`
+        SELECT COALESCE(SUM(amount), 0) as total_receitas, COUNT(*) as count_receitas
+        FROM gym_billing
+        WHERE status = 'paid' AND due_date >= $1 AND due_date <= $2
+      `, dateParams),
+      query(`
+        SELECT COALESCE(SUM(amount), 0) as total_despesas, COUNT(*) as count_despesas
+        FROM gym_expenses
+        WHERE status = 'PAID' AND due_date >= $1 AND due_date <= $2
+      `, dateParams),
+      query(`
+        SELECT COALESCE(SUM(base_amount), 0) as total_custo_fixo
+        FROM gym_expense_recurrences
+        WHERE status = 'ACTIVE'
+      `),
+      getMonthlyProfitHistory(6)
+    ]);
 
-    const expRes = await query(`
-      SELECT COALESCE(SUM(amount), 0) as total_despesas, COUNT(*) as count_despesas
-      FROM gym_expenses
-      WHERE status = 'PAID' AND due_date::text LIKE $1
-    `, [monthPattern]);
-
-    const fixedRes = await query(`
-      SELECT COALESCE(SUM(base_amount), 0) as total_custo_fixo
-      FROM gym_expense_recurrences
-      WHERE status = 'ACTIVE'
-    `);
-
-    const receitas = parseFloat(revRes.rows[0].total_receitas || 0);
-    const despesas = parseFloat(expRes.rows[0].total_despesas || 0);
-    const custoFixo = parseFloat(fixedRes.rows[0].total_custo_fixo || 0);
+    const receitas = parseFloat(revRes.rows[0]?.total_receitas || 0);
+    const despesas = parseFloat(expRes.rows[0]?.total_despesas || 0);
+    const custoFixo = parseFloat(fixedRes.rows[0]?.total_custo_fixo || 0);
     const lucroLiquido = receitas - despesas;
     
     const mensalidadeMedia = 150;
     const alunosPontoEquilibrio = custoFixo > 0 ? Math.ceil(custoFixo / mensalidadeMedia) : 0;
-    const history = await getMonthlyProfitHistory(6);
 
     return {
       receitas,
