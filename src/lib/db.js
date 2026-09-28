@@ -63,6 +63,10 @@ export async function initDbSchema() {
   try {
     await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;`);
     await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS recurrence_id VARCHAR(64);`);
+    await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS cancel_reason TEXT;`);
+    await query(`ALTER TABLE gym_billing ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;`);
+    await query(`ALTER TABLE gym_expenses ADD COLUMN IF NOT EXISTS cancel_reason TEXT;`);
+    await query(`ALTER TABLE gym_expenses ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP;`);
 
     // Core userprofile extensions for Musculação, Shape & Performance
     await query(`ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS fase_shape VARCHAR(50);`);
@@ -827,14 +831,37 @@ export async function getStudentCompleteHistory(alunoId) {
 }
 
 export async function deleteStudent(id) {
+  // Complete Cascade Deletion
   await query(`DELETE FROM gym_billing WHERE user_id = $1`, [id]);
   await query(`DELETE FROM gym_medidas_historico WHERE aluno_id = $1`, [id]);
   await query(`DELETE FROM gym_metas_historico WHERE aluno_id = $1`, [id]);
   await query(`DELETE FROM core_userprofile WHERE user_id = $1`, [id]);
   await query(`DELETE FROM manager_workoutlog WHERE user_id = $1`, [id]);
   await query(`DELETE FROM manager_workoutsession WHERE user_id = $1`, [id]);
+
+  // Clean up routines and routine sub-configs
+  const routines = await query(`SELECT id FROM manager_routine WHERE user_id = $1`, [id]);
+  for (const r of routines.rows) {
+    const days = await query(`SELECT id FROM manager_day WHERE routine_id = $1`, [r.id]);
+    for (const d of days.rows) {
+      const slots = await query(`SELECT id FROM manager_slot WHERE day_id = $1`, [d.id]);
+      for (const s of slots.rows) {
+        const entries = await query(`SELECT id FROM manager_slotentry WHERE slot_id = $1`, [s.id]);
+        for (const e of entries.rows) {
+          await query(`DELETE FROM manager_setsconfig WHERE slot_entry_id = $1`, [e.id]);
+          await query(`DELETE FROM manager_repetitionsconfig WHERE slot_entry_id = $1`, [e.id]);
+          await query(`DELETE FROM manager_weightconfig WHERE slot_entry_id = $1`, [e.id]);
+          await query(`DELETE FROM manager_restconfig WHERE slot_entry_id = $1`, [e.id]);
+        }
+        await query(`DELETE FROM manager_slotentry WHERE slot_id = $1`, [s.id]);
+      }
+      await query(`DELETE FROM manager_slot WHERE day_id = $1`, [d.id]);
+    }
+    await query(`DELETE FROM manager_day WHERE routine_id = $1`, [r.id]);
+  }
   await query(`DELETE FROM manager_routine WHERE user_id = $1`, [id]);
   await query(`DELETE FROM auth_user WHERE id = $1`, [id]);
+  cache.flush();
   return true;
 }
 
@@ -1085,6 +1112,15 @@ export async function getBillingSummary({ month_year, search, user_id } = {}) {
   await query(
     `UPDATE gym_billing SET status = 'overdue' WHERE remind_at < CURRENT_DATE AND status = 'charged'`
   );
+  await query(`
+    DELETE FROM gym_billing 
+    WHERE status != 'paid' 
+      AND (
+        user_id NOT IN (SELECT id FROM auth_user)
+        OR user_id IN (SELECT id FROM auth_user WHERE is_active = false)
+        OR user_id IN (SELECT user_id FROM core_userprofile WHERE enrollment_status IN ('cancelled', 'inactive'))
+      )
+  `);
 
   let sql = `
     SELECT 
@@ -1100,7 +1136,7 @@ export async function getBillingSummary({ month_year, search, user_id } = {}) {
       COUNT(CASE WHEN b.status = 'overdue' THEN 1 END) as count_overdue,
       COUNT(*) as count_total
     FROM gym_billing b
-    JOIN auth_user u ON u.id = b.user_id
+    JOIN auth_user u ON u.id = b.user_id AND u.is_active = true
     LEFT JOIN core_userprofile p ON p.user_id = u.id
     WHERE 1=1
   `;
@@ -1145,11 +1181,20 @@ export async function getBillings({ status, user_id, search, month_year } = {}) 
   await query(
     `UPDATE gym_billing SET status = 'overdue' WHERE remind_at < CURRENT_DATE AND status = 'charged'`
   );
+  await query(`
+    DELETE FROM gym_billing 
+    WHERE status != 'paid' 
+      AND (
+        user_id NOT IN (SELECT id FROM auth_user)
+        OR user_id IN (SELECT id FROM auth_user WHERE is_active = false)
+        OR user_id IN (SELECT user_id FROM core_userprofile WHERE enrollment_status IN ('cancelled', 'inactive'))
+      )
+  `);
 
   let sql = `
     SELECT b.*, u.username, u.first_name, u.last_name, u.email, p.whatsapp, p.photo_base64
     FROM gym_billing b
-    JOIN auth_user u ON u.id = b.user_id
+    JOIN auth_user u ON u.id = b.user_id AND u.is_active = true
     LEFT JOIN core_userprofile p ON p.user_id = u.id
     WHERE 1=1
   `;
@@ -1284,13 +1329,23 @@ export async function markBillingAsCharged(id, { remind_days = 3, remind_at = nu
   return res.rows[0];
 }
 
-export async function updateBillingStatus(id, { status, paid_date, receipt_generated, notes, proof_base64, proof_filename }) {
+export async function updateBillingStatus(id, { status, paid_date, receipt_generated, notes, proof_base64, proof_filename, cancel_reason }) {
   let sql = `UPDATE gym_billing SET status = $1`;
   const params = [status];
 
   if (status === 'paid') {
     params.push(paid_date || new Date());
     sql += `, paid_date = $${params.length}`;
+  }
+
+  if (status === 'cancelled') {
+    if (!cancel_reason || !cancel_reason.trim()) {
+      throw new Error('A justificativa de cancelamento é obrigatória!');
+    }
+    params.push(cancel_reason.trim());
+    sql += `, cancel_reason = $${params.length}`;
+    params.push(new Date());
+    sql += `, cancelled_at = $${params.length}`;
   }
 
   if (receipt_generated !== undefined) {
@@ -1482,20 +1537,20 @@ export async function convertToMonthly(id, { generateYear = true, monthsCount = 
 }
 
 export async function cancelStudentEnrollment(studentId) {
-  // Update enrollment_status to 'cancelled'
+  await initDbSchema();
+  await query(`UPDATE auth_user SET is_active = false WHERE id = $1`, [studentId]);
   await query(
     `UPDATE core_userprofile SET enrollment_status = 'cancelled' WHERE user_id = $1`,
     [studentId]
   );
 
-  // Cancel all pending, charged, or overdue future billings for this student
+  // Delete all non-paid (future/pending/overdue) billings for this student (keep paid ones for history)
   await query(
-    `UPDATE gym_billing 
-     SET status = 'cancelled', notes = CONCAT(COALESCE(notes, ''), ' (Matrícula Cancelada)')
-     WHERE user_id = $1 AND status IN ('pending', 'charged', 'overdue')`,
+    `DELETE FROM gym_billing WHERE user_id = $1 AND status != 'paid'`,
     [studentId]
   );
 
+  cache.flush();
   return true;
 }
 
@@ -1799,7 +1854,7 @@ export async function createExpense({
   return { success: true, expense: res.rows[0], recurrenceId };
 }
 
-export async function updateExpense(id, { description, category, amount, due_date, payment_method, notes, status, scope = 'single' }) {
+export async function updateExpense(id, { description, category, amount, due_date, payment_method, notes, status, cancel_reason, scope = 'single' }) {
   await initDbSchema();
   const origRes = await query(`SELECT * FROM gym_expenses WHERE id = $1`, [id]);
   if (origRes.rows.length === 0) throw new Error('Despesa não encontrada');
@@ -1812,6 +1867,21 @@ export async function updateExpense(id, { description, category, amount, due_dat
   const newPaymentMethod = payment_method !== undefined ? payment_method : target.payment_method;
   const newNotes = notes !== undefined ? notes : target.notes;
   const newStatus = status !== undefined ? status : target.status;
+
+  if (newStatus === 'CANCELLED') {
+    if (!cancel_reason || !cancel_reason.trim()) {
+      throw new Error('A justificativa de cancelamento é obrigatória!');
+    }
+    const now = new Date();
+    const res = await query(`
+      UPDATE gym_expenses
+      SET status = 'CANCELLED', cancel_reason = $1, cancelled_at = $2, notes = COALESCE($3, notes)
+      WHERE id = $4
+      RETURNING *
+    `, [cancel_reason.trim(), now, newNotes, id]);
+    cache.flush();
+    return { success: true, expense: res.rows[0] };
+  }
 
   const res = await query(`
     UPDATE gym_expenses

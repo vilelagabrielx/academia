@@ -29,6 +29,12 @@ export default function ExpensesPage() {
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Cancel Expense Modal State
+  const [showCancelExpenseModal, setShowCancelExpenseModal] = useState(false);
+  const [selectedCancelExpense, setSelectedCancelExpense] = useState(null);
+  const [cancelExpenseReason, setCancelExpenseReason] = useState('');
+  const [cancellingExpense, setCancellingExpense] = useState(false);
+
   const [summary, setSummary] = useState({ 
     total_paid: 0, 
     total_pending: 0, 
@@ -196,6 +202,37 @@ export default function ExpensesPage() {
       showToast(err.message, 'error');
     } finally {
       setPaying(false);
+    }
+  };
+
+  const handleCancelExpenseSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedCancelExpense) return;
+    if (!cancelExpenseReason.trim()) {
+      return showToast('A justificativa de cancelamento é obrigatória!', 'warning');
+    }
+    setCancellingExpense(true);
+    try {
+      const res = await fetch(`/api/expenses/${selectedCancelExpense.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'CANCELLED',
+          cancel_reason: cancelExpenseReason.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao cancelar despesa');
+
+      showToast('Despesa cancelada com sucesso!', 'success');
+      setShowCancelExpenseModal(false);
+      setSelectedCancelExpense(null);
+      setCancelExpenseReason('');
+      loadData();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setCancellingExpense(false);
     }
   };
 
@@ -503,6 +540,10 @@ export default function ExpensesPage() {
                           <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px] flex items-center gap-1 w-fit">
                             <CheckCircle2 className="w-3 h-3" /> Pago
                           </span>
+                        ) : exp.status === 'CANCELLED' ? (
+                          <span className="px-2.5 py-1 rounded-lg bg-white/5 text-slate-400 border border-white/10 font-bold text-[10px] flex items-center gap-1 w-fit" title={exp.cancel_reason}>
+                            Cancelado
+                          </span>
                         ) : isOverdue ? (
                           <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold text-[10px] flex items-center gap-1 w-fit">
                             <AlertCircle className="w-3 h-3" /> Atrasado
@@ -512,16 +553,30 @@ export default function ExpensesPage() {
                             <Clock className="w-3 h-3" /> Pendente
                           </span>
                         )}
+                        {exp.status === 'CANCELLED' && exp.cancel_reason && (
+                          <span className="text-[9px] text-slate-500 block italic mt-0.5" title={exp.cancel_reason}>
+                            Motivo: {exp.cancel_reason.length > 20 ? `${exp.cancel_reason.slice(0, 20)}...` : exp.cancel_reason}
+                          </span>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {!isPaid && (
-                            <button
-                              onClick={() => { setSelectedPayExpense(exp); setShowPayModal(true); }}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-extrabold hover:bg-emerald-400 text-[11px] transition-all cursor-pointer shadow-md"
-                            >
-                              Dar Baixa
-                            </button>
+                          {!isPaid && exp.status !== 'CANCELLED' && (
+                            <>
+                              <button
+                                onClick={() => { setSelectedPayExpense(exp); setShowPayModal(true); }}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-extrabold hover:bg-emerald-400 text-[11px] transition-all cursor-pointer shadow-md"
+                              >
+                                Dar Baixa
+                              </button>
+                              <button
+                                onClick={() => { setSelectedCancelExpense(exp); setCancelExpenseReason(''); setShowCancelExpenseModal(true); }}
+                                className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 font-bold text-[11px] transition-all cursor-pointer"
+                                title="Cancelar despesa com justificativa"
+                              >
+                                Cancelar
+                              </button>
+                            </>
                           )}
 
                           {exp.proof_base64 && (
@@ -890,6 +945,60 @@ export default function ExpensesPage() {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CANCELAR DESPESA (JUSTIFICATIVA OBRIGATÓRIA) */}
+      {showCancelExpenseModal && selectedCancelExpense && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass-panel w-full max-w-md rounded-3xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+                <span>Cancelar Despesa</span>
+              </h3>
+              <button onClick={() => setShowCancelExpenseModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="p-3 bg-slate-900/80 rounded-2xl border border-slate-800 text-xs space-y-1">
+              <div className="flex justify-between"><span className="text-slate-400">Descrição:</span><span className="font-bold text-white">{selectedCancelExpense.description}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Valor:</span><span className="font-extrabold text-rose-400">R$ {parseFloat(selectedCancelExpense.amount).toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Categoria:</span><span className="font-semibold text-slate-300">{selectedCancelExpense.category}</span></div>
+            </div>
+
+            <form onSubmit={handleCancelExpenseSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-amber-300 mb-1">
+                  Justificativa de Cancelamento *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={cancelExpenseReason}
+                  onChange={(e) => setCancelExpenseReason(e.target.value)}
+                  placeholder="Digite o motivo do cancelamento da despesa (ex: Serviço não executado, Cobrança indevida, Substituição de nota)..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelExpenseModal(false)}
+                  className="px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer"
+                >
+                  Voltar
+                </button>
+                <button
+                  type="submit"
+                  disabled={cancellingExpense || !cancelExpenseReason.trim()}
+                  className="px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-rose-600/30 transition-all cursor-pointer"
+                >
+                  {cancellingExpense ? 'Cancelando...' : 'Confirmar Cancelamento'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

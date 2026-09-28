@@ -68,6 +68,9 @@ export default function StudentsPage() {
   const [toast, setToast] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
 
+  // 3-Step Permanent Cascade Deletion Modal State
+  const [hardDeleteModal, setHardDeleteModal] = useState(null); // { id, name, step: 1, textInput: '', submitting: false }
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -890,36 +893,42 @@ export default function StudentsPage() {
   };
 
   const handleDelete = (id, name) => {
-    setConfirmModal({
-      title: 'Excluir Aluno',
-      message: `Tem certeza que deseja excluir o aluno ${name}? Esta ação não poderá ser desfeita.`,
-      confirmText: 'Excluir Aluno',
-      danger: true,
-      onConfirm: async () => {
-        try {
-          const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
-          if (!res.ok) throw new Error('Erro ao excluir aluno');
-          showToast('Aluno excluído com sucesso!', 'success');
-          setViewingStudent(null);
-          loadStudents();
-        } catch (err) {
-          showToast(err.message, 'error');
-        }
-      }
+    setHardDeleteModal({
+      id,
+      name: name || 'Aluno',
+      step: 1,
+      textInput: '',
+      submitting: false
     });
+  };
+
+  const executeHardDelete = async () => {
+    if (!hardDeleteModal) return;
+    setHardDeleteModal((prev) => ({ ...prev, submitting: true }));
+    try {
+      const res = await fetch(`/api/students/${hardDeleteModal.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Erro ao excluir aluno em cascata');
+      showToast('Aluno e todos os seus registros em cascata foram excluídos permanentemente!', 'success');
+      setViewingStudent(null);
+      setHardDeleteModal(null);
+      loadStudents();
+    } catch (err) {
+      showToast(err.message, 'error');
+      setHardDeleteModal((prev) => ({ ...prev, submitting: false }));
+    }
   };
 
   const handleCancelEnrollment = (studentId, studentName) => {
     setConfirmModal({
-      title: 'Cancelar Matrícula',
-      message: `Tem certeza que deseja CANCELAR A MATRÍCULA de ${studentName}? Todas as mensalidades futuras pendentes serão canceladas.`,
-      confirmText: 'Cancelar Matrícula',
+      title: 'Desativar Aluno / Inativar Matrícula',
+      message: `Tem certeza que deseja DESATIVAR a matrícula de ${studentName}? O aluno ficará inativo e as mensalidades futuras pendentes serão canceladas, mantendo todo o histórico de cobranças passadas e treinos.`,
+      confirmText: 'Desativar Aluno',
       danger: true,
       onConfirm: async () => {
         try {
           const res = await fetch(`/api/students/${studentId}/cancel-enrollment`, { method: 'POST' });
-          if (!res.ok) throw new Error('Erro ao cancelar matrícula');
-          showToast('Matrícula cancelada com sucesso!', 'success');
+          if (!res.ok) throw new Error('Erro ao desativar aluno');
+          showToast('Aluno desativado com sucesso!', 'success');
           setViewingStudent(null);
           loadStudents();
         } catch (err) {
@@ -1212,8 +1221,16 @@ export default function StudentsPage() {
                           </button>
 
                           <button
+                            onClick={() => handleCancelEnrollment(student.id, student.first_name || student.username)}
+                            title="Desativar Aluno / Inativar Matrícula"
+                            className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-all active:scale-95 cursor-pointer"
+                          >
+                            <AlertTriangle className="w-4 h-4" />
+                          </button>
+
+                          <button
                             onClick={() => handleDelete(student.id, student.first_name || student.username)}
-                            title="Excluir Aluno"
+                            title="Excluir Permanentemente em Cascata (Requer 3 confirmações)"
                             className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all active:scale-95 cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1672,9 +1689,17 @@ export default function StudentsPage() {
                 </button>
                 <button
                   onClick={() => handleCancelEnrollment(viewingStudent.id, viewingStudent.first_name)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 cursor-pointer"
+                  title="Desativar aluno e inativar a matrícula"
                 >
-                  Cancelar Matrícula
+                  Desativar Aluno
+                </button>
+                <button
+                  onClick={() => handleDelete(viewingStudent.id, viewingStudent.first_name || viewingStudent.username)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 cursor-pointer"
+                  title="Excluir aluno e todos os dados em cascata (requer 3 confirmações)"
+                >
+                  Apagar em Cascata
                 </button>
               </div>
 
@@ -3361,6 +3386,161 @@ export default function StudentsPage() {
                 {confirmModal.confirmText || 'Confirmar'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EXCLUSÃO PERMANENTE EM CASCATA (3 CONFIRMAÇÕES) */}
+      {hardDeleteModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass-panel w-full max-w-lg rounded-3xl p-6 border border-rose-500/40 shadow-2xl space-y-5 relative">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-rose-400">
+                <AlertTriangle className="w-5 h-5 animate-pulse" />
+                <h3 className="text-base font-black uppercase tracking-wide">
+                  Exclusão Permanente em Cascata ({hardDeleteModal.step}/3)
+                </h3>
+              </div>
+              <button
+                onClick={() => setHardDeleteModal(null)}
+                className="text-slate-400 hover:text-white text-sm font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Progress Stepper */}
+            <div className="flex items-center justify-between gap-2 px-1">
+              <div className={`h-2 flex-1 rounded-full transition-all ${hardDeleteModal.step >= 1 ? 'bg-rose-500 shadow-sm shadow-rose-500/50' : 'bg-slate-800'}`} />
+              <div className={`h-2 flex-1 rounded-full transition-all ${hardDeleteModal.step >= 2 ? 'bg-rose-500 shadow-sm shadow-rose-500/50' : 'bg-slate-800'}`} />
+              <div className={`h-2 flex-1 rounded-full transition-all ${hardDeleteModal.step >= 3 ? 'bg-rose-500 shadow-sm shadow-rose-500/50' : 'bg-slate-800'}`} />
+            </div>
+
+            {/* PASSO 1: ALERTA DE IMPACTO DE CASCATA */}
+            {hardDeleteModal.step === 1 && (
+              <div className="space-y-4">
+                <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-xs space-y-2 text-rose-200">
+                  <p className="font-extrabold text-white text-sm">
+                    🚨 ATENÇÃO: Operação Destrutiva e Irreversível!
+                  </p>
+                  <p>
+                    Você iniciou o processo para apagar o cadastro de <strong className="text-white font-bold">{hardDeleteModal.name}</strong>. Esta ação apagará <strong className="text-white font-bold">TODOS OS REGISTROS EM CASCATA</strong>:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-slate-300 pl-1">
+                    <li>Histórico completo de avaliações físicas e medidas corporais</li>
+                    <li>Fichas de treino, registros de cargas e PRs (recordes)</li>
+                    <li>Ficha de saúde, anamnese e atestados armazenados</li>
+                    <li>Todas as cobranças e mensalidades vinculadas</li>
+                    <li>Conta de acesso e perfil completo do usuário</li>
+                  </ul>
+                </div>
+
+                <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs text-amber-300 flex items-start gap-2">
+                  <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Recomendação:</strong> Se o aluno apenas cancelou a mensalidade ou trancou o plano, o ideal é usar a opção <strong>DESATIVAR ALUNO</strong> para preservar seu histórico.
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-end gap-2.5 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const id = hardDeleteModal.id;
+                      const name = hardDeleteModal.name;
+                      setHardDeleteModal(null);
+                      handleCancelEnrollment(id, name);
+                    }}
+                    className="px-4 py-2.5 rounded-xl font-bold text-xs text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all cursor-pointer"
+                  >
+                    Preferencial: Apenas Desativar Aluno
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHardDeleteModal((prev) => ({ ...prev, step: 2 }))}
+                    className="px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-rose-600 hover:bg-rose-500 shadow-md shadow-rose-600/30 transition-all cursor-pointer"
+                  >
+                    Entendi os riscos ➔ Ir para Passo 2 (2/3)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASSO 2: DIGITAÇÃO DE CONFIRMAÇÃO */}
+            {hardDeleteModal.step === 2 && (
+              <div className="space-y-4 text-xs">
+                <p className="text-slate-300 leading-relaxed">
+                  Para liberar o botão de exclusão final em cascata, digite exatamente a palavra <strong className="text-rose-400 font-black tracking-wider uppercase">EXCLUIR</strong> no campo abaixo:
+                </p>
+
+                <div>
+                  <label className="block font-bold text-slate-400 mb-1">
+                    Confirmação de Segurança (2/3) *
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={hardDeleteModal.textInput}
+                    onChange={(e) => setHardDeleteModal((prev) => ({ ...prev, textInput: e.target.value }))}
+                    placeholder="Digite EXCLUIR em maiúsculas"
+                    className="w-full bg-slate-950 border border-slate-700 focus:border-rose-500 rounded-xl p-3 text-white font-bold placeholder-slate-600 focus:outline-none tracking-widest text-center text-sm"
+                  />
+                </div>
+
+                <div className="flex justify-between items-center gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setHardDeleteModal((prev) => ({ ...prev, step: 1 }))}
+                    className="px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer"
+                  >
+                    ← Voltar ao Passo 1
+                  </button>
+                  <button
+                    type="button"
+                    disabled={hardDeleteModal.textInput.trim().toUpperCase() !== 'EXCLUIR'}
+                    onClick={() => setHardDeleteModal((prev) => ({ ...prev, step: 3 }))}
+                    className="px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-rose-600/30 transition-all cursor-pointer"
+                  >
+                    Confirmar Digitação ➔ Passo 3 (3/3)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PASSO 3: CONFIRMAÇÃO FINAL E DEFINITIVA */}
+            {hardDeleteModal.step === 3 && (
+              <div className="space-y-4 text-xs">
+                <div className="p-4 bg-rose-600/20 border-2 border-rose-500 rounded-2xl text-rose-200 text-center space-y-2">
+                  <p className="font-black text-rose-400 text-sm uppercase tracking-wide">
+                    💣 CONFIRMAÇÃO FINAL DEFINITIVA (3/3)
+                  </p>
+                  <p className="text-white font-bold text-sm">
+                    Esta é a sua ÚLTIMA CHANCE para cancelar!
+                  </p>
+                  <p className="text-slate-300">
+                    Você tem certeza absoluta de que deseja apagar o aluno <strong className="text-white font-extrabold">{hardDeleteModal.name}</strong> e <strong className="text-rose-300">TODOS os seus dados vinculados em cascata</strong> do sistema?
+                  </p>
+                </div>
+
+                <div className="flex justify-between items-center gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setHardDeleteModal(null)}
+                    className="px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer"
+                  >
+                    Cancelar Operação
+                  </button>
+                  <button
+                    type="button"
+                    disabled={hardDeleteModal.submitting}
+                    onClick={executeHardDelete}
+                    className="px-5 py-2.5 rounded-xl font-black text-xs text-white bg-gradient-to-r from-rose-700 via-red-600 to-rose-700 hover:from-rose-600 hover:to-red-500 shadow-xl shadow-rose-600/40 disabled:opacity-50 cursor-pointer animate-pulse"
+                  >
+                    {hardDeleteModal.submitting ? 'EXCLUINDO EM CASCATA...' : '💥 SIM, EXCLUIR EM CASCATA DEFINITIVAMENTE'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

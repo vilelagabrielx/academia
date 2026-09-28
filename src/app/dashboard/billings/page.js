@@ -179,6 +179,12 @@ export default function FinancialPage() {
   const [paidBillingNotes, setPaidBillingNotes] = useState('');
   const [savingPaidBilling, setSavingPaidBilling] = useState(false);
 
+  // Cancel Billing Modal State
+  const [showCancelBillingModal, setShowCancelBillingModal] = useState(false);
+  const [selectedCancelBilling, setSelectedCancelBilling] = useState(null);
+  const [cancelBillingReason, setCancelBillingReason] = useState('');
+  const [cancellingBilling, setCancellingBilling] = useState(false);
+
   // Modals: Expenses (Saídas)
   const [showCreateExpenseModal, setShowCreateExpenseModal] = useState(false);
   const [creatingExpense, setCreatingExpense] = useState(false);
@@ -379,6 +385,37 @@ export default function FinancialPage() {
       showToast(err.message, 'error');
     } finally {
       setPayingExpense(false);
+    }
+  };
+
+  const handleCancelBillingSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedCancelBilling) return;
+    if (!cancelBillingReason.trim()) {
+      return showToast('A justificativa de cancelamento é obrigatória!', 'warning');
+    }
+    setCancellingBilling(true);
+    try {
+      const res = await fetch(`/api/billings/${selectedCancelBilling.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'cancelled',
+          cancel_reason: cancelBillingReason.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao cancelar cobrança');
+
+      showToast('Cobrança cancelada com sucesso!', 'success');
+      setShowCancelBillingModal(false);
+      setSelectedCancelBilling(null);
+      setCancelBillingReason('');
+      loadData();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setCancellingBilling(false);
     }
   };
 
@@ -698,14 +735,28 @@ export default function FinancialPage() {
                           {getBillingStatusBadge(b.status)}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {b.status !== 'paid' && (
-                              <button
-                                onClick={() => { setSelectedPaidBilling(b); setShowPaidBillingModal(true); }}
-                                className="px-2.5 py-1 bg-emerald-500 text-slate-950 font-bold rounded-lg text-[10px]"
-                              >
-                                Dar Baixa
-                              </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            {b.status !== 'paid' && b.status !== 'cancelled' && (
+                              <>
+                                <button
+                                  onClick={() => { setSelectedPaidBilling(b); setShowPaidBillingModal(true); }}
+                                  className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-[10px] shadow-sm transition-all cursor-pointer"
+                                >
+                                  Dar Baixa
+                                </button>
+                                <button
+                                  onClick={() => { setSelectedCancelBilling(b); setCancelBillingReason(''); setShowCancelBillingModal(true); }}
+                                  className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 font-bold rounded-lg text-[10px] transition-all cursor-pointer"
+                                  title="Cancelar cobrança com justificativa"
+                                >
+                                  Cancelar
+                                </button>
+                              </>
+                            )}
+                            {b.status === 'cancelled' && b.cancel_reason && (
+                              <span className="text-[10px] text-slate-400 italic block" title={b.cancel_reason}>
+                                Motivo: {b.cancel_reason.length > 25 ? `${b.cancel_reason.slice(0, 25)}...` : b.cancel_reason}
+                              </span>
                             )}
                           </div>
                         </td>
@@ -1401,6 +1452,60 @@ export default function FinancialPage() {
                 </a>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CANCELAR COBRANÇA DE ALUNO (JUSTIFICATIVA OBRIGATÓRIA) */}
+      {showCancelBillingModal && selectedCancelBilling && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass-panel w-full max-w-md rounded-3xl p-6 border border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+                <span>Cancelar Cobrança</span>
+              </h3>
+              <button onClick={() => setShowCancelBillingModal(false)} className="text-slate-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="p-3 bg-slate-900/80 rounded-2xl border border-slate-800 text-xs space-y-1">
+              <div className="flex justify-between"><span className="text-slate-400">Aluno:</span><span className="font-bold text-white">{selectedCancelBilling.first_name || selectedCancelBilling.username}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Valor:</span><span className="font-extrabold text-amber-400">R$ {parseFloat(selectedCancelBilling.amount).toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400">Vencimento:</span><span className="font-semibold text-slate-300">{new Date(selectedCancelBilling.due_date).toLocaleDateString('pt-BR')}</span></div>
+            </div>
+
+            <form onSubmit={handleCancelBillingSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-amber-300 mb-1">
+                  Justificativa de Cancelamento *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={cancelBillingReason}
+                  onChange={(e) => setCancelBillingReason(e.target.value)}
+                  placeholder="Digite o motivo do cancelamento (ex: Erro de digitação, Aluno trancou a matrícula, Acordo comercial)..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelBillingModal(false)}
+                  className="px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer"
+                >
+                  Voltar
+                </button>
+                <button
+                  type="submit"
+                  disabled={cancellingBilling || !cancelBillingReason.trim()}
+                  className="px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-rose-600/30 transition-all cursor-pointer"
+                >
+                  {cancellingBilling ? 'Cancelando...' : 'Confirmar Cancelamento'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
