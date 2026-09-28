@@ -5,8 +5,37 @@ import Link from 'next/link';
 import { 
   Users, Dumbbell, FileText, Plus, MessageCircle, Instagram, ArrowUpRight, Search, Activity, 
   UserPlus, CheckCircle2, Eye, User, Scale, Droplet, Target, Calendar, CreditCard, Trash2, RefreshCw, AlertTriangle, AlertCircle, TrendingDown, DollarSign, Sparkles,
-  Heart, Award, History, ArrowLeftRight, ShieldAlert, ChevronRight, ChevronLeft, Zap
+  Heart, Award, History, ArrowLeftRight, ShieldAlert, ChevronRight, ChevronLeft, Zap, Camera, Layers, TrendingUp
 } from 'lucide-react';
+
+const FASE_OPTIONS = ['Bulking', 'Cutting', 'Manutenção', 'Recomposição'];
+const NIVEL_OPTIONS = ['Iniciante', 'Intermediário', 'Avançado / Atleta'];
+const OBJETIVO_OPTIONS = ['Hipertrofia', 'Emagrecimento', 'Recomposição corporal', 'Ganho de força', 'Definição', 'Performance', 'Manutenção'];
+const DIVISAO_OPTIONS = ['Full Body', 'Upper / Lower', 'Push / Pull / Legs', 'ABC', 'ABCD', 'ABCDE', 'Outro'];
+const PONTOS_FRACOS_OPTIONS = [
+  'Dorsal / Largura', 'Dorsal / Espessura', 'Peitoral superior', 'Peitoral geral',
+  'Deltoide lateral', 'Deltoide posterior', 'Deltoide anterior', 'Trapézio',
+  'Bíceps', 'Tríceps', 'Antebraço', 'Abdômen', 'Oblíquos',
+  'Quadríceps', 'Posterior de coxa', 'Glúteos', 'Panturrilha', 'Outro'
+];
+
+const RESTRICOES_ARTICULARES_OPTIONS = [
+  'Hérnia de disco (cervical/lombar)',
+  'Condromalácia patelar',
+  'Tendinite / Bursite de ombro',
+  'Lesão de Labrum',
+  'Manguito rotador',
+  'Pinçamento de nervo ciático',
+  'Instabilidade de tornozelo'
+];
+
+const CONDICOES_CARDIO_OPTIONS = [
+  'Hipertensão (Pressão Alta)',
+  'Hipotensão (Pressão Baixa)',
+  'Diabetes (Tipo 1 ou 2)',
+  'Labirintite',
+  'Arritmia cardíaca'
+];
 
 export function parseHealthAlerts(val) {
   if (!val) return [];
@@ -176,9 +205,19 @@ export default function DashboardPage() {
     }
   };
 
-  // Quick Add Student Modal State (com opção de 1ª cobrança)
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newStudent, setNewStudent] = useState({
+  // Multi-step Registration Wizard Modal State (identico ao /dashboard/students)
+  const [showWizardModal, setShowWizardModal] = useState(false);
+  const [wizardMode, setWizardMode] = useState('fast'); // 'fast' | 'full'
+  const [wizardStep, setWizardStep] = useState(1);
+  const [editingStudentId, setEditingStudentId] = useState(null);
+  const [hasDraft, setHasDraft] = useState(false);
+  const [showEvalAccordion, setShowEvalAccordion] = useState(false);
+  const [customRestricaoInput, setCustomRestricaoInput] = useState('');
+  const [customCardioInput, setCustomCardioInput] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
     username: '',
@@ -186,14 +225,500 @@ export default function DashboardPage() {
     whatsapp: '',
     instagram: '',
     password: '',
+    photo_base64: '',
+    data_nascimento: '',
+    birth_date: '',
+    age: '',
+    height: '',
+    current_weight: '',
+    blood_type: '',
+    goal: '',
+    training_days: '',
+
+    fase_shape: '',
+    nivel_treino: '',
+    frequencia_semanal: '',
+    divisao_treino: '',
+    objetivo_principal: '',
+    objetivos_secundarios: '',
+    pontos_fracos: [],
+    altura: '',
+    observacoes_treinador: '',
+
+    restricoes_articulares: [],
+    condicoes_cardio_metabolicas: [],
+    cirurgias_reabilitacao: '',
+    status_atestado: '',
+    atested_file_base64: '',
+    medicamentos_uso_continuo: '',
+    dor_cronica_nivel: '',
+    dor_cronica_regiao: '',
+    horas_sono_media: '',
+    qualidade_sono_estresse: '',
+    recursos_ergogenicos: '',
+    contato_emergencia_nome: '',
+    contato_emergencia_parentesco: '',
+    contato_emergencia_telefone: '',
+
+    prazo_meta: '',
+    peso_meta: '',
+    bf_meta: '',
+    braco_meta: '',
+    antebraco_meta: '',
+    ombro_meta: '',
+    peitoral_meta: '',
+    cintura_meta: '',
+    abdomen_meta: '',
+    dorsal_meta: '',
+    coxa_meta: '',
+    gluteo_meta: '',
+    panturrilha_meta: '',
+    pescoco_meta: '',
+
+    initial_evaluation: {
+      data_registro: new Date().toISOString().split('T')[0],
+      peso: '',
+      bf_percentual: '',
+      pescoco: '',
+      ombro: '',
+      peitoral_torax: '',
+      dorsal_largura: '',
+      dorsal_espessura: '',
+      cintura: '',
+      abdomen: '',
+      quadril: '',
+      braco_direito: '',
+      braco_direito_contraido: '',
+      braco_esquerdo: '',
+      braco_esquerdo_contraido: '',
+      braco_contraido: '',
+      antebraco_direito: '',
+      antebraco_esquerdo: '',
+      coxa_direita: '',
+      coxa_esquerda: '',
+      gluteo: '',
+      panturrilha_direita: '',
+      panturrilha_esquerda: '',
+      observacoes: ''
+    },
+
     create_first_billing: false,
     billing_amount: '150.00',
     billing_due_date: new Date().toISOString().split('T')[0],
+    dia_vencimento_recorrente: 5,
     billing_notes: 'Mensalidade',
     billing_payment_method: 'Pix',
     is_recurring: false,
+    send_whatsapp_now: false,
   });
-  const [creating, setCreating] = useState(false);
+
+  const addCustomRestricao = () => {
+    const trimmed = customRestricaoInput.trim();
+    if (!trimmed) return;
+    setFormData((prev) => {
+      const currentArr = Array.isArray(prev.restricoes_articulares) ? [...prev.restricoes_articulares] : [];
+      if (!currentArr.includes(trimmed)) {
+        return { ...prev, restricoes_articulares: [...currentArr, trimmed] };
+      }
+      return prev;
+    });
+    setCustomRestricaoInput('');
+  };
+
+  const removeRestricaoTag = (tagToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      restricoes_articulares: (Array.isArray(prev.restricoes_articulares) ? prev.restricoes_articulares : []).filter((i) => i !== tagToRemove),
+    }));
+  };
+
+  const addCustomCardio = () => {
+    const trimmed = customCardioInput.trim();
+    if (!trimmed) return;
+    setFormData((prev) => {
+      const currentArr = Array.isArray(prev.condicoes_cardio_metabolicas) ? [...prev.condicoes_cardio_metabolicas] : [];
+      if (!currentArr.includes(trimmed)) {
+        return { ...prev, condicoes_cardio_metabolicas: [...currentArr, trimmed] };
+      }
+      return prev;
+    });
+    setCustomCardioInput('');
+  };
+
+  const removeCardioTag = (tagToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      condicoes_cardio_metabolicas: (Array.isArray(prev.condicoes_cardio_metabolicas) ? prev.condicoes_cardio_metabolicas : []).filter((i) => i !== tagToRemove),
+    }));
+  };
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 300;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        setFormData((prev) => ({ ...prev, photo_base64: compressedBase64 }));
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAtestadoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setFormData((prev) => ({ ...prev, atested_file_base64: event.target.result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleMeasurementKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const form = e.target.form;
+      if (!form) return;
+      const index = Array.prototype.indexOf.call(form, e.target);
+      if (index >= 0 && index < form.elements.length - 1) {
+        const next = form.elements[index + 1];
+        if (next && typeof next.focus === 'function') {
+          next.focus();
+          if (typeof next.select === 'function') next.select();
+        }
+      }
+    }
+  };
+
+  const restoreDraft = () => {
+    try {
+      const saved = localStorage.getItem('student_wizard_draft');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.formData) setFormData(parsed.formData);
+        if (parsed.wizardStep) setWizardStep(parsed.wizardStep);
+        if (parsed.wizardMode) setWizardMode(parsed.wizardMode);
+        setHasDraft(false);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem('student_wizard_draft');
+      setHasDraft(false);
+    } catch (e) {}
+  };
+
+  const handleOpenCreateWizard = () => {
+    setEditingStudentId(null);
+    setWizardMode('fast');
+    setWizardStep(1);
+    setShowEvalAccordion(false);
+    setErrorMsg('');
+
+    let draftExists = false;
+    try {
+      const saved = localStorage.getItem('student_wizard_draft');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.formData && parsed.formData.first_name) draftExists = true;
+      }
+    } catch (e) {}
+    setHasDraft(draftExists);
+
+    setFormData({
+      first_name: '',
+      last_name: '',
+      username: '',
+      email: '',
+      whatsapp: '',
+      instagram: '',
+      password: '',
+      photo_base64: '',
+      data_nascimento: '',
+      birth_date: '',
+      age: '',
+      height: '',
+      current_weight: '',
+      blood_type: '',
+      goal: '',
+      training_days: '',
+
+      fase_shape: '',
+      nivel_treino: '',
+      frequencia_semanal: '',
+      divisao_treino: '',
+      objetivo_principal: '',
+      objetivos_secundarios: '',
+      pontos_fracos: [],
+      altura: '',
+      observacoes_treinador: '',
+
+      restricoes_articulares: [],
+      condicoes_cardio_metabolicas: [],
+      cirurgias_reabilitacao: '',
+      status_atestado: '',
+      atested_file_base64: '',
+      medicamentos_uso_continuo: '',
+      dor_cronica_nivel: '',
+      dor_cronica_regiao: '',
+      horas_sono_media: '',
+      qualidade_sono_estresse: '',
+      recursos_ergogenicos: '',
+      contato_emergencia_nome: '',
+      contato_emergencia_parentesco: '',
+      contato_emergencia_telefone: '',
+
+      prazo_meta: '',
+      peso_meta: '',
+      bf_meta: '',
+      braco_meta: '',
+      antebraco_meta: '',
+      ombro_meta: '',
+      peitoral_meta: '',
+      cintura_meta: '',
+      abdomen_meta: '',
+      dorsal_meta: '',
+      coxa_meta: '',
+      gluteo_meta: '',
+      panturrilha_meta: '',
+      pescoco_meta: '',
+
+      initial_evaluation: {
+        data_registro: new Date().toISOString().split('T')[0],
+        peso: '',
+        bf_percentual: '',
+        pescoco: '',
+        ombro: '',
+        peitoral_torax: '',
+        dorsal_largura: '',
+        dorsal_espessura: '',
+        cintura: '',
+        abdomen: '',
+        quadril: '',
+        braco_direito: '',
+        braco_direito_contraido: '',
+        braco_esquerdo: '',
+        braco_esquerdo_contraido: '',
+        braco_contraido: '',
+        antebraco_direito: '',
+        antebraco_esquerdo: '',
+        coxa_direita: '',
+        coxa_esquerda: '',
+        gluteo: '',
+        panturrilha_direita: '',
+        panturrilha_esquerda: '',
+        observacoes: ''
+      },
+
+      create_first_billing: false,
+      billing_amount: '150.00',
+      billing_due_date: new Date().toISOString().split('T')[0],
+      dia_vencimento_recorrente: 5,
+      billing_notes: 'Mensalidade',
+      billing_payment_method: 'Pix',
+      is_recurring: false,
+      send_whatsapp_now: false,
+    });
+    setShowWizardModal(true);
+  };
+
+  const handleOpenEditWizard = (student) => {
+    setEditingStudentId(student.id);
+    setWizardMode('full');
+    setWizardStep(1);
+    setShowEvalAccordion(false);
+    setErrorMsg('');
+    setHasDraft(false);
+
+    let parsedPontosFracos = [];
+    if (student.pontos_fracos) {
+      try {
+        parsedPontosFracos = typeof student.pontos_fracos === 'string' ? JSON.parse(student.pontos_fracos) : student.pontos_fracos;
+      } catch {
+        parsedPontosFracos = student.pontos_fracos ? String(student.pontos_fracos).split(',').map(s => s.trim()) : [];
+      }
+    }
+
+    let parsedRestricoes = [];
+    if (student.restricoes_articulares) {
+      try {
+        parsedRestricoes = typeof student.restricoes_articulares === 'string' ? JSON.parse(student.restricoes_articulares) : student.restricoes_articulares;
+      } catch {
+        parsedRestricoes = student.restricoes_articulares ? String(student.restricoes_articulares).split(',').map(s => s.trim()) : [];
+      }
+    }
+
+    let parsedCardio = [];
+    if (student.condicoes_cardio_metabolicas) {
+      try {
+        parsedCardio = typeof student.condicoes_cardio_metabolicas === 'string' ? JSON.parse(student.condicoes_cardio_metabolicas) : student.condicoes_cardio_metabolicas;
+      } catch {
+        parsedCardio = student.condicoes_cardio_metabolicas ? String(student.condicoes_cardio_metabolicas).split(',').map(s => s.trim()) : [];
+      }
+    }
+
+    const bDateStr = student.birth_date || student.data_nascimento ? String(student.birth_date || student.data_nascimento).split('T')[0] : '';
+
+    setFormData({
+      first_name: student.first_name || '',
+      last_name: student.last_name || '',
+      username: student.username || '',
+      email: student.email || '',
+      whatsapp: student.whatsapp || '',
+      instagram: student.instagram || '',
+      password: '',
+      photo_base64: student.photo_base64 || '',
+      data_nascimento: bDateStr,
+      birth_date: bDateStr,
+      age: student.age || (bDateStr ? String(calculateAge(bDateStr)) : ''),
+      height: student.height || '175',
+      current_weight: student.current_weight || '',
+      blood_type: student.blood_type || 'O+',
+      goal: student.goal || 'Hipertrofia',
+      training_days: student.training_days || 'Segunda, Quarta, Sexta',
+
+      fase_shape: student.fase_shape || 'Bulking',
+      nivel_treino: student.nivel_treino || 'Intermediário',
+      frequencia_semanal: student.frequencia_semanal || '5x por semana',
+      divisao_treino: student.divisao_treino || 'Push / Pull / Legs',
+      objetivo_principal: student.objetivo_principal || student.goal || 'Hipertrofia',
+      objetivos_secundarios: student.objetivos_secundarios || '',
+      pontos_fracos: parsedPontosFracos,
+      altura: student.altura || student.height || '175',
+      observacoes_treinador: student.observacoes_treinador || '',
+
+      restricoes_articulares: parsedRestricoes,
+      condicoes_cardio_metabolicas: parsedCardio,
+      cirurgias_reabilitacao: student.cirurgias_reabilitacao || '',
+      status_atestado: student.status_atestado || 'Pendente',
+      atested_file_base64: student.atested_file_base64 || '',
+      medicamentos_uso_continuo: student.medicamentos_uso_continuo || '',
+      dor_cronica_nivel: student.dor_cronica_nivel || '',
+      dor_cronica_regiao: student.dor_cronica_regiao || '',
+      horas_sono_media: student.horas_sono_media || '',
+      qualidade_sono_estresse: student.qualidade_sono_estresse || '',
+      recursos_ergogenicos: student.recursos_ergogenicos || '',
+      contato_emergencia_nome: student.contato_emergencia_nome || '',
+      contato_emergencia_parentesco: student.contato_emergencia_parentesco || '',
+      contato_emergencia_telefone: student.contato_emergencia_telefone || '',
+
+      prazo_meta: student.prazo_meta || '90 dias (3 meses)',
+      peso_meta: student.peso_meta || '',
+      bf_meta: student.bf_meta || '',
+      braco_meta: student.braco_meta || '',
+      antebraco_meta: student.antebraco_meta || '',
+      ombro_meta: student.ombro_meta || '',
+      peitoral_meta: student.peitoral_meta || '',
+      cintura_meta: student.cintura_meta || '',
+      abdomen_meta: student.abdomen_meta || '',
+      dorsal_meta: student.dorsal_meta || '',
+      coxa_meta: student.coxa_meta || '',
+      gluteo_meta: student.gluteo_meta || '',
+      panturrilha_meta: student.panturrilha_meta || '',
+      pescoco_meta: student.pescoco_meta || '',
+
+      initial_evaluation: {
+        data_registro: new Date().toISOString().split('T')[0],
+        peso: '',
+        bf_percentual: '',
+        pescoco: '',
+        ombro: '',
+        peitoral_torax: '',
+        dorsal_largura: '',
+        dorsal_espessura: '',
+        cintura: '',
+        abdomen: '',
+        quadril: '',
+        braco_direito: '',
+        braco_direito_contraido: '',
+        braco_esquerdo: '',
+        braco_esquerdo_contraido: '',
+        braco_contraido: '',
+        antebraco_direito: '',
+        antebraco_esquerdo: '',
+        coxa_direita: '',
+        coxa_esquerda: '',
+        gluteo: '',
+        panturrilha_direita: '',
+        panturrilha_esquerda: '',
+        observacoes: ''
+      },
+
+      create_first_billing: false,
+      billing_amount: '150.00',
+      billing_due_date: new Date().toISOString().split('T')[0],
+      dia_vencimento_recorrente: 5,
+      billing_notes: 'Mensalidade',
+      billing_payment_method: 'Pix',
+      is_recurring: false,
+      send_whatsapp_now: false,
+    });
+    setShowWizardModal(true);
+  };
+
+  const handleSubmitWizard = async (e) => {
+    if (e) e.preventDefault();
+    if (!formData.first_name && !editingStudentId) {
+      return setErrorMsg('O Nome do aluno é o único campo obrigatório!');
+    }
+
+    if (formData.create_first_billing && !formData.whatsapp.trim()) {
+      return setErrorMsg('Para gerar a primeira cobrança, o preenchimento do WhatsApp é OBRIGATÓRIO!');
+    }
+
+    setSubmitting(true);
+    setErrorMsg('');
+
+    try {
+      const cleanPhone = formData.whatsapp ? formData.whatsapp.replace(/\D/g, '') : '';
+      const formattedPhone = cleanPhone ? (cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`) : '';
+
+      const payload = {
+        ...formData,
+        whatsapp: formattedPhone,
+      };
+
+      const url = editingStudentId ? `/api/students/${editingStudentId}` : '/api/students';
+      const method = editingStudentId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao salvar aluno');
+
+      clearDraft();
+      setShowWizardModal(false);
+      showToast(editingStudentId ? 'Ficha do aluno atualizada com sucesso!' : 'Aluno cadastrado com sucesso!', 'success');
+      loadData();
+      if (editingStudentId && viewingStudent?.id === editingStudentId) {
+        openStudentProfile({ ...viewingStudent, ...payload });
+      }
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // Renew / Create Billing Modal State
   const [showRenewModal, setShowRenewModal] = useState(false);
@@ -470,7 +995,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={handleOpenCreateWizard}
               className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-3 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
             >
               <UserPlus className="w-5 h-5" />
@@ -579,7 +1104,7 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={handleOpenCreateWizard}
               className="p-4 rounded-xl bg-[#1C1C1E] hover:bg-white/10 border border-white/10 text-left transition-all group cursor-pointer active:scale-95 space-y-2"
             >
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-sm">1</div>
@@ -1301,12 +1826,12 @@ export default function DashboardPage() {
                 >
                   + Nova Avaliação
                 </button>
-                <Link
-                  href={`/dashboard/students?search=${encodeURIComponent(viewingStudent.username || viewingStudent.first_name)}`}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700"
+                <button
+                  onClick={() => handleOpenEditWizard(viewingStudent)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 cursor-pointer"
                 >
                   Editar Cadastro
-                </Link>
+                </button>
                 <button
                   onClick={() => handleCancelEnrollment(viewingStudent.id, viewingStudent.first_name)}
                   className="px-3.5 py-2 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 cursor-pointer"
@@ -1616,193 +2141,1382 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Modal Quick Create Student (com opção de 1ª cobrança) */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="glass-panel w-full max-w-lg rounded-2xl p-6 border border-slate-800 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-emerald-400" />
-                Cadastrar Novo Aluno
-              </h3>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateStudent} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-4">
+      {/* MODAL: CADASTRO / EDIÇÃO DE ALUNO (WIZARD COMPLETO APPLE iOS STYLE) */}
+      {showWizardModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-xl transition-all">
+          <div className="glass-panel w-full max-w-3xl rounded-t-[32px] sm:rounded-3xl border border-white/10 shadow-2xl space-y-0 max-h-[94vh] overflow-y-auto flex flex-col justify-between">
+            {/* Top Modal Header (iOS Sheet Header Style) */}
+            <div className="p-5 sm:p-6 border-b border-white/10 space-y-4 sticky top-0 z-20 bg-slate-950/90 backdrop-blur-md shrink-0">
+              <div className="flex items-center justify-between">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Nome *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newStudent.first_name}
-                    onChange={(e) => setNewStudent({ ...newStudent, first_name: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    placeholder="João"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Sobrenome</label>
-                  <input
-                    type="text"
-                    value={newStudent.last_name}
-                    onChange={(e) => setNewStudent({ ...newStudent, last_name: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    placeholder="Silva"
-                  />
-                </div>
-              </div>
-
-
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">WhatsApp (DDD + Número)</label>
-                  <input
-                    type="text"
-                    value={newStudent.whatsapp}
-                    onChange={(e) => setNewStudent({ ...newStudent, whatsapp: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    placeholder="5511999999999"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center justify-between">
-                    <span className="flex items-center gap-1 text-pink-400 font-bold">
-                      <Instagram className="w-3 h-3 text-pink-500 shrink-0" />
-                      Instagram
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-normal">(Opcional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={newStudent.instagram || ''}
-                    onChange={(e) => setNewStudent({ ...newStudent, instagram: e.target.value })}
-                    className="w-full bg-slate-900 border border-pink-500/30 focus:border-pink-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none"
-                    placeholder="@usuario ou link"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Senha de Acesso do Aluno</label>
-                <input
-                  type="password"
-                  required
-                  value={newStudent.password}
-                  onChange={(e) => setNewStudent({ ...newStudent, password: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  placeholder="••••••••"
-                />
-              </div>
-
-              {/* Seção opcional de 1ª cobrança */}
-              <label className="flex items-center gap-3 p-3.5 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
-                <input
-                  type="checkbox"
-                  checked={newStudent.create_first_billing}
-                  onChange={(e) => setNewStudent({ ...newStudent, create_first_billing: e.target.checked })}
-                  className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
-                />
-                <div>
-                  <span className="font-bold text-white block text-xs">☐ Criar primeira cobrança para este aluno</span>
-                  <span className="text-[10px] text-slate-400 block">
-                    Gere a mensalidade inicial juntamente no cadastro (opcional).
+                  <h3 className="text-lg sm:text-xl font-black text-white tracking-tight flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-emerald-400" />
+                    {editingStudentId ? 'Editar Ficha do Aluno' : 'Cadastrar Aluno'}
+                  </h3>
+                  <span className="text-[11px] text-slate-400 block mt-0.5 font-medium">
+                    Atalho: <kbd className="px-1.5 py-0.5 bg-slate-800/80 rounded-md border border-slate-700 text-emerald-400 font-bold font-mono">Ctrl + S</kbd> para salvar instantaneamente
                   </span>
                 </div>
-              </label>
+                <button 
+                  onClick={() => setShowWizardModal(false)} 
+                  className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700/80 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer text-sm font-bold"
+                >
+                  ✕
+                </button>
+              </div>
 
-              {newStudent.create_first_billing && (
-                <div className="space-y-4 pt-2 border-t border-slate-800">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Valor da Mensalidade (R$) *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        required={newStudent.create_first_billing}
-                        value={newStudent.billing_amount}
-                        onChange={(e) => setNewStudent({ ...newStudent, billing_amount: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-emerald-400 font-bold focus:border-emerald-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">1º Vencimento *</label>
-                      <input
-                        type="date"
-                        required={newStudent.create_first_billing}
-                        value={newStudent.billing_due_date}
-                        onChange={(e) => setNewStudent({ ...newStudent, billing_due_date: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      />
-                    </div>
+              {/* Draft Restore Notification if Draft Exists */}
+              {hasDraft && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300 shadow-sm">
+                  <span className="flex items-center gap-2 font-semibold">
+                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                    Rascunho de cadastro salvo encontrado.
+                  </span>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={restoreDraft} className="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 transition-all text-xs cursor-pointer">
+                      Restaurar
+                    </button>
+                    <button type="button" onClick={clearDraft} className="px-2.5 py-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-all text-xs cursor-pointer">
+                      Descartar
+                    </button>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Forma de Pagamento</label>
-                      <select
-                        value={newStudent.billing_payment_method}
-                        onChange={(e) => setNewStudent({ ...newStudent, billing_payment_method: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                      >
-                        <option value="Pix">Pix</option>
-                        <option value="Cartão de Crédito">Cartão de Crédito</option>
-                        <option value="Dinheiro">Dinheiro</option>
-                        <option value="Boleto">Boleto</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-300 mb-1">Descrição</label>
-                      <input
-                        type="text"
-                        value={newStudent.billing_notes}
-                        onChange={(e) => setNewStudent({ ...newStudent, billing_notes: e.target.value })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
-                        placeholder="Mensalidade"
-                      />
-                    </div>
-                  </div>
-
-                  <label className="flex items-center gap-3 p-3 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
-                    <input
-                      type="checkbox"
-                      checked={newStudent.is_recurring}
-                      onChange={(e) => setNewStudent({ ...newStudent, is_recurring: e.target.checked })}
-                      className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
-                    />
-                    <div>
-                      <span className="font-bold text-white block text-xs">Cobrança recorrente (12 Meses)</span>
-                      <span className="text-[10px] text-slate-400 block">
-                        Criar mensalidades automaticamente a cada mês por 12 meses.
-                      </span>
-                    </div>
-                  </label>
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              {/* iOS Segmented Control Selector Header (Balcão Rápido vs Ficha Completa) */}
+              {!editingStudentId && (
+                <div className="grid grid-cols-2 gap-1.5 p-1.5 bg-slate-900/90 rounded-2xl border border-white/10 backdrop-blur-md">
+                  <button
+                    type="button"
+                    onClick={() => setWizardMode('fast')}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[40px] ${
+                      wizardMode === 'fast'
+                        ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span>⚡ Modo Rápido (15s)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setWizardMode('full')}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[40px] ${
+                      wizardMode === 'full'
+                        ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span>📋 Ficha Completa (5 Steps)</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Steps Indicator Bar (Full Wizard Mode - iOS Segmented Tabs) */}
+              {wizardMode === 'full' && (
+                <div className="grid grid-cols-5 gap-1 text-center">
+                  {['1. Perfil', '2. Saúde', '3. Aferição', '4. Metas', '5. Cobrança'].map((label, index) => {
+                    const stepNum = index + 1;
+                    return (
+                      <button
+                        key={stepNum}
+                        onClick={() => setWizardStep(stepNum)}
+                        className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all cursor-pointer min-h-[36px] ${
+                          wizardStep === stepNum
+                            ? 'bg-emerald-500 text-slate-950 shadow-md'
+                            : 'bg-slate-900/80 text-slate-500 border border-slate-800 hover:text-slate-300'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="p-5 sm:p-6 flex-1 space-y-4">
+              {errorMsg && (
+                <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 shadow-sm font-semibold">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
+              <form id="wizardForm" onSubmit={handleSubmitWizard} className="space-y-4 text-xs">
+                {/* MODE 1: BALCÃO / RÁPIDO (15s) */}
+                {wizardMode === 'fast' && (
+                  <div className="space-y-4">
+                    <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/30">
+                      <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
+                        <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>Modo Balcão — Matrícula Rápida (15 Segundos)</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Cadastre o aluno instantaneamente na recepção. O link para preenchimento da ficha técnica pode ser enviado via WhatsApp ao concluir!
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-300 mb-1">Nome * (Obrigatório)</label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.first_name}
+                          onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                          placeholder="Ex: Gabriel"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:border-emerald-500 text-sm font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-slate-300 mb-1">Sobrenome</label>
+                        <input
+                          type="text"
+                          value={formData.last_name}
+                          onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                          placeholder="Vilela"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:border-emerald-500 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                          <span>WhatsApp (DDD + N°)</span>
+                          {formData.create_first_billing && <span className="text-[9px] text-amber-400 font-extrabold">* Obr. p/ Cobrança</span>}
+                        </label>
+                        <input
+                          type="tel"
+                          inputMode="tel"
+                          value={formData.whatsapp}
+                          onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                          placeholder="5511999999999"
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:border-emerald-500 text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-slate-300 mb-1">Instagram (Opcional)</label>
+                        <input
+                          type="text"
+                          value={formData.instagram || ''}
+                          onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                          placeholder="@usuario"
+                          className="w-full bg-slate-900 border border-pink-500/30 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-white text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quick Billing Checkbox */}
+                    <div className="p-4 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-3">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.create_first_billing}
+                          onChange={(e) => setFormData({ ...formData, create_first_billing: e.target.checked })}
+                          className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
+                        />
+                        <div>
+                          <span className="font-bold text-white block text-xs">Criar 1ª cobrança de mensalidade agora</span>
+                          <span className="text-[10px] text-slate-400 block">Gerar mensalidade automática com vencimento inicial.</span>
+                        </div>
+                      </label>
+
+                      {formData.create_first_billing && (
+                        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 text-xs">Valor (R$) *</label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              step="0.01"
+                              value={formData.billing_amount}
+                              onChange={(e) => setFormData({ ...formData, billing_amount: e.target.value })}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-emerald-400 font-bold text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 text-xs">1º Vencimento *</label>
+                            <input
+                              type="date"
+                              value={formData.billing_due_date}
+                              onChange={(e) => setFormData({ ...formData, billing_due_date: e.target.value })}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* MODE 2: WIZARD FULL (5 ETAPAS) */}
+                {wizardMode === 'full' && (
+                  <>
+                    {/* PASSO 1: DADOS DE PERFIL */}
+                    {wizardStep === 1 && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Nome * (Obrigatório)</label>
+                            <input
+                              type="text"
+                              required
+                              value={formData.first_name}
+                              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                              placeholder="Ex: Gabriel"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Sobrenome</label>
+                            <input
+                              type="text"
+                              value={formData.last_name}
+                              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                              placeholder="Vilela"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                              <span>WhatsApp (DDD + N°)</span>
+                              {formData.create_first_billing && (
+                                <span className="text-[9px] text-amber-400 font-extrabold">* Obr. p/ Cobrança</span>
+                              )}
+                            </label>
+                            <input
+                              type="tel"
+                              inputMode="tel"
+                              value={formData.whatsapp}
+                              onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                              placeholder="5511999999999"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                              <span className="flex items-center gap-1.5 text-pink-400 font-bold">
+                                <Instagram className="w-3.5 h-3.5 text-pink-500 shrink-0" />
+                                Instagram
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-normal">(Opcional • Destaque)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.instagram || ''}
+                              onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                              placeholder="@usuario ou link"
+                              className="w-full bg-slate-900 border border-pink-500/30 focus:border-pink-500 rounded-xl px-3 py-2 text-white placeholder-slate-600 transition-colors"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                              <span>Data de Nascimento</span>
+                              {formData.data_nascimento && calculateAge(formData.data_nascimento) !== null && (
+                                <span className="text-[10px] text-emerald-400 font-bold">
+                                  🎉 {calculateAge(formData.data_nascimento)} anos
+                                </span>
+                              )}
+                            </label>
+                            <input
+                              type="date"
+                              value={formData.data_nascimento || ''}
+                              onChange={(e) => {
+                                const dStr = e.target.value;
+                                const computed = calculateAge(dStr);
+                                setFormData({
+                                  ...formData,
+                                  data_nascimento: dStr,
+                                  birth_date: dStr,
+                                  age: computed !== null ? String(computed) : formData.age
+                                });
+                              }}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Altura (cm)</label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              value={formData.altura || formData.height}
+                              onChange={(e) => setFormData({ ...formData, altura: e.target.value, height: e.target.value })}
+                              placeholder="182"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1 flex items-center justify-between">
+                              <span>Peso Inicial (kg)</span>
+                              <span className="text-[9px] text-emerald-400 font-mono">⚡ Sync</span>
+                            </label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              step="0.1"
+                              value={formData.current_weight}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFormData({
+                                  ...formData,
+                                  current_weight: val,
+                                  initial_evaluation: { ...formData.initial_evaluation, peso: val }
+                                });
+                              }}
+                              placeholder="84.5"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500 font-bold text-emerald-400"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 pt-2">
+                          {formData.photo_base64 ? (
+                            <img
+                              src={formData.photo_base64}
+                              alt="Preview"
+                              className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500">
+                              <Camera className="w-6 h-6" />
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            <label className="block text-xs font-semibold text-slate-300 cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-xl border border-slate-700">
+                              📷 Tirar Foto Agora
+                              <input type="file" accept="image/*" capture="user" onChange={handlePhotoUpload} className="hidden" />
+                            </label>
+                            <label className="block text-xs font-semibold text-slate-300 cursor-pointer bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-xl border border-slate-700">
+                              🖼️ Da Galeria
+                              <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PASSO 2: SAÚDE CLÍNICA, SEGURANÇA E CONTEXTO DE TREINO */}
+                    {wizardStep === 2 && (
+                      <div className="space-y-4">
+                        {/* 1. Alertas Críticos (Badges em Destaque) */}
+                        <div className="p-3.5 rounded-2xl bg-rose-950/20 border border-rose-500/30 space-y-3">
+                          <div className="flex items-center gap-2 text-rose-400 font-extrabold text-xs uppercase tracking-wider">
+                            <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
+                            <span>1. Alertas Críticos & Segurança (Badges em Destaque)</span>
+                          </div>
+
+                          {/* Restrições Articulares */}
+                          <div>
+                            <label className="block font-bold text-amber-300 mb-1 text-[11px]">
+                              Restrições Articulares & Coluna (Tag Vermelha/Laranja no Perfil)
+                            </label>
+                            <div className="flex flex-wrap gap-1.5 p-2 bg-slate-900/90 rounded-xl border border-slate-800">
+                              {Array.from(new Set([...RESTRICOES_ARTICULARES_OPTIONS, ...(Array.isArray(formData.restricoes_articulares) ? formData.restricoes_articulares : [])])).map((item) => {
+                                const isSelected = Array.isArray(formData.restricoes_articulares) && formData.restricoes_articulares.includes(item);
+                                const isCustom = !RESTRICOES_ARTICULARES_OPTIONS.includes(item);
+                                return (
+                                  <button
+                                    type="button"
+                                    key={item}
+                                    onClick={() => {
+                                      if (isSelected) {
+                                        removeRestricaoTag(item);
+                                      } else {
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          restricoes_articulares: [...(Array.isArray(prev.restricoes_articulares) ? prev.restricoes_articulares : []), item]
+                                        }));
+                                      }
+                                    }}
+                                    className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                                      isSelected
+                                        ? isCustom
+                                          ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20 scale-105 font-extrabold'
+                                          : 'bg-rose-500 text-white border-rose-400 shadow-md shadow-rose-500/20 scale-105'
+                                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                                    }`}
+                                  >
+                                    <span>{isSelected ? '✓ ' : '+ '} {item}</span>
+                                    {isSelected && (
+                                      <span
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          removeRestricaoTag(item);
+                                        }}
+                                        className="ml-1 text-[11px] hover:text-white font-extrabold opacity-80 hover:opacity-100 px-1"
+                                        title="Remover tag"
+                                      >
+                                        ✕
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Inline custom tag adder */}
+                            <div className="mt-2 flex gap-2">
+                              <input
+                                type="text"
+                                value={customRestricaoInput}
+                                onChange={(e) => setCustomRestricaoInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    addCustomRestricao();
+                                  }
+                                }}
+                                placeholder="Outra restrição articular/coluna (ex: Prótese de quadril, Escoliose)..."
+                                className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none flex-1"
+                              />
+                              <button
+                                type="button"
+                                onClick={addCustomRestricao}
+                                className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs cursor-pointer shadow-md transition-all shrink-0 flex items-center gap-1"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Adicionar Tag</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Condições Cardiovasculares & Metabólicas */}
+                          <div>
+                            <label className="block font-bold text-rose-400 mb-1 text-[11px]">
+                              Condições Cardiovasculares & Metabólicas (Alerta de Risco Alto)
+                            </label>
+                            <div className="flex flex-wrap gap-1.5 p-2 bg-slate-900/90 rounded-xl border border-slate-800">
+                              {Array.from(new Set([...CONDICOES_CARDIO_OPTIONS, ...(Array.isArray(formData.condicoes_cardio_metabolicas) ? formData.condicoes_cardio_metabolicas : [])])).map((item) => {
+                                const isSelected = Array.isArray(formData.condicoes_cardio_metabolicas) && formData.condicoes_cardio_metabolicas.includes(item);
+                                const isCustom = !CONDICOES_CARDIO_OPTIONS.includes(item);
+                                return (
+                                  <button
+                                    type="button"
+                                    key={item}
+                                    onClick={() => {
+                                      if (isSelected) {
+                                        removeCardioTag(item);
+                                      } else {
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          condicoes_cardio_metabolicas: [...(Array.isArray(prev.condicoes_cardio_metabolicas) ? prev.condicoes_cardio_metabolicas : []), item]
+                                        }));
+                                      }
+                                    }}
+                                    className={`px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                                      isSelected
+                                        ? isCustom
+                                          ? 'bg-rose-500 text-white border-rose-400 shadow-md shadow-rose-500/30 scale-105 font-extrabold'
+                                          : 'bg-red-600 text-white border-red-400 shadow-md shadow-red-500/30 scale-105'
+                                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                                    }`}
+                                  >
+                                    <span>{isSelected ? '✓ ' : '+ '} {item}</span>
+                                    {isSelected && (
+                                      <span
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          removeCardioTag(item);
+                                        }}
+                                        className="ml-1 text-[11px] hover:text-white font-extrabold opacity-80 hover:opacity-100 px-1"
+                                        title="Remover tag"
+                                      >
+                                        ✕
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Inline custom tag adder */}
+                            <div className="mt-2 flex gap-2">
+                              <input
+                                type="text"
+                                value={customCardioInput}
+                                onChange={(e) => setCustomCardioInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    addCustomCardio();
+                                  }
+                                }}
+                                placeholder="Outra condição cardiovascular/metabólica (ex: Asma grave, Marcapasso)..."
+                                className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-rose-400 focus:outline-none flex-1"
+                              />
+                              <button
+                                type="button"
+                                onClick={addCustomCardio}
+                                className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs cursor-pointer shadow-md transition-all shrink-0 flex items-center gap-1"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Adicionar Tag</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Cirurgias Recentes & Atestado Médico */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <div>
+                              <label className="block font-semibold text-purple-300 mb-1">Cirurgias Recentes / Pós-Reabilitação</label>
+                              <input
+                                type="text"
+                                value={formData.cirurgias_reabilitacao}
+                                onChange={(e) => setFormData({ ...formData, cirurgias_reabilitacao: e.target.value })}
+                                placeholder="Ex: LCA joelho esquerdo (6 meses), Cesárea..."
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Atestado Médico / Liberação</label>
+                              <div className="flex flex-wrap gap-1.5 pt-1">
+                                {[
+                                  { val: 'Liberado Total', label: '🟢 Liberado Total', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' },
+                                  { val: 'Liberado com Restrições', label: '🟡 c/ Restrições', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40' },
+                                  { val: 'Pendente', label: '🔴 Pendente', bg: 'bg-rose-500/20 text-rose-300 border-rose-500/40' }
+                                ].map((opt) => (
+                                  <button
+                                    type="button"
+                                    key={opt.val}
+                                    onClick={() => setFormData({ ...formData, status_atestado: opt.val })}
+                                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all border cursor-pointer ${
+                                      formData.status_atestado === opt.val
+                                        ? `${opt.bg} shadow-md scale-105`
+                                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                    }`}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                ))}
+                                <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700 font-bold text-[10px]">
+                                  {formData.atested_file_base64 ? '✓ Anexado' : 'Upload'}
+                                  <input type="file" accept="image/*,.pdf" onChange={handleAtestadoUpload} className="hidden" />
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 2. Informações Úteis para Montagem de Treino */}
+                        <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+                          <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-xs uppercase tracking-wider">
+                            <Activity className="w-4 h-4 text-cyan-400 shrink-0" />
+                            <span>2. Contexto Fisiológico & Prescrição Técnica</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Medicamentos de Uso Contínuo</label>
+                              <input
+                                type="text"
+                                value={formData.medicamentos_uso_continuo}
+                                onChange={(e) => setFormData({ ...formData, medicamentos_uso_continuo: e.target.value })}
+                                placeholder="Ex: Betabloqueadores, Estatinas..."
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Recursos Ergogênicos / Terapias</label>
+                              <input
+                                type="text"
+                                value={formData.recursos_ergogenicos}
+                                onChange={(e) => setFormData({ ...formData, recursos_ergogenicos: e.target.value })}
+                                placeholder="Ex: TRT, Estimulantes pré-treino..."
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder-slate-600"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Dor Crônica (EVA 0-10)</label>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min="0" max="10"
+                                value={formData.dor_cronica_nivel}
+                                onChange={(e) => setFormData({ ...formData, dor_cronica_nivel: e.target.value })}
+                                placeholder="0"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Região da Dor</label>
+                              <input
+                                type="text"
+                                value={formData.dor_cronica_regiao}
+                                onChange={(e) => setFormData({ ...formData, dor_cronica_regiao: e.target.value })}
+                                placeholder="Ex: Lombar, Ombro D"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Média Sono (hs/noite)</label>
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={formData.horas_sono_media}
+                                onChange={(e) => setFormData({ ...formData, horas_sono_media: e.target.value })}
+                                placeholder="Ex: 7.5h"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-slate-300 mb-1">Nível Estresse (1-5)</label>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min="1" max="5"
+                                value={formData.qualidade_sono_estresse}
+                                onChange={(e) => setFormData({ ...formData, qualidade_sono_estresse: e.target.value })}
+                                placeholder="1 a 5"
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 3. Contato de Emergência (Indispensável) */}
+                        <div className="p-3.5 rounded-2xl bg-amber-950/20 border border-amber-500/40 space-y-3 shadow-md shadow-amber-500/5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-amber-400 font-extrabold text-xs uppercase tracking-wider">
+                              <Heart className="w-4 h-4 text-amber-400 shrink-0 fill-amber-400/20" />
+                              <span>3. Contato de Emergência (Indispensável)</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-300/80 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                              ⚡ Destaque no Perfil & Tabela
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block font-bold text-amber-200 mb-1 text-xs">Nome do Contato</label>
+                              <input
+                                type="text"
+                                value={formData.contato_emergencia_nome}
+                                onChange={(e) => setFormData({ ...formData, contato_emergencia_nome: e.target.value })}
+                                placeholder="Ex: Maria Vilela"
+                                className="w-full bg-slate-900 border border-amber-500/30 focus:border-amber-400 rounded-xl px-3 py-2 text-white placeholder-slate-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold text-amber-200 mb-1 text-xs">Parentesco</label>
+                              <input
+                                type="text"
+                                value={formData.contato_emergencia_parentesco}
+                                onChange={(e) => setFormData({ ...formData, contato_emergencia_parentesco: e.target.value })}
+                                placeholder="Ex: Mãe, Esposa"
+                                className="w-full bg-slate-900 border border-amber-500/30 focus:border-amber-400 rounded-xl px-3 py-2 text-white placeholder-slate-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold text-amber-200 mb-1 text-xs">Telefone / WhatsApp</label>
+                              <input
+                                type="tel"
+                                inputMode="tel"
+                                value={formData.contato_emergencia_telefone}
+                                onChange={(e) => setFormData({ ...formData, contato_emergencia_telefone: e.target.value })}
+                                placeholder="(11) 99999-9999"
+                                className="w-full bg-slate-900 border border-amber-500/30 focus:border-amber-400 rounded-xl px-3 py-2 text-white placeholder-slate-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 4. Periodização & Metodologia de Treino (Pills Selectors) */}
+                        <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+                          <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
+                            <Dumbbell className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>4. Periodização & Metodologia de Treino</span>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Fase do Shape</label>
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {FASE_OPTIONS.map((f) => (
+                                <button
+                                  type="button"
+                                  key={f}
+                                  onClick={() => setFormData({ ...formData, fase_shape: f })}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                    formData.fase_shape === f
+                                      ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md scale-105'
+                                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                  }`}
+                                >
+                                  {f}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Nível de Treino</label>
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {NIVEL_OPTIONS.map((n) => (
+                                <button
+                                  type="button"
+                                  key={n}
+                                  onClick={() => setFormData({ ...formData, nivel_treino: n })}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                    formData.nivel_treino === n
+                                      ? 'bg-purple-500 text-white border-purple-400 shadow-md scale-105'
+                                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                  }`}
+                                >
+                                  {n}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Objetivo Principal</label>
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {OBJETIVO_OPTIONS.map((o) => (
+                                <button
+                                  type="button"
+                                  key={o}
+                                  onClick={() => setFormData({ ...formData, objetivo_principal: o, goal: o })}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                    formData.objetivo_principal === o
+                                      ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md scale-105'
+                                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                  }`}
+                                >
+                                  {o}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Frequência Semanal</label>
+                            <input
+                              type="text"
+                              value={formData.frequencia_semanal}
+                              onChange={(e) => setFormData({ ...formData, frequencia_semanal: e.target.value, training_days: e.target.value })}
+                              placeholder="Ex: 5x por semana"
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Pontos Fracos do Shape (Multi-seleção)</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 p-3 bg-slate-950 rounded-xl border border-slate-800 max-h-36 overflow-y-auto">
+                              {PONTOS_FRACOS_OPTIONS.map((pf) => {
+                                const isSelected = Array.isArray(formData.pontos_fracos) && formData.pontos_fracos.includes(pf);
+                                return (
+                                  <label key={pf} className={`flex items-center gap-1.5 text-[11px] p-1.5 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40' : 'text-slate-400 hover:text-white'}`}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        const currentArr = Array.isArray(formData.pontos_fracos) ? [...formData.pontos_fracos] : [];
+                                        if (e.target.checked) {
+                                          setFormData({ ...formData, pontos_fracos: [...currentArr, pf] });
+                                        } else {
+                                          setFormData({ ...formData, pontos_fracos: currentArr.filter((item) => item !== pf) });
+                                        }
+                                      }}
+                                      className="w-3.5 h-3.5 rounded text-emerald-500 bg-slate-950 border-slate-700"
+                                    />
+                                    <span>{pf}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PASSO 3: AFERIÇÃO CORPORAL INICIAL (OPCIONAL & RECOLHIDO POR PADRÃO) */}
+                    {wizardStep === 3 && (
+                      <div className="space-y-4">
+                        <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-xs uppercase tracking-wider">
+                              <Activity className="w-4 h-4 text-cyan-400 shrink-0" />
+                              <span>Avaliação Física Inicial (Fita Métrica)</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-1">
+                              Deseja realizar a avaliação física completa agora? Atalho: Pressione Enter nos campos para navegar automaticamente!
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowEvalAccordion(!showEvalAccordion)}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
+                              showEvalAccordion
+                                ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md'
+                                : 'bg-slate-800 text-cyan-300 border-cyan-500/40 hover:bg-cyan-950/40'
+                            }`}
+                          >
+                            <span>{showEvalAccordion ? '▲ Recolher Avaliação' : '▼ Preencher Avaliação Agora'}</span>
+                          </button>
+                        </div>
+
+                        {/* Sincronização de Peso com Etapa 1 */}
+                        <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Scale className="w-4 h-4 text-emerald-400" />
+                            <span className="text-xs text-slate-300 font-semibold">Peso Inicial do Perfil:</span>
+                            <span className="text-sm font-black text-emerald-400">{formData.current_weight ? `${formData.current_weight} kg` : 'Não informado'}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-mono">⚡ Sincronizado automaticamente</span>
+                        </div>
+
+                        {!showEvalAccordion ? (
+                          <div className="p-6 rounded-2xl border border-slate-800/80 bg-slate-900/40 text-center space-y-2">
+                            <Scale className="w-8 h-8 text-slate-600 mx-auto" />
+                            <p className="text-xs text-slate-300 font-bold">Avaliação física recolhida por padrão.</p>
+                            <p className="text-[10px] text-slate-500">
+                              Clique no botão acima para expandir os campos da fita métrica ou realize a avaliação a qualquer momento na ficha do aluno.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 pt-2 border-t border-slate-800">
+                            {/* Split Screen Anatomical Body Diagram on Desktop */}
+                            <div className="hidden md:block md:col-span-4 p-4 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-3 shrink-0">
+                              <span className="text-xs font-bold text-cyan-400 block uppercase tracking-wider">Silhueta Anatômica</span>
+                              <div className="w-full h-56 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col items-center justify-center p-4 text-slate-600 space-y-2">
+                                <User className="w-24 h-24 text-cyan-500/40 animate-pulse" />
+                                <span className="text-[10px] text-cyan-300/80 font-mono font-bold uppercase">Painel de Referência Padrão ISAK</span>
+                              </div>
+                              <p className="text-[10px] text-slate-500 italic">
+                                Tecla Enter pula automaticamente para a próxima medida.
+                              </p>
+                            </div>
+
+                            {/* Measurement Input Fields Column */}
+                            <div className="md:col-span-8 space-y-4">
+                              {/* Datas & Dados Principais */}
+                              <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                  <label className="block font-semibold text-slate-300 mb-1">Data da Avaliação *</label>
+                                  <input
+                                    type="date"
+                                    value={formData.initial_evaluation?.data_registro || new Date().toISOString().split('T')[0]}
+                                    onChange={(e) => setFormData({
+                                      ...formData,
+                                      initial_evaluation: { ...formData.initial_evaluation, data_registro: e.target.value }
+                                    })}
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block font-semibold text-slate-300 mb-1">Peso (kg)</label>
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.1"
+                                    onKeyDown={handleMeasurementKeyDown}
+                                    placeholder="84.5"
+                                    value={formData.initial_evaluation?.peso || formData.current_weight || ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setFormData({
+                                        ...formData,
+                                        current_weight: val,
+                                        initial_evaluation: { ...formData.initial_evaluation, peso: val }
+                                      });
+                                    }}
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500 font-bold text-emerald-400 text-xs"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block font-semibold text-slate-300 mb-1">BF (% Gordura)</label>
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.1"
+                                    onKeyDown={handleMeasurementKeyDown}
+                                    placeholder="13.0"
+                                    value={formData.initial_evaluation?.bf_percentual || ''}
+                                    onChange={(e) => setFormData({
+                                      ...formData,
+                                      initial_evaluation: { ...formData.initial_evaluation, bf_percentual: e.target.value }
+                                    })}
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-cyan-500 text-xs"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Tronco & Proporção */}
+                              <div className="space-y-2 pt-2 border-t border-slate-800">
+                                <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+                                  <Dumbbell className="w-3.5 h-3.5 text-cyan-400" />
+                                  Tronco & Proporção
+                                </h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Pescoço (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="40.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.pescoco || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, pescoco: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Ombros (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="125.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.ombro || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, ombro: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Peitoral (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="110.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.peitoral_torax || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, peitoral_torax: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Dorsal Largura (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="118.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.dorsal_largura || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, dorsal_largura: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Dorsal Espessura (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="42.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.dorsal_espessura || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, dorsal_espessura: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Cintura (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="82.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.cintura || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, cintura: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Abdômen (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="85.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.abdomen || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, abdomen: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Quadril (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="100.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.quadril || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, quadril: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Braços & Antebraços */}
+                              <div className="space-y-2 pt-2 border-t border-slate-800">
+                                <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+                                  <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                                  Braços & Antebraços (Relaxados vs. Contraídos)
+                                </h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Braço D. Relaxado (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="38.5" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.braco_direito || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_direito: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-cyan-400 font-bold mb-1">Braço D. Contraído (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="41.5" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.braco_direito_contraido || formData.initial_evaluation?.braco_contraido || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_direito_contraido: e.target.value, braco_contraido: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-cyan-500/40 rounded-xl px-2.5 py-1.5 text-white font-bold text-cyan-300"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Braço E. Relaxado (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="38.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.braco_esquerdo || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_esquerdo: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-cyan-400 font-bold mb-1">Braço E. Contraído (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="41.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.braco_esquerdo_contraido || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, braco_esquerdo_contraido: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-cyan-500/40 rounded-xl px-2.5 py-1.5 text-white font-bold text-cyan-300"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2.5 text-xs pt-1">
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Antebraço D (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="32.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.antebraco_direito || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, antebraco_direito: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Antebraço E (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="32.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.antebraco_esquerdo || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, antebraco_esquerdo: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Pernas & Glúteos */}
+                              <div className="space-y-2 pt-2 border-t border-slate-800">
+                                <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+                                  <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
+                                  Pernas & Glúteos (Coxa Medial / Padrão ISAK)
+                                </h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-xs">
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Coxa Medial D (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="60.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.coxa_direita || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, coxa_direita: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Coxa Medial E (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="60.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.coxa_esquerda || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, coxa_esquerda: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Glúteo (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="102.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.gluteo || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, gluteo: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Panturrilha D (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="39.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.panturrilha_direita || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, panturrilha_direita: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] text-slate-400 mb-1">Panturrilha E (cm)</label>
+                                    <input
+                                      type="number" inputMode="decimal" step="0.1" placeholder="39.0" onKeyDown={handleMeasurementKeyDown}
+                                      value={formData.initial_evaluation?.panturrilha_esquerda || ''}
+                                      onChange={(e) => setFormData({ ...formData, initial_evaluation: { ...formData.initial_evaluation, panturrilha_esquerda: e.target.value } })}
+                                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-white"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* PASSO 4: METAS CORPORAIS & CONTEXTO TEMPORAL */}
+                    {wizardStep === 4 && (
+                      <div className="space-y-4">
+                        <div className="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
+                          <label className="block font-bold text-emerald-400 text-xs uppercase tracking-wide">
+                            ⏱️ Prazo / Data Alvo da Meta (Contexto Temporal)
+                          </label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {['30 dias (1 mês)', '60 dias (2 meses)', '90 dias (3 meses)', '180 dias (6 meses)', '1 ano (12 meses)'].map((p) => (
+                              <button
+                                type="button"
+                                key={p}
+                                onClick={() => setFormData({ ...formData, prazo_meta: p })}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                  formData.prazo_meta === p
+                                    ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md scale-105'
+                                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Peso Meta (kg)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.peso_meta} onChange={(e) => setFormData({ ...formData, peso_meta: e.target.value })} placeholder="90.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">BF Meta (%)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.bf_meta} onChange={(e) => setFormData({ ...formData, bf_meta: e.target.value })} placeholder="10.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Braço Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.braco_meta} onChange={(e) => setFormData({ ...formData, braco_meta: e.target.value })} placeholder="43.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Ombro Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.ombro_meta} onChange={(e) => setFormData({ ...formData, ombro_meta: e.target.value })} placeholder="130.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Peitoral Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.peitoral_meta} onChange={(e) => setFormData({ ...formData, peitoral_meta: e.target.value })} placeholder="115.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Cintura Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.cintura_meta} onChange={(e) => setFormData({ ...formData, cintura_meta: e.target.value })} placeholder="80.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Coxa Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.coxa_meta} onChange={(e) => setFormData({ ...formData, coxa_meta: e.target.value })} placeholder="65.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Glúteo Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.gluteo_meta} onChange={(e) => setFormData({ ...formData, gluteo_meta: e.target.value })} placeholder="105.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-slate-300 mb-1">Panturrilha Meta (cm)</label>
+                            <input type="number" inputMode="decimal" step="0.1" value={formData.panturrilha_meta} onChange={(e) => setFormData({ ...formData, panturrilha_meta: e.target.value })} placeholder="42.0" className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-slate-300 mb-1">Observações do Treinador</label>
+                          <textarea
+                            rows="2"
+                            value={formData.observacoes_treinador}
+                            onChange={(e) => setFormData({ ...formData, observacoes_treinador: e.target.value })}
+                            placeholder="Observações técnicas, estilo de treino ou foco específico."
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                          ></textarea>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PASSO 5: PRIMEIRA COBRANÇA (OPCIONAL) */}
+                    {wizardStep === 5 && (
+                      <div className="space-y-4">
+                        <label className="flex items-center gap-3 p-3.5 bg-slate-900 rounded-xl border border-slate-800 cursor-pointer hover:bg-slate-800/80 transition-all">
+                          <input
+                            type="checkbox"
+                            checked={formData.create_first_billing}
+                            onChange={(e) => setFormData({ ...formData, create_first_billing: e.target.checked })}
+                            className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
+                          />
+                          <div>
+                            <span className="font-bold text-white block text-xs">☐ Criar primeira cobrança para este aluno</span>
+                            <span className="text-[10px] text-slate-400 block">
+                              Se desmarcado, o aluno será cadastrado sem cobrança (exibindo o alerta 🔴 Sem cobrança).
+                            </span>
+                          </div>
+                        </label>
+
+                        {formData.create_first_billing && (
+                          <div className="space-y-4 pt-2 border-t border-slate-800">
+                            {!formData.whatsapp && (
+                              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2 font-bold">
+                                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                                <span>O número de WhatsApp (Etapa 1) é OBRIGATÓRIO quando a primeira cobrança está ativada.</span>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block font-semibold text-slate-300 mb-1">Valor da Mensalidade (R$) *</label>
+                                <input
+                                  type="number"
+                                  inputMode="decimal"
+                                  step="0.01"
+                                  required={formData.create_first_billing}
+                                  value={formData.billing_amount}
+                                  onChange={(e) => setFormData({ ...formData, billing_amount: e.target.value })}
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-emerald-400 font-bold focus:border-emerald-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block font-semibold text-slate-300 mb-1">1º Vencimento *</label>
+                                <input
+                                  type="date"
+                                  required={formData.create_first_billing}
+                                  value={formData.billing_due_date}
+                                  onChange={(e) => setFormData({ ...formData, billing_due_date: e.target.value })}
+                                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block font-semibold text-slate-300 mb-1">Dia Vencimento Recorrente Padrão</label>
+                              <div className="flex flex-wrap gap-1.5">
+                                {[1, 5, 10, 15, 20, 25, 30].map((day) => (
+                                  <button
+                                    type="button"
+                                    key={day}
+                                    onClick={() => setFormData({ ...formData, dia_vencimento_recorrente: day })}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                      (formData.dia_vencimento_recorrente || 5) === day
+                                        ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md scale-105'
+                                        : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                    }`}
+                                  >
+                                    Dia {String(day).padStart(2, '0')}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.is_recurring}
+                                  onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
+                                  className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
+                                />
+                                <div>
+                                  <span className="font-bold text-white block text-xs">Cobrança recorrente (12 Meses)</span>
+                                  <span className="text-[10px] text-slate-400 block">
+                                    Criar mensalidades automaticamente a cada mês por 12 meses.
+                                  </span>
+                                </div>
+                              </label>
+                            </div>
+
+                            <div className="p-3 bg-emerald-950/20 rounded-xl border border-emerald-500/30">
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.send_whatsapp_now || false}
+                                  onChange={(e) => setFormData({ ...formData, send_whatsapp_now: e.target.checked })}
+                                  className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 bg-slate-950 border-slate-700"
+                                />
+                                <div>
+                                  <span className="font-bold text-emerald-400 block text-xs flex items-center gap-1">
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                    Disparar cobrança/chave Pix imediatamente via WhatsApp ao concluir
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 block">
+                                    Abre o WhatsApp com a mensagem pronta de cobrança assim que você clicar em "Salvar e Concluir".
+                                  </span>
+                                </div>
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </form>
+            </div>
+
+            {/* STICKY BOTTOM ACTION BAR (Apple iOS Glass Sheet Footer with 48px Touch Targets) */}
+            <div className="sticky bottom-0 z-20 bg-slate-950/90 backdrop-blur-xl p-4 sm:p-5 border-t border-white/10 flex justify-between items-center gap-3 shrink-0 rounded-b-none sm:rounded-b-3xl">
+              {wizardMode === 'full' && wizardStep > 1 ? (
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800"
+                  onClick={() => setWizardStep((s) => s - 1)}
+                  className="px-4 py-3 rounded-2xl font-bold text-slate-300 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 flex items-center gap-1.5 cursor-pointer transition-all text-xs min-h-[48px]"
                 >
-                  Cancelar
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Anterior</span>
                 </button>
+              ) : (
+                <div></div>
+              )}
+
+              <div className="flex items-center gap-2">
+                {wizardMode === 'full' && wizardStep < 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setWizardStep((s) => s + 1)}
+                    className="px-5 py-3 rounded-2xl font-extrabold text-slate-950 bg-emerald-400 hover:bg-emerald-300 flex items-center gap-1.5 shadow-lg shadow-emerald-400/20 cursor-pointer transition-all text-xs min-h-[48px]"
+                  >
+                    <span>Próximo</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
+
                 <button
-                  type="submit"
-                  disabled={creating}
-                  className="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-emerald-500 hover:bg-emerald-400"
+                  type="button"
+                  onClick={handleSubmitWizard}
+                  disabled={submitting}
+                  className={`px-6 py-3 rounded-2xl font-black transition-all cursor-pointer text-xs flex items-center gap-2 min-h-[48px] ${
+                    wizardMode === 'fast'
+                      ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-xl shadow-emerald-500/30 text-sm'
+                      : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20'
+                  }`}
                 >
-                  {creating ? 'Cadastrando...' : 'Cadastrar Aluno'}
+                  {wizardMode === 'fast' ? <Zap className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <span>
+                    {submitting 
+                      ? 'Salvando...' 
+                      : wizardMode === 'fast' 
+                      ? '⚡ Concluir Cadastro em 15s' 
+                      : editingStudentId 
+                      ? 'Salvar Alterações (Ctrl+S)' 
+                      : 'Salvar e Concluir (Ctrl+S)'}
+                  </span>
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
