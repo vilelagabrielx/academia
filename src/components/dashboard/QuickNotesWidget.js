@@ -5,6 +5,7 @@ import {
   Pin, Plus, Trash2, Edit3, Search, Filter, Sparkles, User, 
   CreditCard, DollarSign, StickyNote, Check, X, Palette
 } from 'lucide-react';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 const DEFAULT_COLOR_PALETTE = [
   { name: 'Esmeralda', hex: '#10B981' },
@@ -233,7 +234,7 @@ export default function QuickNotesWidget({ students = [], billings = [], expense
 
       {/* Notes Grid */}
       {loading ? (
-        <div className="py-12 text-center text-slate-500 text-xs font-semibold">Carregando cartões de anotações...</div>
+        <LoadingSpinner text="Carregando anotações..." size="md" className="py-8" />
       ) : filteredNotes.length === 0 ? (
         <div className="py-12 text-center glass-panel rounded-3xl border border-slate-800 p-8 space-y-3">
           <StickyNote className="w-10 h-10 text-slate-600 mx-auto" />

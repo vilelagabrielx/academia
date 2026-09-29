@@ -6,6 +6,7 @@ import {
   CreditCard, DollarSign, Sparkles, Check, X, RefreshCw, ChevronDown,
   Calendar, Clock, Tag
 } from 'lucide-react';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 const CATEGORIES = [
   { id: 'all', name: 'Todas', color: '#10B981', icon: StickyNote },
@@ -337,10 +338,7 @@ export default function NotesTimelinePage() {
 
       {/* Notes Stream / Grid */}
       {loading ? (
-        <div className="py-20 flex flex-col items-center justify-center gap-3">
-          <RefreshCw className="w-8 h-8 text-emerald-400 animate-spin" />
-          <p className="text-xs text-slate-400 font-medium">Carregando linha do tempo de anotações...</p>
-        </div>
+        <LoadingSpinner text="Carregando linha do tempo de anotações..." size="md" className="py-16" />
       ) : notes.length === 0 ? (
         <div className="py-20 text-center bg-[#141416]/60 rounded-3xl border border-white/5 p-8">
           <StickyNote className="w-12 h-12 text-slate-600 mx-auto mb-3" />
@@ -489,10 +487,7 @@ export default function NotesTimelinePage() {
       {/* Infinite Scroll Sentinel / Load More Status */}
       <div ref={observerTarget} className="py-6 text-center">
         {loadingMore && (
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-emerald-400 font-semibold">
-            <RefreshCw className="w-4 h-4 animate-spin" />
-            <span>Carregando mais 20 anotações...</span>
-          </div>
+          <LoadingSpinner text="Carregando mais 20 anotações..." size="sm" className="py-2" />
         )}
         {!hasMore && notes.length > 0 && !loading && (
           <p className="text-xs text-slate-500 font-medium">✨ Todas as anotações foram carregadas ({notes.length})</p>
