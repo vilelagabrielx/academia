@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const CreateBillingModal = dynamic(() => import('@/components/modals/CreateBillingModal'), { ssr: false });
+const CreateExpenseModal = dynamic(() => import('@/components/modals/CreateExpenseModal'), { ssr: false });
+const WaModal = dynamic(() => import('@/components/modals/WaModal'), { ssr: false });
+const PaidBillingModal = dynamic(() => import('@/components/modals/PaidBillingModal'), { ssr: false });
+const CancelBillingModal = dynamic(() => import('@/components/modals/CancelBillingModal'), { ssr: false });
+const PayExpenseModal = dynamic(() => import('@/components/modals/PayExpenseModal'), { ssr: false });
+
 import { 
   CreditCard, Plus, CheckCircle2, AlertCircle, Clock, MessageCircle, FileText, Download, Eye, 
   Trash2, Search, DollarSign, Send, Filter, Printer, BellRing, Upload, Calendar, Check, Repeat, 
@@ -1094,276 +1103,80 @@ export default function FinancialPage() {
         </div>
       )}
 
-      {/* MODAL CADASTRAR COBRANÇA ALUNO */}
-      {showCreateBillingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
-          <div className="glass-panel w-full max-w-lg rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-extrabold text-white">Criar Nova Cobrança de Aluno</h3>
-              <button onClick={() => setShowCreateBillingModal(false)} className="text-slate-400">✕</button>
-            </div>
-            <form onSubmit={handleCreateBillingSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Aluno *</label>
-                <select
-                  required
-                  value={newBilling.user_id}
-                  onChange={(e) => setNewBilling({ ...newBilling, user_id: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                >
-                  <option value="">Selecione o aluno...</option>
-                  {students.map((s) => (
-                    <option key={s.id} value={s.id}>{s.first_name ? `${s.first_name} ${s.last_name || ''}` : s.username}</option>
-                  ))}
-                </select>
-              </div>
+      {/* MODAIS CARREGADOS ON DEMAND (DYNAMIC IMPORTS) */}
+      <CreateBillingModal
+        isOpen={showCreateBillingModal}
+        onClose={() => setShowCreateBillingModal(false)}
+        newBilling={newBilling}
+        setNewBilling={setNewBilling}
+        students={students}
+        handleCreateBillingSubmit={handleCreateBillingSubmit}
+        creatingBilling={creatingBilling}
+      />
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Valor (R$) *</label>
-                  <input type="number" step="0.01" required value={newBilling.amount} onChange={(e) => setNewBilling({ ...newBilling, amount: e.target.value })} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-emerald-400 font-bold" />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Vencimento *</label>
-                  <input type="date" required value={newBilling.due_date} onChange={(e) => setNewBilling({ ...newBilling, due_date: e.target.value })} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
-                </div>
-              </div>
+      <CreateExpenseModal
+        isOpen={showCreateExpenseModal}
+        onClose={() => setShowCreateExpenseModal(false)}
+        newExpense={newExpense}
+        setNewExpense={setNewExpense}
+        expenseCategories={EXPENSE_CATEGORIES}
+        paymentMethods={PAYMENT_METHODS}
+        handleCreateExpenseSubmit={handleCreateExpenseSubmit}
+        creatingExpense={creatingExpense}
+      />
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                <button type="button" onClick={() => setShowCreateBillingModal(false)} className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800">Cancelar</button>
-                <button type="submit" disabled={creatingBilling} className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-emerald-500">Salvar Cobrança</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <PaidBillingModal
+        isOpen={showPaidBillingModal}
+        onClose={() => setShowPaidBillingModal(false)}
+        selectedPaidBilling={selectedPaidBilling}
+        paidBillingNotes={paidBillingNotes}
+        setPaidBillingNotes={setPaidBillingNotes}
+        paidBillingProofFilename={paidBillingProofFilename}
+        setPaidBillingProofFilename={setPaidBillingProofFilename}
+        setPaidBillingProofBase64={setPaidBillingProofBase64}
+        handlePaidBillingSubmit={handlePaidBillingSubmit}
+        savingPaidBilling={savingPaidBilling}
+      />
 
-      {/* MODAL CADASTRAR DESPESA */}
-      {showCreateExpenseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
-          <div className="glass-panel w-full max-w-lg rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-extrabold text-white">Cadastrar Nova Despesa (Saída)</h3>
-              <button onClick={() => setShowCreateExpenseModal(false)} className="text-slate-400">✕</button>
-            </div>
-            <form onSubmit={handleCreateExpenseSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Descrição *</label>
-                <input type="text" required value={newExpense.description} onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })} placeholder="Ex: Aluguel, Conta de Luz..." className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-bold" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Valor (R$) *</label>
-                  <input type="number" step="0.01" required value={newExpense.amount} onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-rose-400 font-bold" />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Vencimento *</label>
-                  <input type="date" required value={newExpense.due_date} onChange={(e) => setNewExpense({ ...newExpense, due_date: e.target.value })} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white" />
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                <button type="button" onClick={() => setShowCreateExpenseModal(false)} className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800">Cancelar</button>
-                <button type="submit" disabled={creatingExpense} className="px-5 py-2 rounded-xl font-bold text-slate-950 bg-rose-500">Salvar Despesa</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      {/* MODAL DAR BAIXA EM MENSALIDADE DO ALUNO */}
-      {showPaidBillingModal && selectedPaidBilling && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
-          <div className="glass-panel w-full max-w-md rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                <span>Confirmar Baixa de Mensalidade</span>
-              </h3>
-              <button onClick={() => setShowPaidBillingModal(false)} className="text-slate-400 hover:text-white">✕</button>
-            </div>
-            
-            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 block font-semibold">Aluno:</span>
-              <span className="text-sm font-bold text-white block">
-                {selectedPaidBilling.first_name ? `${selectedPaidBilling.first_name} ${selectedPaidBilling.last_name || ''}` : selectedPaidBilling.username}
-              </span>
-              <div className="flex justify-between items-center pt-1 border-t border-slate-800 text-xs">
-                <span className="text-slate-400">Valor a Dar Baixa:</span>
-                <span className="font-extrabold text-emerald-400 text-sm">R$ {parseFloat(selectedPaidBilling.amount).toFixed(2)}</span>
-              </div>
-            </div>
+      <CancelBillingModal
+        isOpen={showCancelBillingModal}
+        onClose={() => setShowCancelBillingModal(false)}
+        selectedCancelBilling={selectedCancelBilling}
+        cancelBillingReason={cancelBillingReason}
+        setCancelBillingReason={setCancelBillingReason}
+        handleCancelBillingSubmit={handleCancelBillingSubmit}
+        cancellingBilling={cancellingBilling}
+      />
 
-            <form onSubmit={handlePaidBillingSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Comprovante de Pagamento (Opcional)</label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={(e) => handleFileUpload(e, setPaidBillingProofBase64, setPaidBillingProofFilename)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 text-xs file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-emerald-400 hover:file:bg-slate-700"
-                  />
-                </div>
-                {paidBillingProofFilename && (
-                  <span className="text-[10px] text-emerald-400 block mt-1">✓ Anexado: {paidBillingProofFilename}</span>
-                )}
-              </div>
+      <WaModal
+        isOpen={showWaModal}
+        onClose={() => setShowWaModal(false)}
+        selectedWaBilling={selectedWaBilling}
+        waMessage={waMessage}
+        setWaMessage={setWaMessage}
+        onOpenWhatsApp={async (b) => {
+          setShowWaModal(false);
+          if (b?.id) {
+            try {
+              await fetch(`/api/billings/${b.id}/charge`, { method: 'POST' });
+              loadData();
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        }}
+      />
 
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Observações / Anotações (Opcional)</label>
-                <textarea
-                  rows={2}
-                  value={paidBillingNotes}
-                  onChange={(e) => setPaidBillingNotes(e.target.value)}
-                  placeholder="Ex: Recebido em dinheiro na recepção..."
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-white"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowPaidBillingModal(false)}
-                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 font-bold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingPaidBilling}
-                  className="px-5 py-2 rounded-xl font-black text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-all flex items-center gap-1.5 shadow-md"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{savingPaidBilling ? 'Confirmando...' : 'Confirmar Pagamento'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL WHATSAPP / NOTIFICAÇÃO DE COBRANÇA */}
-      {showWaModal && selectedWaBilling && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
-          <div className="glass-panel w-full max-w-md rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-emerald-400" />
-                <span>Enviar Lembrete por WhatsApp</span>
-              </h3>
-              <button onClick={() => setShowWaModal(false)} className="text-slate-400 hover:text-white">✕</button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                <span className="text-slate-400 font-semibold block">Aluno:</span>
-                <span className="font-bold text-white text-sm">
-                  {selectedWaBilling.first_name ? `${selectedWaBilling.first_name} ${selectedWaBilling.last_name || ''}` : selectedWaBilling.username}
-                </span>
-                <span className="text-emerald-400 font-mono text-xs block mt-0.5">
-                  📱 WhatsApp: {selectedWaBilling.whatsapp || 'Não informado no cadastro'}
-                </span>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Mensagem a enviar:</label>
-                <textarea
-                  rows={4}
-                  value={waMessage}
-                  onChange={(e) => setWaMessage(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-white focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowWaModal(false)}
-                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 font-bold"
-                >
-                  Cancelar
-                </button>
-                <a
-                  href={`https://wa.me/${String(selectedWaBilling?.whatsapp || '').replace(/\D/g, '').startsWith('55') ? String(selectedWaBilling?.whatsapp || '').replace(/\D/g, '') : `55${String(selectedWaBilling?.whatsapp || '').replace(/\D/g, '')}`}?text=${encodeURIComponent(waMessage)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={async () => {
-                    setShowWaModal(false);
-                    if (selectedWaBilling?.id) {
-                      try {
-                        await fetch(`/api/billings/${selectedWaBilling.id}/charge`, { method: 'POST' });
-                        loadData();
-                      } catch (e) {
-                        console.error('Erro ao registrar cobrança:', e);
-                      }
-                    }
-                  }}
-                  className="px-5 py-2 rounded-xl font-black text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Abrir no WhatsApp</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DAR BAIXA EM DESPESA (SAÍDA) */}
-      {showPayExpenseModal && selectedPayExpense && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
-          <div className="glass-panel w-full max-w-md rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-rose-400" />
-                <span>Confirmar Baixa de Despesa</span>
-              </h3>
-              <button onClick={() => setShowPayExpenseModal(false)} className="text-slate-400 hover:text-white">✕</button>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 block font-semibold">Despesa:</span>
-              <span className="text-sm font-bold text-white block">{selectedPayExpense.description}</span>
-              <div className="flex justify-between items-center pt-1 border-t border-slate-800 text-xs">
-                <span className="text-slate-400">Valor Pago:</span>
-                <span className="font-extrabold text-rose-400 text-sm">R$ {parseFloat(selectedPayExpense.amount).toFixed(2)}</span>
-              </div>
-            </div>
-
-            <form onSubmit={handlePayExpenseSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-300 mb-1">Comprovante de Pagamento (Opcional)</label>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={(e) => handleFileUpload(e, setPayExpenseProofBase64, setPayExpenseProofFilename)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 text-xs file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-rose-400 hover:file:bg-slate-700"
-                />
-                {payExpenseProofFilename && (
-                  <span className="text-[10px] text-rose-400 block mt-1">✓ Anexado: {payExpenseProofFilename}</span>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowPayExpenseModal(false)}
-                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 font-bold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={payingExpense}
-                  className="px-5 py-2 rounded-xl font-black text-slate-950 bg-rose-500 hover:bg-rose-400 transition-all flex items-center gap-1.5 shadow-md"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{payingExpense ? 'Confirmando...' : 'Confirmar Pagamento'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <PayExpenseModal
+        isOpen={showPayExpenseModal}
+        onClose={() => setShowPayExpenseModal(false)}
+        selectedPayExpense={selectedPayExpense}
+        payExpenseProofFilename={payExpenseProofFilename}
+        setPayExpenseProofFilename={setPayExpenseProofFilename}
+        setPayExpenseProofBase64={setPayExpenseProofBase64}
+        handlePayExpenseSubmit={handlePayExpenseSubmit}
+        payingExpense={payingExpense}
+      />
 
       {/* MODAL FICHA / PERFIL RÁPIDO DO ALUNO */}
       {viewingStudent && (
