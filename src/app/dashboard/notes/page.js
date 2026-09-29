@@ -340,20 +340,32 @@ export default function NotesTimelinePage() {
       {loading ? (
         <LoadingSpinner text="Carregando linha do tempo de anotações..." size="md" className="py-16" />
       ) : notes.length === 0 ? (
-        <div className="py-20 text-center bg-[#141416]/60 rounded-3xl border border-white/5 p-8">
-          <StickyNote className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-slate-300">Nenhuma anotação encontrada</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-            {searchQuery || selectedCategory !== 'all'
-              ? 'Tente ajustar seus filtros de busca ou categoria.'
-              : 'Comece criando sua primeira anotação no botão acima!'}
-          </p>
-          {(searchQuery || selectedCategory !== 'all') && (
+        <div className="py-20 text-center bg-[#141416]/60 rounded-3xl border border-white/5 p-8 flex flex-col items-center justify-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <StickyNote className="w-8 h-8" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white">Nenhuma anotação encontrada</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+              {searchQuery || selectedCategory !== 'all'
+                ? 'Nenhuma anotação corresponde aos seus filtros de busca.'
+                : 'Sua linha do tempo está vazia. Crie sua primeira anotação agora mesmo!'}
+            </p>
+          </div>
+          {searchQuery || selectedCategory !== 'all' ? (
             <button
               onClick={() => { setSelectedCategory('all'); setSearchQuery(''); }}
-              className="mt-4 px-4 py-2 bg-white/10 text-xs text-slate-300 rounded-xl hover:bg-white/20 transition-all"
+              className="px-4 py-2 bg-white/10 text-xs font-semibold text-slate-300 rounded-xl hover:bg-white/20 transition-all cursor-pointer"
             >
               Limpar Filtros
+            </button>
+          ) : (
+            <button
+              onClick={handleOpenCreateModal}
+              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/25 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Criar Primeira Anotação</span>
             </button>
           )}
         </div>

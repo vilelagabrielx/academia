@@ -236,14 +236,15 @@ export default function QuickNotesWidget({ students = [], billings = [], expense
       {loading ? (
         <LoadingSpinner text="Carregando anotações..." size="md" className="py-8" />
       ) : filteredNotes.length === 0 ? (
-        <div className="py-12 text-center glass-panel rounded-3xl border border-slate-800 p-8 space-y-3">
+        <div className="py-12 text-center glass-panel rounded-3xl border border-slate-800 p-8 flex flex-col items-center justify-center space-y-3">
           <StickyNote className="w-10 h-10 text-slate-600 mx-auto" />
           <p className="text-slate-400 text-xs font-medium">Nenhuma anotação encontrada nesta categoria.</p>
           <button
             onClick={() => openNewModal('student')}
-            className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs"
+            className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 active:scale-95 transition-all inline-flex items-center gap-2 cursor-pointer"
           >
-            + Criar Primeira Anotação
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Criar Primeira Anotação</span>
           </button>
         </div>
       ) : (
