@@ -439,24 +439,29 @@ export default function NotesTimelinePage() {
 
                   {/* Prominent Student Photo Header (If Student Category) */}
                   {note.student_id && (note.first_name || note.username) && (
-                    <div className="flex items-center gap-3 p-2.5 mb-3 rounded-xl bg-white/5 border border-white/5">
+                    <div className="flex items-center gap-3.5 p-3 mb-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900/80 to-slate-900 border border-emerald-500/30 shadow-lg">
                       {note.photo_base64 ? (
                         <img
                           src={note.photo_base64}
                           alt={note.first_name || note.username}
-                          className="w-10 h-10 rounded-full object-cover border border-emerald-500/40 shadow-sm"
+                          className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-400 shadow-md shadow-emerald-500/20 shrink-0"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 font-extrabold text-xl shrink-0">
                           {(note.first_name || note.username || 'A')[0].toUpperCase()}
                         </div>
                       )}
-                      <div className="overflow-hidden">
-                        <span className="text-xs font-bold text-white block truncate">
-                          {note.first_name ? `${note.first_name} ${note.last_name || ''}` : note.username}
+                      <div className="overflow-hidden space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-black text-white truncate">
+                            {note.first_name ? `${note.first_name} ${note.last_name || ''}` : note.username}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-emerald-400 font-bold tracking-wider uppercase block">
+                          📸 Aluno Vinculado
                         </span>
                         {note.whatsapp && (
-                          <span className="text-[10px] text-emerald-400 font-mono block">
+                          <span className="text-[10px] text-slate-400 font-mono block">
                             WhatsApp: {note.whatsapp}
                           </span>
                         )}
@@ -558,20 +563,89 @@ export default function NotesTimelinePage() {
 
               {/* Dynamic Sub-select based on category */}
               {formData.category === 'student' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Selecione o Aluno</label>
+                <div className="space-y-3">
+                  <label className="block text-xs font-semibold text-slate-400">Selecione o Aluno (Clique na Foto)</label>
+                  
+                  {/* Visual Photo Selector Strip */}
+                  <div className="flex items-center gap-2.5 overflow-x-auto pb-2 no-scrollbar">
+                    {students.map((s) => {
+                      const isSelected = String(s.id) === String(formData.student_id);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, student_id: isSelected ? '' : String(s.id) })}
+                          className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all shrink-0 cursor-pointer ${
+                            isSelected
+                              ? 'bg-emerald-500/20 border-emerald-400 scale-105 shadow-lg shadow-emerald-500/25 ring-2 ring-emerald-400/50'
+                              : 'bg-white/5 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          {s.photo_base64 ? (
+                            <img
+                              src={s.photo_base64}
+                              alt={s.username}
+                              className="w-14 h-14 rounded-full object-cover border-2 border-emerald-400 shadow-md"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center font-black text-emerald-400 text-lg">
+                              {(s.first_name?.[0] || s.username?.[0] || 'A').toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-[10px] font-bold text-white max-w-[64px] truncate text-center">
+                            {s.first_name || s.username}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   <select
                     value={formData.student_id}
                     onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-                    className="w-full bg-[#1C1C1E] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-[#1C1C1E] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                   >
-                    <option value="">Selecione um aluno (Opcional)</option>
+                    <option value="">Ou escolha pela lista...</option>
                     {students.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.first_name ? `${s.first_name} ${s.last_name || ''}` : s.username}
                       </option>
                     ))}
                   </select>
+
+                  {/* Prominent Featured Selected Student Preview Card */}
+                  {(() => {
+                    const selStudent = students.find((s) => String(s.id) === String(formData.student_id));
+                    if (!selStudent) return null;
+                    return (
+                      <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-900 border-2 border-emerald-400 shadow-xl shadow-emerald-500/15 animate-in fade-in">
+                        {selStudent.photo_base64 ? (
+                          <img
+                            src={selStudent.photo_base64}
+                            alt={selStudent.username}
+                            className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400 shadow-lg shrink-0"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center font-black text-emerald-400 text-2xl shrink-0">
+                            {(selStudent.first_name?.[0] || selStudent.username?.[0] || 'A').toUpperCase()}
+                          </div>
+                        )}
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider">
+                            📸 Foto do Aluno Vinculada
+                          </span>
+                          <span className="font-extrabold text-white text-sm block">
+                            {selStudent.first_name ? `${selStudent.first_name} ${selStudent.last_name || ''}` : selStudent.username}
+                          </span>
+                          {selStudent.whatsapp && (
+                            <span className="text-[10px] text-slate-400 font-mono block">
+                              WhatsApp: {selStudent.whatsapp}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

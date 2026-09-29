@@ -444,14 +444,49 @@ export default function QuickNotesWidget({ students = [], billings = [], expense
 
               {/* Student Picker with PROMINENT PHOTO */}
               {formData.category === 'student' && (
-                <div>
-                  <label className="block font-semibold text-slate-300 mb-1.5">Selecione o Aluno *</label>
+                <div className="space-y-3">
+                  <label className="block font-semibold text-slate-300 text-xs">Selecione o Aluno (Clique na Foto)</label>
+                  
+                  {/* Visual Photo Selector Strip */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    {students.map((s) => {
+                      const isSelected = String(s.id) === String(formData.student_id);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, student_id: isSelected ? '' : String(s.id) })}
+                          className={`flex flex-col items-center gap-1 p-1.5 rounded-2xl border transition-all shrink-0 cursor-pointer ${
+                            isSelected
+                              ? 'bg-emerald-500/20 border-emerald-400 scale-105 shadow-md shadow-emerald-500/20 ring-2 ring-emerald-400/50'
+                              : 'bg-white/5 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          {s.photo_base64 ? (
+                            <img
+                              src={s.photo_base64}
+                              alt={s.username}
+                              className="w-12 h-12 rounded-full object-cover border-2 border-emerald-400"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-slate-800 border-2 border-emerald-400 flex items-center justify-center font-black text-emerald-400 text-base">
+                              {(s.first_name?.[0] || s.username?.[0] || 'A').toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-[9px] font-bold text-white max-w-[56px] truncate text-center">
+                            {s.first_name || s.username}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   <select
                     value={formData.student_id}
                     onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-white text-xs focus:border-emerald-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs focus:border-emerald-500"
                   >
-                    <option value="">Selecione o aluno...</option>
+                    <option value="">Ou escolha pela lista...</option>
                     {students.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.first_name ? `${s.first_name} ${s.last_name || ''}` : s.username} (@{s.username})
@@ -464,20 +499,23 @@ export default function QuickNotesWidget({ students = [], billings = [], expense
                     const selStudent = students.find((s) => String(s.id) === String(formData.student_id));
                     if (!selStudent) return null;
                     return (
-                      <div className="flex items-center gap-3 p-3 mt-2 rounded-2xl bg-gradient-to-r from-slate-900 to-emerald-950/40 border border-emerald-500/30">
+                      <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/60 border-2 border-emerald-400 shadow-xl shadow-emerald-500/20 animate-in fade-in">
                         {selStudent.photo_base64 ? (
                           <img
                             src={selStudent.photo_base64}
                             alt={selStudent.username}
-                            className="w-12 h-12 rounded-2xl object-cover border-2 border-emerald-400 shadow-lg shrink-0"
+                            className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400 shadow-lg shrink-0"
                           />
                         ) : (
-                          <div className="w-12 h-12 rounded-2xl bg-slate-800 border-2 border-emerald-400 flex items-center justify-center font-black text-emerald-400 text-lg shrink-0">
-                            {selStudent.first_name?.[0] || selStudent.username?.[0]?.toUpperCase()}
+                          <div className="w-16 h-16 rounded-2xl bg-slate-800 border-2 border-emerald-400 flex items-center justify-center font-black text-emerald-400 text-2xl shrink-0">
+                            {(selStudent.first_name?.[0] || selStudent.username?.[0]?.toUpperCase())}
                           </div>
                         )}
-                        <div>
-                          <span className="font-extrabold text-white text-xs block">
+                        <div className="space-y-0.5">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+                            📸 Foto do Aluno Vinculada
+                          </span>
+                          <span className="font-black text-white text-sm block">
                             {selStudent.first_name} {selStudent.last_name}
                           </span>
                           <span className="text-[10px] text-slate-400 font-mono block">@{selStudent.username}</span>
