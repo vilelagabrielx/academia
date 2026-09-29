@@ -741,10 +741,11 @@ export default function DashboardPage() {
   const loadData = async () => {
     setLoading(true);
     try {
+      const currentMonthStr = new Date().toISOString().slice(0, 7);
       const [stdRes, cfRes, bSummaryRes] = await Promise.all([
         fetch('/api/students'),
-        fetch('/api/cashflow'),
-        fetch('/api/billings'),
+        fetch(`/api/cashflow?month_year=${currentMonthStr}`),
+        fetch(`/api/billings?month_year=${currentMonthStr}`),
       ]);
       const stdData = await stdRes.json();
       const cfData = await cfRes.json();
