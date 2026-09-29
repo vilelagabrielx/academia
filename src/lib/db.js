@@ -1253,7 +1253,7 @@ export async function cleanOverdueAndInactiveBillings() {
 }
 
 export async function getBillingSummary({ month_year, search, user_id } = {}) {
-  await cleanOverdueAndInactiveBillings();
+  cleanOverdueAndInactiveBillings().catch(err => console.error('Billing cleanup error:', err));
 
   let sql = `
     SELECT 
@@ -1309,7 +1309,7 @@ export async function getBillingSummary({ month_year, search, user_id } = {}) {
 }
 
 export async function getBillings({ status, user_id, search, month_year } = {}) {
-  await cleanOverdueAndInactiveBillings();
+  cleanOverdueAndInactiveBillings().catch(err => console.error('Billing cleanup error:', err));
 
   let sql = `
     SELECT b.*, u.username, u.first_name, u.last_name, u.email, p.whatsapp, p.photo_base64
@@ -1344,6 +1344,54 @@ export async function getBillings({ status, user_id, search, month_year } = {}) 
   sql += ` ORDER BY b.due_date ASC, b.id DESC`;
   const res = await query(sql, params);
   return res.rows;
+}
+
+export async function getBillingsWithSummary({ status, user_id, search, month_year } = {}) {
+  const billings = await getBillings({ status, user_id, search, month_year });
+
+  let total_paid = 0;
+  let total_pending = 0;
+  let total_charged = 0;
+  let total_overdue = 0;
+  let count_paid = 0;
+  let count_pending = 0;
+  let count_charged = 0;
+  let count_overdue = 0;
+
+  for (const b of billings) {
+    const amt = parseFloat(b.amount || 0);
+    const s = String(b.status || '').toLowerCase();
+
+    if (s === 'paid') {
+      total_paid += amt;
+      count_paid++;
+    } else if (s === 'pending') {
+      total_pending += amt;
+      count_pending++;
+    } else if (s === 'charged') {
+      total_charged += amt;
+      count_charged++;
+    } else if (s === 'overdue' || s === 'atrasado') {
+      total_overdue += amt;
+      count_overdue++;
+    }
+  }
+
+  const summary = {
+    total_paid,
+    total_pending,
+    total_charged,
+    total_overdue,
+    total_receber: total_pending + total_charged + total_overdue,
+    total_geral: total_paid + total_pending + total_charged + total_overdue,
+    count_paid,
+    count_pending,
+    count_charged,
+    count_overdue,
+    count_total: billings.length,
+  };
+
+  return { summary, billings };
 }
 
 export async function createBilling({

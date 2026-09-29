@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getBillings, getBillingSummary, createBilling } from '@/lib/db';
+import { getBillingsWithSummary, createBilling } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -17,10 +17,7 @@ export async function GET(request) {
     const search = searchParams.get('search') || '';
     const monthYear = searchParams.get('month_year') || null;
 
-    const [summary, billings] = await Promise.all([
-      getBillingSummary({ month_year: monthYear, search, user_id: userId }),
-      getBillings({ status, user_id: userId, search, month_year: monthYear })
-    ]);
+    const { summary, billings } = await getBillingsWithSummary({ status, user_id: userId, search, month_year: monthYear });
 
     return NextResponse.json({ summary, billings });
   } catch (error) {
