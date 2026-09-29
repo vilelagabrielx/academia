@@ -1,6 +1,26 @@
 import { NextResponse } from 'next/server';
-import { uploadBillingProof } from '@/lib/db';
+import { uploadBillingProof, getBillingProof } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
+
+export async function GET(request, { params }) {
+  try {
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    const { id } = params;
+    const proof = await getBillingProof(id);
+    if (!proof) {
+      return NextResponse.json({ error: 'Comprovante não encontrado' }, { status: 404 });
+    }
+
+    return NextResponse.json(proof);
+  } catch (error) {
+    console.error('Error fetching billing proof:', error);
+    return NextResponse.json({ error: 'Erro ao buscar comprovante' }, { status: 500 });
+  }
+}
 
 export async function POST(request, { params }) {
   try {

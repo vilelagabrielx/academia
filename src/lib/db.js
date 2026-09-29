@@ -279,8 +279,6 @@ export async function checkExistingBilling(userId, dueDateStr) {
 export async function getStudents(search = '') {
   const cacheKey = `students:search:${search.toLowerCase().trim()}`;
   return cache.getOrFetch(cacheKey, async () => {
-    await initDbSchema();
-
     let sql = `
       SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.is_staff, u.date_joined,
              p.whatsapp, p.instagram, p.photo_base64, p.gym_id, p.age, p.height, p.goal, p.blood_type, p.training_days, p.current_weight,
@@ -290,7 +288,8 @@ export async function getStudents(search = '') {
              p.altura, p.observacoes_treinador,
              p.peso_meta, p.bf_meta, p.braco_meta, p.antebraco_meta, p.ombro_meta, p.peitoral_meta,
              p.cintura_meta, p.abdomen_meta, p.dorsal_meta, p.coxa_meta, p.gluteo_meta, p.panturrilha_meta, p.pescoco_meta,
-             p.restricoes_articulares, p.condicoes_cardio_metabolicas, p.cirurgias_reabilitacao, p.status_atestado, p.atestado_file_base64,
+             p.restricoes_articulares, p.condicoes_cardio_metabolicas, p.cirurgias_reabilitacao, p.status_atestado,
+             (CASE WHEN p.atestado_file_base64 IS NOT NULL AND p.atestado_file_base64 != '' THEN true ELSE false END) as has_atestado_file,
              p.medicamentos_uso_continuo, p.dor_cronica_nivel, p.dor_cronica_regiao, p.horas_sono_media, p.qualidade_sono_estresse,
              p.recursos_ergogenicos, p.contato_emergencia_nome, p.contato_emergencia_parentesco, p.contato_emergencia_telefone,
              p.birth_date, p.data_nascimento, p.prazo_meta, p.dia_vencimento_recorrente,
@@ -312,20 +311,21 @@ export async function getStudents(search = '') {
 
     const studentIds = students.map((s) => s.id);
 
-    const [evalsRes, billingsRes] = await Promise.all([
-      query(`
-        SELECT * FROM (
-          SELECT *, ROW_NUMBER() OVER (PARTITION BY aluno_id ORDER BY data_registro DESC, id DESC) as rn
-          FROM gym_medidas_historico
-          WHERE aluno_id = ANY($1::int[])
-        ) t WHERE rn <= 2
-      `, [studentIds]),
-      query(`
-        SELECT * FROM gym_billing 
-        WHERE user_id = ANY($1::int[]) AND status != 'cancelled' 
-        ORDER BY due_date DESC, id DESC
-      `, [studentIds])
-    ]);
+    // Sequential execution re-uses the warm database socket avoiding Supavisor dual-connection TLS handshake delay
+    const evalsRes = await query(`
+      SELECT * FROM (
+        SELECT *, ROW_NUMBER() OVER (PARTITION BY aluno_id ORDER BY data_registro DESC, id DESC) as rn
+        FROM gym_medidas_historico
+        WHERE aluno_id = ANY($1::int[])
+      ) t WHERE rn <= 2
+    `, [studentIds]);
+
+    const billingsRes = await query(`
+      SELECT id, user_id, amount, due_date, status, payment_method, notes, paid_date
+      FROM gym_billing 
+      WHERE user_id = ANY($1::int[]) AND status != 'cancelled' 
+      ORDER BY due_date DESC, id DESC
+    `, [studentIds]);
 
     const evalMap = new Map();
     for (const eRow of evalsRes.rows) {
@@ -1312,7 +1312,18 @@ export async function getBillings({ status, user_id, search, month_year } = {}) 
   cleanOverdueAndInactiveBillings().catch(err => console.error('Billing cleanup error:', err));
 
   let sql = `
-    SELECT b.*, u.username, u.first_name, u.last_name, u.email, p.whatsapp, p.photo_base64
+    SELECT 
+      b.id, b.user_id, b.amount, b.due_date, b.payment_method,
+      CASE 
+        WHEN (b.status = 'pending' AND b.due_date < CURRENT_DATE) THEN 'overdue'
+        WHEN (b.status = 'charged' AND b.remind_at < CURRENT_DATE) THEN 'overdue'
+        ELSE b.status
+      END AS status,
+      b.notes, b.receipt_generated, b.paid_date, b.created_at,
+      b.is_recurring, b.recurrence_id, b.cancel_reason, b.remind_at,
+      (CASE WHEN b.proof_base64 IS NOT NULL AND b.proof_base64 != '' THEN true ELSE false END) as has_proof,
+      b.proof_filename,
+      u.username, u.first_name, u.last_name, u.email, p.whatsapp, p.photo_base64
     FROM gym_billing b
     JOIN auth_user u ON u.id = b.user_id AND u.is_active = true
     LEFT JOIN core_userprofile p ON p.user_id = u.id
@@ -1627,6 +1638,14 @@ export async function uploadBillingProof(id, { proof_base64, proof_filename }) {
     [proof_base64, proof_filename || 'comprovante.jpg', id]
   );
   return res.rows[0];
+}
+
+export async function getBillingProof(id) {
+  const res = await query(
+    `SELECT proof_base64, proof_filename FROM gym_billing WHERE id = $1`,
+    [id]
+  );
+  return res.rows[0] || null;
 }
 
 export async function deleteBilling(id) {

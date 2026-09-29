@@ -740,22 +740,16 @@ export default function DashboardPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [stdRes, exRes, rtRes, cfRes, bSummaryRes] = await Promise.all([
+      const [stdRes, cfRes, bSummaryRes] = await Promise.all([
         fetch('/api/students'),
-        fetch('/api/exercises'),
-        fetch('/api/routines'),
         fetch('/api/cashflow'),
         fetch('/api/billings'),
       ]);
       const stdData = await stdRes.json();
-      const exData = await exRes.json();
-      const rtData = await rtRes.json();
       const cfData = await cfRes.json();
       const bSummaryData = await bSummaryRes.json();
 
       setStudents(stdData.students || []);
-      setExercises(exData.exercises || []);
-      setRoutines(rtData.routines || []);
 
       const cf = cfData.cashflow || {};
       const sum = bSummaryData.summary || {};
