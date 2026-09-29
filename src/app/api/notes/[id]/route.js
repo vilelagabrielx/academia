@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { updateQuickNote, deleteQuickNote } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
+import cache from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +16,7 @@ export async function PUT(request, { params }) {
     const body = await request.json();
 
     const note = await updateQuickNote(id, body);
+    cache.delPrefix('notes:');
     return NextResponse.json({ success: true, note });
   } catch (error) {
     console.error('Error updating quick note:', error);
@@ -31,6 +33,7 @@ export async function DELETE(request, { params }) {
 
     const { id } = params;
     await deleteQuickNote(id);
+    cache.delPrefix('notes:');
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting quick note:', error);

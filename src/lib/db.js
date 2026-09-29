@@ -2257,11 +2257,9 @@ export async function getCashFlowSummary({ month_year } = {}) {
 // QUICK NOTES MODULE (Anotações Rápidas)
 // ==========================================
 export async function getQuickNotes({ category, student_id, billing_id, expense_id, search, limit = null, offset = 0 } = {}) {
-  await initDbSchema();
-
   let sql = `
     SELECT 
-      n.*,
+      n.id, n.category, n.student_id, n.billing_id, n.expense_id, n.title, n.content, n.color, n.is_pinned, n.created_at, n.updated_at,
       u.username, u.first_name, u.last_name, u.email, p.whatsapp, p.photo_base64,
       b.amount as billing_amount, b.due_date as billing_due_date, b.status as billing_status,
       e.description as expense_description, e.amount as expense_amount, e.status as expense_status
@@ -2324,7 +2322,6 @@ export async function createQuickNote({
   color = '#10B981',
   is_pinned = false
 }) {
-  await initDbSchema();
   const res = await query(
     `INSERT INTO gym_quick_notes (category, student_id, billing_id, expense_id, title, content, color, is_pinned)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
