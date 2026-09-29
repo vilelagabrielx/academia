@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { 
   Users, UserPlus, Search, MessageCircle, Instagram, Edit3, Trash2, ArrowUpRight, Camera, Key, Check, 
   AlertCircle, ChevronRight, ChevronLeft, Heart, Dumbbell, Calendar, CreditCard, Droplet, Target, Scale, User, FileText, CheckCircle2, Clock, Eye, Repeat, AlertTriangle, RefreshCw, Plus, Award, Activity, TrendingUp, TrendingDown, Layers, ShieldAlert, BarChart3, History, ArrowLeftRight, Zap, Sparkles
@@ -1033,7 +1034,7 @@ export default function StudentsPage() {
       {/* Students Table */}
       <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
         {loading ? (
-          <div className="py-12 text-center text-slate-500 text-sm">Carregando alunos...</div>
+          <LoadingSpinner text="Carregando lista de alunos..." size="lg" className="py-8" />
         ) : students.length === 0 ? (
           <div className="py-12 text-center text-slate-500 text-sm">Nenhum aluno cadastrado.</div>
         ) : (

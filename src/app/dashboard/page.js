@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { 
   Users, Dumbbell, FileText, Plus, MessageCircle, Instagram, ArrowUpRight, Search, Activity, 
   UserPlus, CheckCircle2, Eye, User, Scale, Droplet, Target, Calendar, CreditCard, Trash2, RefreshCw, AlertTriangle, AlertCircle, TrendingDown, DollarSign, Sparkles,
@@ -1150,7 +1151,7 @@ export default function DashboardPage() {
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-slate-500 text-sm">Carregando dados dos alunos...</div>
+          <LoadingSpinner text="Carregando dados dos alunos..." size="lg" className="py-8" />
         ) : filteredStudents.length === 0 ? (
           <div className="py-12 text-center text-slate-[#8E8E93] text-sm">Nenhum aluno encontrado.</div>
         ) : (

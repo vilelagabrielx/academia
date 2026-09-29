@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 const CreateBillingModal = dynamic(() => import('@/components/modals/CreateBillingModal'), { ssr: false });
 const CreateExpenseModal = dynamic(() => import('@/components/modals/CreateExpenseModal'), { ssr: false });
@@ -723,7 +724,7 @@ export default function FinancialPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {loading ? (
-                    <tr><td colSpan={6} className="py-8 text-center text-slate-500">Carregando mensalidades...</td></tr>
+                    <tr><td colSpan={6} className="py-4 text-center"><LoadingSpinner text="Carregando mensalidades..." size="md" /></td></tr>
                   ) : billings.length === 0 ? (
                     <tr><td colSpan={6} className="py-8 text-center text-slate-500">Nenhuma mensalidade encontrada.</td></tr>
                   ) : (
@@ -800,7 +801,7 @@ export default function FinancialPage() {
             {/* Mobile Touch Cards View */}
             <div className="block md:hidden p-3 space-y-2.5">
               {loading ? (
-                <div className="py-8 text-center text-slate-500 text-xs">Carregando mensalidades...</div>
+                <LoadingSpinner text="Carregando mensalidades..." size="md" className="py-4" />
               ) : billings.length === 0 ? (
                 <div className="py-8 text-center text-slate-500 text-xs">Nenhuma mensalidade encontrada.</div>
               ) : (
