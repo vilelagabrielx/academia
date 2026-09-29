@@ -24,9 +24,10 @@ export default function QuickNotesWidget({ students = [], billings = [], expense
   const [filterCategory, setFilterCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // New Note Modal State
+  // New Note Modal & Lightbox State
   const [showModal, setShowModal] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -316,8 +317,17 @@ export default function QuickNotesWidget({ students = [], billings = [], expense
                         <img
                           src={photoUrl}
                           alt={note.first_name || note.username || 'Aluno'}
-                          className="w-12 h-12 rounded-2xl object-cover border-2 shadow-md shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewImage({
+                              url: photoUrl,
+                              title: note.first_name ? `${note.first_name} ${note.last_name || ''}` : note.username,
+                              subtitle: note.whatsapp ? `WhatsApp: ${note.whatsapp}` : null,
+                            });
+                          }}
+                          className="w-12 h-12 rounded-2xl object-cover border-2 shadow-md shrink-0 cursor-zoom-in hover:scale-105 transition-transform"
                           style={{ borderColor: hexColor }}
+                          title="Clique para ver a foto em tamanho grande"
                         />
                       ) : (
                         <div
@@ -504,7 +514,17 @@ export default function QuickNotesWidget({ students = [], billings = [], expense
                           <img
                             src={selStudent.photo_base64}
                             alt={selStudent.username}
-                            className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400 shadow-lg shrink-0"
+                            onClick={() =>
+                              setPreviewImage({
+                                url: selStudent.photo_base64,
+                                title: selStudent.first_name
+                                  ? `${selStudent.first_name} ${selStudent.last_name || ''}`
+                                  : selStudent.username,
+                                subtitle: selStudent.whatsapp ? `WhatsApp: ${selStudent.whatsapp}` : null,
+                              })
+                            }
+                            className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-400 shadow-lg shrink-0 cursor-zoom-in hover:scale-105 transition-transform"
+                            title="Clique para ver a foto em tamanho grande"
                           />
                         ) : (
                           <div className="w-16 h-16 rounded-2xl bg-slate-800 border-2 border-emerald-400 flex items-center justify-center font-black text-emerald-400 text-2xl shrink-0">
@@ -669,6 +689,50 @@ export default function QuickNotesWidget({ students = [], billings = [], expense
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* FULL-SCREEN IMAGE LIGHTBOX MODAL */}
+      {previewImage && (
+        <div
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-2xl w-full bg-[#161618] border border-white/15 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col items-center animate-in zoom-in-95 cursor-default overflow-hidden"
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer z-10 active:scale-95"
+              title="Fechar (ESC)"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header Badge */}
+            <div className="text-center mb-4 space-y-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30">
+                📸 Visualização da Foto do Aluno
+              </span>
+              <h3 className="text-lg font-black text-white">{previewImage.title || 'Foto do Aluno'}</h3>
+              {previewImage.subtitle && (
+                <p className="text-xs text-slate-400 font-mono">{previewImage.subtitle}</p>
+              )}
+            </div>
+
+            {/* Image Container */}
+            <div className="relative max-h-[65vh] w-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/60 border border-white/10 p-2 shadow-inner">
+              <img
+                src={previewImage.url}
+                alt={previewImage.title || 'Foto do Aluno'}
+                className="max-h-[60vh] max-w-full object-contain rounded-xl shadow-2xl"
+              />
+            </div>
+
+            <p className="text-[11px] text-slate-500 mt-3 font-medium">Clique em qualquer lugar fora da caixa para fechar</p>
           </div>
         </div>
       )}
