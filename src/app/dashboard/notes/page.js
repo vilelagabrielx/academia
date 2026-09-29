@@ -338,7 +338,7 @@ export default function NotesTimelinePage() {
 
       {/* Notes Stream / Grid */}
       {loading ? (
-        <LoadingSpinner text="Carregando linha do tempo de anotações..." size="md" className="py-16" />
+        <LoadingSpinner text="Carregando anotações..." size="lg" className="py-12" />
       ) : notes.length === 0 ? (
         <div className="py-20 text-center bg-[#141416]/60 rounded-3xl border border-white/5 p-8 flex flex-col items-center justify-center space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
@@ -504,19 +504,19 @@ export default function NotesTimelinePage() {
       {/* Infinite Scroll Sentinel / Load More Status */}
       <div ref={observerTarget} className="py-6 text-center">
         {loadingMore && (
-          <LoadingSpinner text="Carregando mais 20 anotações..." size="sm" className="py-2" />
+          <LoadingSpinner text="Carregando mais 20 anotações..." size="md" className="py-2" />
         )}
         {!hasMore && notes.length > 0 && !loading && (
           <p className="text-xs text-slate-500 font-medium">✨ Todas as anotações foram carregadas ({notes.length})</p>
         )}
       </div>
 
-      {/* Modal: Create / Edit Note */}
+      {/* Modal: Create / Edit Note (100% Mobile-First Apple HIG Bottom Sheet) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-[#161618] border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="bg-[#161618] border border-white/10 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[92vh] sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 overflow-hidden">
             {/* Modal Header */}
-            <div className="p-5 border-b border-white/10 flex items-center justify-between">
+            <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#161618]">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400">
                   <StickyNote className="w-5 h-5" />
@@ -527,14 +527,14 @@ export default function NotesTimelinePage() {
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-white bg-white/5"
+                className="p-2 rounded-xl text-slate-400 hover:text-white bg-white/5 active:scale-95"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
               {/* Category selector */}
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1.5">Categoria</label>
@@ -547,9 +547,9 @@ export default function NotesTimelinePage() {
                         key={cat.id}
                         type="button"
                         onClick={() => setFormData({ ...formData, category: cat.id })}
-                        className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                        className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-bold'
                             : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
                         }`}
                       >
@@ -720,7 +720,7 @@ export default function NotesTimelinePage() {
                       type="button"
                       onClick={() => setFormData({ ...formData, color: c })}
                       style={{ backgroundColor: c }}
-                      className={`w-7 h-7 rounded-full transition-transform active:scale-90 flex items-center justify-center ${
+                      className={`w-7 h-7 rounded-full transition-transform active:scale-90 flex items-center justify-center cursor-pointer ${
                         formData.color === c ? 'ring-2 ring-white scale-110' : 'hover:scale-105'
                       }`}
                     >
@@ -737,7 +737,7 @@ export default function NotesTimelinePage() {
               </div>
 
               {/* Pin checkbox */}
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-2 pt-1 pb-2">
                 <input
                   type="checkbox"
                   id="pinNote"
@@ -750,18 +750,18 @@ export default function NotesTimelinePage() {
                 </label>
               </div>
 
-              {/* Modal Footer */}
-              <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3">
+              {/* Sticky Footer */}
+              <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-3 sticky bottom-0 bg-[#161618] py-3 -mb-4 sm:-mb-5 -mx-4 sm:-mx-5 px-4 sm:px-5">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-white/5"
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-white/5 active:scale-95 transition-all"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all"
+                  className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
                 >
                   {editingNote ? 'Salvar Alterações' : 'Criar Anotação'}
                 </button>

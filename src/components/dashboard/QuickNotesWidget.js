@@ -400,22 +400,22 @@ export default function QuickNotesWidget({ students = [], billings = [], expense
         </div>
       )}
 
-      {/* CREATE / EDIT NOTE MODAL */}
+      {/* CREATE / EDIT NOTE MODAL (Mobile-First Apple HIG Bottom Sheet) */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
-          <div className="glass-panel w-full max-w-lg rounded-3xl p-5 border border-slate-800 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in">
+          <div className="glass-panel w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-slate-800 shadow-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center justify-between border-b border-slate-800 p-4 sm:p-5 shrink-0 bg-[#161618]">
               <h3 className="text-base font-extrabold text-white flex items-center gap-2">
                 <StickyNote className="w-5 h-5 text-emerald-400" />
                 <span>{editingNote ? 'Editar Anotação' : 'Nova Anotação Rápida'}</span>
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white p-1">
+              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white p-2 rounded-xl bg-white/5 active:scale-95">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 text-xs overflow-y-auto flex-1">
               {/* Category Selector */}
               <div>
                 <label className="block font-semibold text-slate-300 mb-1.5">Tipo / Vínculo *</label>
@@ -651,21 +651,21 @@ export default function QuickNotesWidget({ students = [], billings = [], expense
                 </label>
               </div>
 
-              {/* Modal Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+              {/* Sticky Footer */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800 sticky bottom-0 bg-[#161618] py-3 -mb-4 sm:-mb-5 -mx-4 sm:-mx-5 px-4 sm:px-5">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-xl text-slate-400 bg-slate-800 font-bold"
+                  className="px-4 py-2.5 rounded-xl text-slate-400 bg-slate-800 font-bold active:scale-95 transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-xl font-black text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-all shadow-md cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl font-black text-slate-950 bg-emerald-500 hover:bg-emerald-400 transition-all shadow-md active:scale-95 cursor-pointer"
                 >
-                  {saving ? 'Salvação...' : 'Salvar Cartão'}
+                  {saving ? 'Salvando...' : 'Salvar Cartão'}
                 </button>
               </div>
             </form>
