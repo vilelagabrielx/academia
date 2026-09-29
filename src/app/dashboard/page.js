@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import QuickNotesWidget from '@/components/dashboard/QuickNotesWidget';
 import { 
   Users, Dumbbell, FileText, Plus, MessageCircle, Instagram, ArrowUpRight, Search, Activity, 
   UserPlus, CheckCircle2, Eye, User, Scale, Droplet, Target, Calendar, CreditCard, Trash2, RefreshCw, AlertTriangle, AlertCircle, TrendingDown, DollarSign, Sparkles,
@@ -733,6 +734,8 @@ export default function DashboardPage() {
     is_recurring: false,
   });
   const [renewing, setRenewing] = useState(false);
+  const [dashboardBillings, setDashboardBillings] = useState([]);
+  const [dashboardExpenses, setDashboardExpenses] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -752,6 +755,7 @@ export default function DashboardPage() {
       const bSummaryData = await bSummaryRes.json();
 
       setStudents(stdData.students || []);
+      setDashboardBillings(bSummaryData.billings || []);
 
       const cf = cfData.cashflow || {};
       const sum = bSummaryData.summary || {};
@@ -1391,6 +1395,13 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {/* QUICK NOTES WIDGET - Apple HIG Mobile First Card System */}
+      <QuickNotesWidget
+        students={students}
+        billings={dashboardBillings}
+        expenses={dashboardExpenses}
+      />
 
       {/* Toast Notification for Eval */}
       {evalSuccessToast && (

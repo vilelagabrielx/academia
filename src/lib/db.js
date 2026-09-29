@@ -214,6 +214,23 @@ export function initDbSchema() {
           CREATE INDEX IF NOT EXISTS idx_manager_restconfig_entry ON manager_restconfig(slot_entry_id);
           CREATE INDEX IF NOT EXISTS idx_workoutsession_user_date ON manager_workoutsession(user_id, datetime_start);
           CREATE INDEX IF NOT EXISTS idx_workoutlog_session_id ON manager_workoutlog(session_id);
+
+          CREATE TABLE IF NOT EXISTS gym_quick_notes (
+            id SERIAL PRIMARY KEY,
+            category VARCHAR(50) DEFAULT 'general',
+            student_id INTEGER REFERENCES auth_user(id) ON DELETE CASCADE,
+            billing_id INTEGER REFERENCES gym_billing(id) ON DELETE SET NULL,
+            expense_id VARCHAR(64) REFERENCES gym_expenses(id) ON DELETE SET NULL,
+            title VARCHAR(200),
+            content TEXT NOT NULL,
+            color VARCHAR(50) DEFAULT '#10B981',
+            is_pinned BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+
+          CREATE INDEX IF NOT EXISTS idx_gym_quick_notes_student ON gym_quick_notes(student_id);
+          CREATE INDEX IF NOT EXISTS idx_gym_quick_notes_category ON gym_quick_notes(category);
         `);
       } catch (err) {
         console.error('Error initializing DB schema extensions:', err);
@@ -2235,4 +2252,114 @@ export async function getCashFlowSummary({ month_year } = {}) {
     };
   }, 30);
 }
+
+// ==========================================
+// QUICK NOTES MODULE (Anotações Rápidas)
+// ==========================================
+export async function getQuickNotes({ category, student_id, billing_id, expense_id, search, limit = null, offset = 0 } = {}) {
+  await initDbSchema();
+
+  let sql = `
+    SELECT 
+      n.*,
+      u.username, u.first_name, u.last_name, u.email, p.whatsapp, p.photo_base64,
+      b.amount as billing_amount, b.due_date as billing_due_date, b.status as billing_status,
+      e.description as expense_description, e.amount as expense_amount, e.status as expense_status
+    FROM gym_quick_notes n
+    LEFT JOIN auth_user u ON u.id = n.student_id
+    LEFT JOIN core_userprofile p ON p.user_id = u.id
+    LEFT JOIN gym_billing b ON b.id = n.billing_id
+    LEFT JOIN gym_expenses e ON e.id = n.expense_id
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (category && category !== 'all') {
+    params.push(category);
+    sql += ` AND n.category = $${params.length}`;
+  }
+
+  if (student_id) {
+    params.push(student_id);
+    sql += ` AND n.student_id = $${params.length}`;
+  }
+
+  if (billing_id) {
+    params.push(billing_id);
+    sql += ` AND n.billing_id = $${params.length}`;
+  }
+
+  if (expense_id) {
+    params.push(expense_id);
+    sql += ` AND n.expense_id = $${params.length}`;
+  }
+
+  if (search) {
+    params.push(`%${search}%`);
+    sql += ` AND (n.title ILIKE $${params.length} OR n.content ILIKE $${params.length} OR u.first_name ILIKE $${params.length} OR u.username ILIKE $${params.length})`;
+  }
+
+  sql += ` ORDER BY n.is_pinned DESC, n.created_at DESC, n.id DESC`;
+
+  if (limit) {
+    params.push(limit);
+    sql += ` LIMIT $${params.length}`;
+    if (offset) {
+      params.push(offset);
+      sql += ` OFFSET $${params.length}`;
+    }
+  }
+
+  const res = await query(sql, params);
+  return res.rows;
+}
+
+export async function createQuickNote({
+  category = 'general',
+  student_id = null,
+  billing_id = null,
+  expense_id = null,
+  title = '',
+  content,
+  color = '#10B981',
+  is_pinned = false
+}) {
+  await initDbSchema();
+  const res = await query(
+    `INSERT INTO gym_quick_notes (category, student_id, billing_id, expense_id, title, content, color, is_pinned)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING *`,
+    [category, student_id || null, billing_id || null, expense_id || null, title || '', content, color || '#10B981', !!is_pinned]
+  );
+  return res.rows[0];
+}
+
+export async function updateQuickNote(id, { title, content, color, is_pinned, category, student_id, billing_id, expense_id }) {
+  const updates = [];
+  const params = [];
+
+  if (title !== undefined) { params.push(title); updates.push(`title = $${params.length}`); }
+  if (content !== undefined) { params.push(content); updates.push(`content = $${params.length}`); }
+  if (color !== undefined) { params.push(color); updates.push(`color = $${params.length}`); }
+  if (is_pinned !== undefined) { params.push(!!is_pinned); updates.push(`is_pinned = $${params.length}`); }
+  if (category !== undefined) { params.push(category); updates.push(`category = $${params.length}`); }
+  if (student_id !== undefined) { params.push(student_id || null); updates.push(`student_id = $${params.length}`); }
+  if (billing_id !== undefined) { params.push(billing_id || null); updates.push(`billing_id = $${params.length}`); }
+  if (expense_id !== undefined) { params.push(expense_id || null); updates.push(`expense_id = $${params.length}`); }
+
+  updates.push(`updated_at = CURRENT_TIMESTAMP`);
+  params.push(id);
+
+  const res = await query(
+    `UPDATE gym_quick_notes SET ${updates.join(', ')} WHERE id = $${params.length} RETURNING *`,
+    params
+  );
+  return res.rows[0];
+}
+
+export async function deleteQuickNote(id) {
+  await query(`DELETE FROM gym_quick_notes WHERE id = $1`, [id]);
+  return true;
+}
+
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Dumbbell, Users, Activity, FileText, LogOut, LayoutDashboard, CreditCard, Menu, X } from 'lucide-react';
+import { Dumbbell, Users, Activity, FileText, LogOut, LayoutDashboard, CreditCard, StickyNote, Menu, X } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
@@ -34,6 +34,7 @@ export default function DashboardLayout({ children }) {
     { label: 'Alunos', href: '/dashboard/students', icon: Users },
     { label: 'Treinos', href: '/dashboard/routines', icon: FileText },
     { label: 'Exercícios', href: '/dashboard/exercises', icon: Dumbbell },
+    { label: 'Anotações', href: '/dashboard/notes', icon: StickyNote },
     { label: 'Financeiro', href: '/dashboard/billings', icon: CreditCard },
   ];
 
