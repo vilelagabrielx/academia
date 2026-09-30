@@ -117,6 +117,10 @@ export function initDbSchema() {
           ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS data_nascimento DATE;
           ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS prazo_meta VARCHAR(50);
           ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS dia_vencimento_recorrente INTEGER DEFAULT 5;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS onboarding_token VARCHAR(100);
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS onboarding_created_at TIMESTAMP;
+          ALTER TABLE core_userprofile ADD COLUMN IF NOT EXISTS onboarding_expires_at TIMESTAMP;
 
           CREATE TABLE IF NOT EXISTS gym_medidas_historico (
             id SERIAL PRIMARY KEY,
@@ -310,6 +314,7 @@ export async function getStudents(search = '') {
              p.medicamentos_uso_continuo, p.dor_cronica_nivel, p.dor_cronica_regiao, p.horas_sono_media, p.qualidade_sono_estresse,
              p.recursos_ergogenicos, p.contato_emergencia_nome, p.contato_emergencia_parentesco, p.contato_emergencia_telefone,
              p.birth_date, p.data_nascimento, p.prazo_meta, p.dia_vencimento_recorrente,
+             p.onboarding_token, p.onboarding_completed, p.onboarding_created_at,
              (SELECT COUNT(*) FROM manager_routine r WHERE r.user_id = u.id) as routine_count
       FROM auth_user u
       LEFT JOIN core_userprofile p ON p.user_id = u.id
@@ -2358,5 +2363,102 @@ export async function deleteQuickNote(id) {
   await query(`DELETE FROM gym_quick_notes WHERE id = $1`, [id]);
   return true;
 }
+
+export async function getOrCreateOnboardingToken(userId, forceNew = false) {
+  await initDbSchema();
+  const res = await query(
+    `SELECT onboarding_token, onboarding_expires_at, (CASE WHEN onboarding_expires_at IS NOT NULL AND onboarding_expires_at < NOW() THEN true ELSE false END) as is_expired
+     FROM core_userprofile WHERE user_id = $1`,
+    [userId]
+  );
+
+  const current = res.rows[0];
+  if (!forceNew && current && current.onboarding_token && !current.is_expired) {
+    return current.onboarding_token;
+  }
+
+  const token = crypto.randomUUID().replace(/-/g, '');
+  await query(
+    `UPDATE core_userprofile 
+     SET onboarding_token = $1, 
+         onboarding_created_at = NOW(),
+         onboarding_expires_at = NOW() + INTERVAL '30 days'
+     WHERE user_id = $2`,
+    [token, userId]
+  );
+  return token;
+}
+
+export async function getStudentByOnboardingToken(token) {
+  await initDbSchema();
+  if (!token || typeof token !== 'string') return null;
+  const sql = `
+    SELECT u.id, u.username, u.first_name, u.last_name, u.email,
+           p.whatsapp, p.instagram, p.photo_base64, p.age, p.height, p.current_weight, p.blood_type,
+           p.goal, p.training_days, p.fase_shape, p.nivel_treino, p.frequencia_semanal, p.divisao_treino,
+           p.objetivo_principal, p.objetivos_secundarios, p.pontos_fracos, p.lesoes_restricoes,
+           p.restricoes_articulares, p.condicoes_cardio_metabolicas, p.cirurgias_reabilitacao, p.status_atestado,
+           p.medicamentos_uso_continuo, p.dor_cronica_nivel, p.dor_cronica_regiao, p.horas_sono_media,
+           p.qualidade_sono_estresse, p.recursos_ergogenicos, p.contato_emergencia_nome,
+           p.contato_emergencia_parentesco, p.contato_emergencia_telefone, p.birth_date, p.data_nascimento,
+           p.onboarding_completed, p.onboarding_token, p.onboarding_expires_at,
+           (CASE WHEN p.onboarding_expires_at IS NOT NULL AND p.onboarding_expires_at < NOW() THEN true ELSE false END) as is_expired
+    FROM core_userprofile p
+    JOIN auth_user u ON u.id = p.user_id
+    WHERE p.onboarding_token = $1
+  `;
+  const res = await query(sql, [token]);
+  return res.rows[0] || null;
+}
+
+export async function updateStudentByOnboardingToken(token, data = {}) {
+  const student = await getStudentByOnboardingToken(token);
+  if (!student) {
+    throw new Error('Link de ficha não encontrado ou token inválido');
+  }
+
+  if (student.is_expired) {
+    throw new Error('Este link de ficha temporário expirou (validade de 48h). Solicite um novo link ao seu treinador.');
+  }
+
+  // Update profile fields & auth_user
+  await updateStudent(student.id, data);
+
+  // If initial body measurements provided by student
+  const evalData = data.initial_evaluation;
+  if (evalData && (evalData.peso || evalData.bf_percentual || evalData.cintura || evalData.braco_contraido || evalData.ombro || evalData.peitoral_torax || evalData.coxa_direita)) {
+    await addBodyEvaluation(student.id, evalData, 'Aluno (Auto-preenchimento)');
+  }
+
+  await query(
+    `UPDATE core_userprofile SET onboarding_completed = true WHERE user_id = $1`,
+    [student.id]
+  );
+
+  return { success: true, userId: student.id };
+}
+
+export async function quickCreateStudent(data = {}) {
+  await initDbSchema();
+  const { first_name, last_name = '', whatsapp = '', email = '' } = data;
+
+  if (!first_name || !first_name.trim()) {
+    throw new Error('Nome do aluno é obrigatório');
+  }
+
+  const createdUser = await createStudent({
+    first_name: first_name.trim(),
+    last_name: (last_name || '').trim(),
+    whatsapp: (whatsapp || '').trim(),
+    email: (email || '').trim(),
+  });
+
+  const token = await getOrCreateOnboardingToken(createdUser.id);
+  return {
+    student: createdUser,
+    token,
+  };
+}
+
 
 

@@ -72,6 +72,13 @@ export default function StudentsPage() {
   // 3-Step Permanent Cascade Deletion Modal State
   const [hardDeleteModal, setHardDeleteModal] = useState(null); // { id, name, step: 1, textInput: '', submitting: false }
 
+  // Quick Registration & External Link Modal States
+  const [showQuickCreateModal, setShowQuickCreateModal] = useState(false);
+  const [quickStudentData, setQuickStudentData] = useState({ first_name: '', last_name: '', whatsapp: '', email: '' });
+  const [quickSubmitting, setQuickSubmitting] = useState(false);
+  const [generatedLinkModal, setGeneratedLinkModal] = useState(null); // { studentName: '', link: '', whatsappLink: '' }
+  const [generatingLinkId, setGeneratingLinkId] = useState(null);
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -1004,13 +1011,22 @@ export default function StudentsPage() {
           </h1>
           <p className="text-xs text-slate-400 mt-1">Acompanhamento completo de musculação, hipertrofia, proporção corporal e performance.</p>
         </div>
-        <button
-          onClick={handleOpenCreateWizard}
-          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all cursor-pointer text-sm"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>Cadastrar Aluno</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={() => setShowQuickCreateModal(true)}
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer text-sm"
+          >
+            <Zap className="w-4 h-4 text-blue-200" />
+            <span>Cadastro Rápido & Link</span>
+          </button>
+          <button
+            onClick={handleOpenCreateWizard}
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all cursor-pointer text-sm"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Cadastrar Completo</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter / Search Bar */}
@@ -1203,6 +1219,36 @@ export default function StudentsPage() {
                               <MessageCircle className="w-4 h-4" />
                             </a>
                           )}
+
+                          <button
+                            onClick={async () => {
+                              try {
+                                setGeneratingLinkId(student.id);
+                                const res = await fetch(`/api/students/${student.id}/generate-link`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ name: student.first_name, whatsapp: student.whatsapp }),
+                                });
+                                const data = await res.json();
+                                if (!res.ok || data.error) throw new Error(data.error || 'Erro ao gerar link');
+                                setGeneratedLinkModal({
+                                  studentName: `${student.first_name} ${student.last_name || ''}`.trim(),
+                                  link: data.link,
+                                  whatsappLink: data.whatsapp_link,
+                                });
+                                showToast('Link da ficha gerado!', 'success');
+                              } catch (err) {
+                                showToast(err.message || 'Erro ao gerar link', 'error');
+                              } finally {
+                                setGeneratingLinkId(null);
+                              }
+                            }}
+                            disabled={generatingLinkId === student.id}
+                            className="p-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                            title="Gerar / Copiar Link da Ficha do Aluno"
+                          >
+                            <Sparkles className="w-4 h-4 text-blue-400" />
+                          </button>
 
                           <button
                             onClick={() => openStudentProfile(student)}
@@ -3542,6 +3588,200 @@ export default function StudentsPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* MODAL: CADASTRO RÁPIDO SUPERFICIAL */}
+      {showQuickCreateModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Cadastro Rápido & Link</h3>
+                  <p className="text-xs text-slate-400">O aluno mesmo preenche a ficha dele</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowQuickCreateModal(false)}
+                className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!quickStudentData.first_name.trim()) {
+                  showToast('O nome do aluno é obrigatório', 'error');
+                  return;
+                }
+                try {
+                  setQuickSubmitting(true);
+                  const res = await fetch('/api/students/quick-create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(quickStudentData),
+                  });
+                  const data = await res.json();
+                  if (!res.ok || data.error) throw new Error(data.error || 'Erro no cadastro rápido');
+
+                  setShowQuickCreateModal(false);
+                  setQuickStudentData({ first_name: '', last_name: '', whatsapp: '', email: '' });
+                  setGeneratedLinkModal({
+                    studentName: `${data.student.first_name} ${data.student.last_name || ''}`.trim(),
+                    link: data.link,
+                    whatsappLink: data.whatsapp_link,
+                  });
+                  showToast('Aluno cadastrado! Link gerado com sucesso.', 'success');
+                  loadStudents();
+                } catch (err) {
+                  showToast(err.message || 'Erro ao cadastrar aluno.', 'error');
+                } finally {
+                  setQuickSubmitting(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Nome do Aluno *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Carlos Eduardo"
+                  value={quickStudentData.first_name}
+                  onChange={(e) => setQuickStudentData((prev) => ({ ...prev, first_name: e.target.value }))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Sobrenome (opcional)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Mendes"
+                  value={quickStudentData.last_name}
+                  onChange={(e) => setQuickStudentData((prev) => ({ ...prev, last_name: e.target.value }))}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">WhatsApp</label>
+                  <input
+                    type="tel"
+                    placeholder="(11) 99999-9999"
+                    value={quickStudentData.whatsapp}
+                    onChange={(e) => setQuickStudentData((prev) => ({ ...prev, whatsapp: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-3 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">E-mail</label>
+                  <input
+                    type="email"
+                    placeholder="aluno@email.com"
+                    value={quickStudentData.email}
+                    onChange={(e) => setQuickStudentData((prev) => ({ ...prev, email: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-3 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickCreateModal(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={quickSubmitting}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-600/30 flex items-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
+                >
+                  {quickSubmitting ? 'Gerando...' : '⚡ Criar & Gerar Link'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: LINK DA FICHA GERADO */}
+      {generatedLinkModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Link da Ficha Gerado!</h3>
+                  <p className="text-xs text-slate-400">Aluno: {generatedLinkModal.studentName}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setGeneratedLinkModal(null)}
+                className="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Envie o link abaixo para o aluno. Ele não precisa de senha e preencherá a própria ficha com design Apple mobile-first:
+              </p>
+
+              <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-2xl p-2.5">
+                <input
+                  type="text"
+                  readOnly
+                  value={generatedLinkModal.link}
+                  className="w-full bg-transparent text-xs text-blue-400 font-mono focus:outline-none truncate"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedLinkModal.link);
+                    showToast('Link copiado para a área de transferência!', 'success');
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shrink-0 transition-colors cursor-pointer"
+                >
+                  Copiar
+                </button>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <a
+                  href={generatedLinkModal.whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Enviar no WhatsApp
+                </a>
+                <a
+                  href={generatedLinkModal.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <Eye className="w-4 h-4" />
+                  Testar Link
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       )}
