@@ -265,37 +265,35 @@ export default function NotesTimelinePage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-16">
-      {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-950/80 via-[#121214] to-blue-950/80 border border-white/10 p-6 sm:p-8 backdrop-blur-xl shadow-2xl">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-              <span>Linha do Tempo em Tempo Real</span>
-            </div>
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
-              <StickyNote className="w-8 h-8 text-emerald-400" />
-              Linha do Tempo de Anotações
-            </h1>
-            <p className="text-slate-400 text-xs sm:text-sm max-w-xl">
-              Acompanhe observações, lembretes de alunos com fotos, cobranças e despesas em uma linha do tempo moderna com carregamento contínuo.
-            </p>
+      {/* Header Banner - Apple HIG OLED Dark Style */}
+      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 bg-[#161618]/90 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-2xl backdrop-blur-xl">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+            <Sparkles className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
+            <span>Linha do Tempo em Tempo Real</span>
           </div>
-
-          <button
-            onClick={handleOpenCreateModal}
-            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 active:scale-95 transition-all flex items-center justify-center gap-2 self-start md:self-auto cursor-pointer"
-          >
-            <Plus className="w-5 h-5 stroke-[2.5]" />
-            <span>Criar Nova Anotação</span>
-          </button>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+            <StickyNote className="w-7 h-7 text-emerald-400" />
+            <span>Linha do Tempo de Anotações</span>
+          </h1>
+          <p className="text-slate-400 text-xs sm:text-sm max-w-xl">
+            Acompanhe observações, lembretes de alunos com fotos, cobranças e despesas em uma linha do tempo moderna com carregamento contínuo.
+          </p>
         </div>
+
+        <button
+          onClick={handleOpenCreateModal}
+          className="px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 self-stretch md:self-auto min-h-[44px] cursor-pointer"
+        >
+          <Plus className="w-5 h-5 stroke-[2.5]" />
+          <span>Criar Anotação</span>
+        </button>
       </div>
 
-      {/* Control Bar: Categories & Search */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-[#141416]/90 p-4 rounded-2xl border border-white/10 backdrop-blur-xl">
-        {/* Category Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+      {/* Control Bar: Categories & Search (iOS Segmented Control Style) */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-[#141416]/90 p-3.5 sm:p-4 rounded-2xl border border-white/10 backdrop-blur-xl">
+        {/* Category Tabs (iOS Segmented Control) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             const isSelected = selectedCategory === cat.id;
@@ -303,13 +301,13 @@ export default function NotesTimelinePage() {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer min-h-[44px] active:scale-95 ${
                   isSelected
-                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
-                    : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 border border-white/5'
+                    ? 'bg-emerald-500 text-slate-950 font-extrabold shadow-md shadow-emerald-500/20'
+                    : 'bg-[#1C1C1E] text-slate-400 hover:text-white border border-white/10'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-4 h-4" />
                 <span>{cat.name}</span>
               </button>
             );
@@ -324,12 +322,12 @@ export default function NotesTimelinePage() {
             placeholder="Buscar por título, aluno ou conteúdo..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#1C1C1E] border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+            className="w-full bg-[#1C1C1E] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors min-h-[44px]"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -523,8 +521,9 @@ export default function NotesTimelinePage() {
 
       {/* Modal: Create / Edit Note (100% Mobile-First Apple HIG Bottom Sheet) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-[#161618] border border-white/10 rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[92vh] sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 overflow-hidden">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-xl animate-in fade-in">
+          <div className="bg-[#161618] border border-white/10 rounded-t-[32px] sm:rounded-3xl w-full max-w-lg max-h-[92vh] sm:max-h-[85vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 overflow-hidden">
+            <div className="ios-sheet-handle md:hidden mt-2" />
             {/* Modal Header */}
             <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#161618]">
               <div className="flex items-center gap-2.5">

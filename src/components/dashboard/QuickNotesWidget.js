@@ -412,8 +412,9 @@ export default function QuickNotesWidget({ students = [], billings = [], expense
 
       {/* CREATE / EDIT NOTE MODAL (Mobile-First Apple HIG Bottom Sheet) */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in">
-          <div className="glass-panel w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-slate-800 shadow-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-xl animate-in fade-in">
+          <div className="glass-panel w-full max-w-lg rounded-t-[32px] sm:rounded-3xl border border-white/10 shadow-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95">
+            <div className="ios-sheet-handle md:hidden mt-2" />
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-800 p-4 sm:p-5 shrink-0 bg-[#161618]">
               <h3 className="text-base font-extrabold text-white flex items-center gap-2">
