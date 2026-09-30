@@ -5,7 +5,7 @@ import Link from 'next/link';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { 
   Users, UserPlus, Search, MessageCircle, Instagram, Edit3, Trash2, ArrowUpRight, Camera, Key, Check, 
-  AlertCircle, ChevronRight, ChevronLeft, Heart, Dumbbell, Calendar, CreditCard, Droplet, Target, Scale, User, FileText, CheckCircle2, Clock, Eye, Repeat, AlertTriangle, RefreshCw, Plus, Award, Activity, TrendingUp, TrendingDown, Layers, ShieldAlert, BarChart3, History, ArrowLeftRight, Zap, Sparkles
+  AlertCircle, ChevronRight, ChevronLeft, Heart, Dumbbell, Calendar, CreditCard, Droplet, Target, Scale, User, FileText, CheckCircle2, Clock, Eye, Repeat, AlertTriangle, RefreshCw, Plus, Award, Activity, TrendingUp, TrendingDown, Layers, ShieldAlert, BarChart3, History, ArrowLeftRight, Zap, Sparkles, X
 } from 'lucide-react';
 
 const FASE_OPTIONS = ['Bulking', 'Cutting', 'Manutenção', 'Recomposição'];
