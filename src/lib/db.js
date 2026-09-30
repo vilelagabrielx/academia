@@ -2187,13 +2187,13 @@ export async function deleteQuickNote(id) {
 export async function getOrCreateOnboardingToken(userId, forceNew = false) {
   await initDbSchema();
   const res = await query(
-    `SELECT onboarding_token, onboarding_expires_at, (CASE WHEN onboarding_expires_at IS NOT NULL AND onboarding_expires_at < NOW() THEN true ELSE false END) as is_expired
+    `SELECT onboarding_token, onboarding_completed, onboarding_expires_at, (CASE WHEN onboarding_expires_at IS NOT NULL AND onboarding_expires_at < NOW() THEN true ELSE false END) as is_expired
      FROM core_userprofile WHERE user_id = $1`,
     [userId]
   );
 
   const current = res.rows[0];
-  if (!forceNew && current && current.onboarding_token && !current.is_expired) {
+  if (!forceNew && current && current.onboarding_token && !current.is_expired && !current.onboarding_completed) {
     return current.onboarding_token;
   }
 
@@ -2201,6 +2201,7 @@ export async function getOrCreateOnboardingToken(userId, forceNew = false) {
   await query(
     `UPDATE core_userprofile 
      SET onboarding_token = $1, 
+         onboarding_completed = false,
          onboarding_created_at = NOW(),
          onboarding_expires_at = NOW() + INTERVAL '30 days'
      WHERE user_id = $2`,
@@ -2237,8 +2238,12 @@ export async function updateStudentByOnboardingToken(token, data = {}) {
     throw new Error('Link de ficha não encontrado ou token inválido');
   }
 
+  if (student.onboarding_completed) {
+    throw new Error('Esta ficha já foi concluída e o link foi invalidado por segurança. Solicite um novo link ao seu treinador para fazer alterações.');
+  }
+
   if (student.is_expired) {
-    throw new Error('Este link de ficha temporário expirou (validade de 48h). Solicite um novo link ao seu treinador.');
+    throw new Error('Este link de ficha temporário expirou (validade de 30 dias). Solicite um novo link ao seu treinador.');
   }
 
   // Update profile fields & auth_user

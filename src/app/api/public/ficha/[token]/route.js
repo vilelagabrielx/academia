@@ -6,6 +6,13 @@ const rateLimitMap = new Map();
 
 function checkRateLimit(ip, limit = 30, windowMs = 60000) {
   const now = Date.now();
+  // Prune expired records to prevent unbounded memory growth
+  if (rateLimitMap.size > 2000) {
+    for (const [k, v] of rateLimitMap.entries()) {
+      if (now > v.resetTime) rateLimitMap.delete(k);
+    }
+  }
+
   const record = rateLimitMap.get(ip) || { count: 0, resetTime: now + windowMs };
 
   if (now > record.resetTime) {
@@ -170,7 +177,26 @@ export async function POST(request, { params }) {
       contato_emergencia_nome: String(rawData.contato_emergencia_nome || '').trim().slice(0, 100),
       contato_emergencia_parentesco: String(rawData.contato_emergencia_parentesco || '').trim().slice(0, 50),
       contato_emergencia_telefone: String(rawData.contato_emergencia_telefone || '').trim().slice(0, 30),
-      initial_evaluation: rawData.initial_evaluation && typeof rawData.initial_evaluation === 'object' ? rawData.initial_evaluation : null,
+      initial_evaluation: rawData.initial_evaluation && typeof rawData.initial_evaluation === 'object'
+        ? {
+            peso: rawData.initial_evaluation.peso ? String(rawData.initial_evaluation.peso).slice(0, 10) : '',
+            bf_percentual: rawData.initial_evaluation.bf_percentual ? String(rawData.initial_evaluation.bf_percentual).slice(0, 10) : '',
+            pescoco: rawData.initial_evaluation.pescoco ? String(rawData.initial_evaluation.pescoco).slice(0, 10) : '',
+            ombro: rawData.initial_evaluation.ombro ? String(rawData.initial_evaluation.ombro).slice(0, 10) : '',
+            peitoral_torax: rawData.initial_evaluation.peitoral_torax ? String(rawData.initial_evaluation.peitoral_torax).slice(0, 10) : '',
+            cintura: rawData.initial_evaluation.cintura ? String(rawData.initial_evaluation.cintura).slice(0, 10) : '',
+            abdomen: rawData.initial_evaluation.abdomen ? String(rawData.initial_evaluation.abdomen).slice(0, 10) : '',
+            quadril: rawData.initial_evaluation.quadril ? String(rawData.initial_evaluation.quadril).slice(0, 10) : '',
+            braco_direito: rawData.initial_evaluation.braco_direito ? String(rawData.initial_evaluation.braco_direito).slice(0, 10) : '',
+            braco_esquerdo: rawData.initial_evaluation.braco_esquerdo ? String(rawData.initial_evaluation.braco_esquerdo).slice(0, 10) : '',
+            braco_contraido: rawData.initial_evaluation.braco_contraido ? String(rawData.initial_evaluation.braco_contraido).slice(0, 10) : '',
+            coxa_direita: rawData.initial_evaluation.coxa_direita ? String(rawData.initial_evaluation.coxa_direita).slice(0, 10) : '',
+            coxa_esquerda: rawData.initial_evaluation.coxa_esquerda ? String(rawData.initial_evaluation.coxa_esquerda).slice(0, 10) : '',
+            panturrilha_direita: rawData.initial_evaluation.panturrilha_direita ? String(rawData.initial_evaluation.panturrilha_direita).slice(0, 10) : '',
+            panturrilha_esquerda: rawData.initial_evaluation.panturrilha_esquerda ? String(rawData.initial_evaluation.panturrilha_esquerda).slice(0, 10) : '',
+            observacoes: rawData.initial_evaluation.observacoes ? String(rawData.initial_evaluation.observacoes).slice(0, 500) : '',
+          }
+        : null,
     };
 
     if (!sanitizedData.first_name) {

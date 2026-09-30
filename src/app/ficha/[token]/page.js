@@ -93,6 +93,26 @@ export default function PublicStudentFichaPage() {
     contato_emergencia_nome: '',
     contato_emergencia_parentesco: '',
     contato_emergencia_telefone: '',
+
+    // Initial Body Evaluation Measurements
+    initial_evaluation: {
+      peso: '',
+      bf_percentual: '',
+      pescoco: '',
+      ombro: '',
+      peitoral_torax: '',
+      cintura: '',
+      abdomen: '',
+      quadril: '',
+      braco_direito: '',
+      braco_esquerdo: '',
+      braco_contraido: '',
+      coxa_direita: '',
+      coxa_esquerda: '',
+      panturrilha_direita: '',
+      panturrilha_esquerda: '',
+      observacoes: '',
+    },
   });
 
   useEffect(() => {
@@ -288,6 +308,24 @@ export default function PublicStudentFichaPage() {
         </p>
         <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-400 max-w-sm mb-6">
           Peça ao seu treinador ou à academia para gerar um novo link de preenchimento para você.
+        </div>
+      </div>
+    );
+  }
+
+  if (alreadyCompleted) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 rounded-full bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-6 shadow-inner">
+          <ShieldCheck className="w-10 h-10" />
+        </div>
+        <h1 className="text-2xl font-bold tracking-tight mb-2 text-white">Ficha Concluída & Link Invalidado 🔒</h1>
+        <p className="text-slate-400 text-sm max-w-sm mb-6 leading-relaxed">
+          Sua ficha foi preenchida com sucesso e este link temporário foi <strong className="text-white">encerrado e invalidado</strong> para garantir a total privacidade dos seus dados.
+        </p>
+        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-400 max-w-sm mb-6 space-y-1">
+          <p className="font-semibold text-slate-300">Precisa alterar alguma informação?</p>
+          <p>Solicite a geração de um novo link ao seu personal trainer ou à academia.</p>
         </div>
       </div>
     );
@@ -658,7 +696,7 @@ export default function PublicStudentFichaPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-2">Pontos Fracos que Deseja Focar</label>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 mb-4">
                   {PONTOS_FRACOS_OPTIONS.map((pf) => {
                     const isSelected = formData.pontos_fracos.includes(pf);
                     return (
@@ -676,6 +714,116 @@ export default function PublicStudentFichaPage() {
                       </button>
                     );
                   })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-800 pt-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Fase do Shape Atual</label>
+                  <select
+                    value={formData.fase_shape}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, fase_shape: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-all"
+                  >
+                    <option value="">Selecione</option>
+                    {FASE_OPTIONS.map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Divisão de Treino Preferida</label>
+                  <select
+                    value={formData.divisao_treino}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, divisao_treino: e.target.value }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-all"
+                  >
+                    <option value="">Selecione</option>
+                    {DIVISAO_OPTIONS.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Optional Detailed Body Circumference Card */}
+            <div className="bg-slate-900/70 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2 text-sm font-bold text-white">
+                  <Activity className="w-4 h-4 text-cyan-400" />
+                  Perímetros & Circunferências Corporais (Opcional)
+                </div>
+                <span className="text-[11px] text-slate-400">cm</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                <div>
+                  <label className="block text-slate-400 mb-1">Peitoral / Tórax</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="ex: 100"
+                    value={formData.initial_evaluation.peitoral_torax}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, initial_evaluation: { ...prev.initial_evaluation, peitoral_torax: e.target.value } }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Cintura</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="ex: 80"
+                    value={formData.initial_evaluation.cintura}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, initial_evaluation: { ...prev.initial_evaluation, cintura: e.target.value } }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Abdômen</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="ex: 85"
+                    value={formData.initial_evaluation.abdomen}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, initial_evaluation: { ...prev.initial_evaluation, abdomen: e.target.value } }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Quadril / Glúteo</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="ex: 95"
+                    value={formData.initial_evaluation.quadril}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, initial_evaluation: { ...prev.initial_evaluation, quadril: e.target.value } }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Braço Contraído (cm)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="ex: 38"
+                    value={formData.initial_evaluation.braco_contraido}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, initial_evaluation: { ...prev.initial_evaluation, braco_contraido: e.target.value } }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Coxa Direita</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="ex: 58"
+                    value={formData.initial_evaluation.coxa_direita}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, initial_evaluation: { ...prev.initial_evaluation, coxa_direita: e.target.value } }))}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-blue-500"
+                  />
                 </div>
               </div>
             </div>
