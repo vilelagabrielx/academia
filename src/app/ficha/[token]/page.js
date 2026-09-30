@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { compressImageFile } from '@/lib/imageCompression';
 import {
   User, Dumbbell, Heart, CheckCircle2, AlertCircle, Camera, ChevronRight, ChevronLeft,
   Sparkles, ShieldCheck, Phone, Mail, Calendar, Activity, Scale, Award, Layers,
@@ -189,18 +190,16 @@ export default function PublicStudentFichaPage() {
     }
   };
 
-  const handlePhotoUpload = (e) => {
+  const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 8 * 1024 * 1024) {
-        alert('Foto muito grande. Escolha uma foto menor que 8MB.');
-        return;
+      try {
+        const compressedBase64 = await compressImageFile(file, 300, 300, 0.60);
+        setFormData((prev) => ({ ...prev, photo_base64: compressedBase64 }));
+      } catch (err) {
+        console.error('Erro ao comprimir imagem:', err);
+        alert('Erro ao processar imagem. Tente outra foto.');
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, photo_base64: reader.result }));
-      };
-      reader.readAsDataURL(file);
     }
   };
 

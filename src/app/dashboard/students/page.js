@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { compressImageFile } from '@/lib/imageCompression';
 import { 
   Users, UserPlus, Search, MessageCircle, Instagram, Edit3, Trash2, ArrowUpRight, Camera, Key, Check, 
   AlertCircle, ChevronRight, ChevronLeft, Heart, Dumbbell, Calendar, CreditCard, Droplet, Target, Scale, User, FileText, CheckCircle2, Clock, Eye, Repeat, AlertTriangle, RefreshCw, Plus, Award, Activity, TrendingUp, TrendingDown, Layers, ShieldAlert, BarChart3, History, ArrowLeftRight, Zap, Sparkles, X
@@ -784,27 +785,16 @@ export default function StudentsPage() {
     window.open(waUrl, '_blank');
   };
 
-  const handlePhotoUpload = (e) => {
+  const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 300;
-        const scaleSize = MAX_WIDTH / img.width;
-        canvas.width = MAX_WIDTH;
-        canvas.height = img.height * scaleSize;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        setFormData((prev) => ({ ...prev, photo_base64: compressedBase64 }));
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedBase64 = await compressImageFile(file, 300, 300, 0.60);
+      setFormData((prev) => ({ ...prev, photo_base64: compressedBase64 }));
+    } catch (err) {
+      console.error('Erro ao comprimir imagem:', err);
+    }
   };
 
   const handleAtestadoUpload = (e) => {
