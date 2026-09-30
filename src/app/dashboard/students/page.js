@@ -291,6 +291,7 @@ export default function StudentsPage() {
     is_recurring: false,
   });
   const [renewing, setRenewing] = useState(false);
+  const [statusTabFilter, setStatusTabFilter] = useState('all');
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -1001,17 +1002,17 @@ export default function StudentsPage() {
           </h1>
           <p className="text-xs text-slate-400 mt-1">Acompanhamento completo de musculação, hipertrofia, proporção corporal e performance.</p>
         </div>
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={() => setShowQuickCreateModal(true)}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer text-sm"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-4 py-3 sm:py-2.5 rounded-2xl shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer text-sm min-h-[44px] active:scale-95"
           >
             <Zap className="w-4 h-4 text-blue-200" />
             <span>Cadastro Rápido & Link</span>
           </button>
           <button
             onClick={handleOpenCreateWizard}
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all cursor-pointer text-sm"
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold px-5 py-3 sm:py-2.5 rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer text-sm min-h-[44px] active:scale-95"
           >
             <UserPlus className="w-4 h-4" />
             <span>Cadastrar Completo</span>
@@ -1019,194 +1020,425 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      {/* Filter / Search Bar */}
-      <div className="glass-panel p-4 rounded-xl border border-slate-800 flex items-center gap-3">
-        <Search className="w-4 h-4 text-slate-500" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nome, WhatsApp, fase do shape ou objetivo..."
-          className="w-full bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
-        />
-        <button
-          onClick={loadStudents}
-          className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition-all font-semibold"
-        >
-          Buscar
-        </button>
+      {/* Filter & Search Bar with iOS Segmented Control */}
+      <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-white/10 space-y-3">
+        <div className="flex items-center gap-3 bg-[#1C1C1E] px-3.5 py-2.5 rounded-2xl border border-white/10">
+          <Search className="w-4 h-4 text-slate-400 shrink-0" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome, WhatsApp, fase do shape ou objetivo..."
+            className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none"
+          />
+          <button
+            onClick={loadStudents}
+            className="px-4 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs transition-all font-bold cursor-pointer shrink-0 min-h-[36px]"
+          >
+            Buscar
+          </button>
+        </div>
+
+        {/* Quick Filter Segmented Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+          {[
+            { id: 'all', label: 'Todos Alunos', count: students.length },
+            { id: 'em_dia', label: 'Em dia', count: students.filter(s => s.billing_status === 'em_dia').length },
+            { id: 'com_alertas', label: 'Com Alertas', count: students.filter(s => parseHealthAlerts(s.restricoes_articulares).length > 0 || parseHealthAlerts(s.condicoes_cardio_metabolicas).length > 0).length },
+            { id: 'sem_cobranca', label: 'Sem cobrança', count: students.filter(s => s.billing_status === 'sem_cobranca' || !s.billing_status).length },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setStatusTabFilter(tab.id)}
+              className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 cursor-pointer min-h-[36px] flex items-center gap-1.5 ${
+                statusTabFilter === tab.id
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-extrabold'
+                  : 'bg-[#1C1C1E] text-slate-400 hover:text-white border border-white/10'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                statusTabFilter === tab.id ? 'bg-slate-950/20 text-slate-950' : 'bg-white/10 text-slate-300'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Students Table */}
-      <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+      {/* Students List: Desktop Table (hidden md:block) & Mobile iOS Cards (block md:hidden) */}
+      <div className="glass-panel rounded-2xl border border-white/10 overflow-hidden">
         {loading ? (
           <LoadingSpinner text="Carregando lista de alunos..." size="lg" className="py-8" />
-        ) : students.length === 0 ? (
-          <div className="py-12 text-center text-slate-500 text-sm">Nenhum aluno cadastrado.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-[#1C1C1E] uppercase text-[10px] text-slate-400 font-semibold border-b border-white/10">
-                <tr>
-                  <th className="py-3.5 px-4">Aluno / Perfil</th>
-                  <th className="py-3.5 px-4">Alertas de Saúde</th>
-                  <th className="py-3.5 px-4">Treino & Divisão</th>
-                  <th className="py-3.5 px-4 text-center">Cobrança</th>
-                  <th className="py-3.5 px-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {students.map((student) => {
-                  const phone = student.whatsapp?.replace(/\D/g, '');
-                  const waUrl = phone ? `https://wa.me/${phone.startsWith('55') ? phone : `55${phone}`}` : null;
-                  const status = student.billing_status;
-                  const computedAgeVal = calculateAge(student.birth_date || student.data_nascimento);
+          (() => {
+            const filteredStudents = students.filter((student) => {
+              if (statusTabFilter === 'em_dia') return student.billing_status === 'em_dia';
+              if (statusTabFilter === 'com_alertas') {
+                const restricoesArr = parseHealthAlerts(student.restricoes_articulares);
+                const cardioArr = parseHealthAlerts(student.condicoes_cardio_metabolicas);
+                return restricoesArr.length > 0 || cardioArr.length > 0 || Boolean(student.contato_emergencia_nome);
+              }
+              if (statusTabFilter === 'sem_cobranca') return student.billing_status === 'sem_cobranca' || !student.billing_status;
+              return true;
+            });
 
-                  const restricoesArr = parseHealthAlerts(student.restricoes_articulares);
-                  const cardioArr = parseHealthAlerts(student.condicoes_cardio_metabolicas);
-                  const hasHealthAlerts = restricoesArr.length > 0 || cardioArr.length > 0 || Boolean(student.contato_emergencia_nome);
+            if (filteredStudents.length === 0) {
+              return <div className="py-12 text-center text-slate-500 text-sm font-medium">Nenhum aluno encontrado neste filtro.</div>;
+            }
 
-                  return (
-                    <tr
-                      key={student.id}
-                      className="hover:bg-white/5 transition-all cursor-pointer group"
-                      onClick={() => openStudentProfile(student)}
-                    >
-                      {/* Coluna 1: Aluno / Perfil (Limpa) */}
-                      <td className="py-3.5 px-4 font-semibold text-white flex items-center gap-3">
-                        {student.photo_base64 ? (
-                          <img
-                            src={student.photo_base64}
-                            alt={student.username}
-                            className="w-10 h-10 rounded-full object-cover border border-white/10 group-hover:border-emerald-400 transition-colors shrink-0"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-[#2C2C2E] border border-white/10 flex items-center justify-center font-bold text-emerald-400 shrink-0">
-                            {student.first_name?.[0] || student.username[0]?.toUpperCase()}
+            return (
+              <>
+                {/* Desktop View: Full Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-300">
+                    <thead className="bg-[#1C1C1E] uppercase text-[10px] text-slate-400 font-semibold border-b border-white/10">
+                      <tr>
+                        <th className="py-3.5 px-4">Aluno / Perfil</th>
+                        <th className="py-3.5 px-4">Alertas de Saúde</th>
+                        <th className="py-3.5 px-4">Treino & Divisão</th>
+                        <th className="py-3.5 px-4 text-center">Cobrança</th>
+                        <th className="py-3.5 px-4 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {filteredStudents.map((student) => {
+                        const phone = student.whatsapp?.replace(/\D/g, '');
+                        const waUrl = phone ? `https://wa.me/${phone.startsWith('55') ? phone : `55${phone}`}` : null;
+                        const status = student.billing_status;
+                        const computedAgeVal = calculateAge(student.birth_date || student.data_nascimento);
+
+                        const restricoesArr = parseHealthAlerts(student.restricoes_articulares);
+                        const cardioArr = parseHealthAlerts(student.condicoes_cardio_metabolicas);
+                        const hasHealthAlerts = restricoesArr.length > 0 || cardioArr.length > 0 || Boolean(student.contato_emergencia_nome);
+
+                        return (
+                          <tr
+                            key={student.id}
+                            className="hover:bg-white/5 transition-all cursor-pointer group"
+                            onClick={() => openStudentProfile(student)}
+                          >
+                            <td className="py-3.5 px-4 font-semibold text-white flex items-center gap-3">
+                              {student.photo_base64 ? (
+                                <img
+                                  src={student.photo_base64}
+                                  alt={student.username}
+                                  className="w-10 h-10 rounded-full object-cover border border-white/10 group-hover:border-emerald-400 transition-colors shrink-0"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-[#2C2C2E] border border-white/10 flex items-center justify-center font-bold text-emerald-400 shrink-0">
+                                  {student.first_name?.[0] || student.username[0]?.toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-sm text-white group-hover:text-emerald-400 transition-colors truncate">
+                                    {student.first_name} {student.last_name}
+                                  </span>
+                                  {computedAgeVal !== null && (
+                                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-slate-300 text-[10px] font-semibold shrink-0">
+                                      {computedAgeVal}a
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-[11px] text-slate-400 font-mono">@{student.username}</span>
+                                  {student.instagram && (
+                                    <a
+                                      href={student.instagram.startsWith('http') ? student.instagram : `https://instagram.com/${student.instagram.replace(/^@/, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="text-[11px] text-slate-400 hover:text-pink-400 transition-colors inline-flex items-center gap-1"
+                                    >
+                                      <Instagram className="w-3 h-3" />
+                                      <span className="truncate">{student.instagram.startsWith('@') ? student.instagram : `@${student.instagram}`}</span>
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              {hasHealthAlerts ? (
+                                <div className="flex flex-col gap-1 items-start">
+                                  {restricoesArr.length > 0 && (
+                                    <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 font-semibold text-[10px] border border-amber-500/20 inline-flex items-center gap-1">
+                                      <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                                      <span>Restrição: {restricoesArr.join(', ')}</span>
+                                    </span>
+                                  )}
+                                  {cardioArr.length > 0 && (
+                                    <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-300 font-semibold text-[10px] border border-rose-500/20 inline-flex items-center gap-1">
+                                      <ShieldAlert className="w-3 h-3 text-rose-400 shrink-0" />
+                                      <span>Cardio: {cardioArr.join(', ')}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-slate-500 text-[11px] italic">Sem restrições</span>
+                              )}
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              <span className="block font-semibold text-slate-200 text-xs">
+                                {student.divisao_treino || '—'}
+                              </span>
+                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                {student.fase_shape && (
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold text-[10px] border border-emerald-500/20">
+                                    {student.fase_shape}
+                                  </span>
+                                )}
+                                {student.nivel_treino && (
+                                  <span className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 font-semibold text-[10px] border border-purple-500/20">
+                                    {student.nivel_treino}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+
+                            <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                              {status === 'sem_cobranca' && (
+                                <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-rose-500/10 text-rose-300 border border-rose-500/20 inline-flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                                  Sem cobrança
+                                </span>
+                              )}
+                              {status === 'atrasada' && (
+                                <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 inline-flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                                  Atrasada
+                                </span>
+                              )}
+                              {status === 'pendente' && (
+                                <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                  Pendente
+                                </span>
+                              )}
+                              {status === 'em_dia' && (
+                                <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                  Em dia
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1.5">
+                                {waUrl && (
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-all active:scale-95"
+                                    title="WhatsApp"
+                                  >
+                                    <MessageCircle className="w-4 h-4" />
+                                  </a>
+                                )}
+
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      setGeneratingLinkId(student.id);
+                                      const res = await fetch(`/api/students/${student.id}/generate-link`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ name: student.first_name, whatsapp: student.whatsapp }),
+                                      });
+                                      const data = await res.json();
+                                      if (!res.ok || data.error) throw new Error(data.error || 'Erro ao gerar link');
+                                      setGeneratedLinkModal({
+                                        studentName: `${student.first_name} ${student.last_name || ''}`.trim(),
+                                        link: data.link,
+                                        whatsappLink: data.whatsapp_link,
+                                      });
+                                      showToast('Link da ficha gerado!', 'success');
+                                    } catch (err) {
+                                      showToast(err.message || 'Erro ao gerar link', 'error');
+                                    } finally {
+                                      setGeneratingLinkId(null);
+                                    }
+                                  }}
+                                  disabled={generatingLinkId === student.id}
+                                  className="p-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                                  title="Gerar / Copiar Link da Ficha"
+                                >
+                                  <Sparkles className="w-4 h-4 text-blue-400" />
+                                </button>
+
+                                <button
+                                  onClick={() => openStudentProfile(student)}
+                                  title="Ver Ficha Completa"
+                                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-500/10 cursor-pointer"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Ver Ficha</span>
+                                </button>
+
+                                <button
+                                  onClick={() => handleOpenEditWizard(student)}
+                                  title="Editar Aluno"
+                                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-all active:scale-95 cursor-pointer"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+
+                                <button
+                                  onClick={() => handleCancelEnrollment(student.id, student.first_name || student.username)}
+                                  title="Desativar Aluno / Inativar Matrícula"
+                                  className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-all active:scale-95 cursor-pointer"
+                                >
+                                  <AlertTriangle className="w-4 h-4" />
+                                </button>
+
+                                <button
+                                  onClick={() => handleDelete(student.id, student.first_name || student.username)}
+                                  title="Excluir Permanentemente"
+                                  className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all active:scale-95 cursor-pointer"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile View: iOS Style Cards (block md:hidden) */}
+                <div className="block md:hidden space-y-3.5 p-3">
+                  {filteredStudents.map((student) => {
+                    const phone = student.whatsapp?.replace(/\D/g, '');
+                    const waUrl = phone ? `https://wa.me/${phone.startsWith('55') ? phone : `55${phone}`}` : null;
+                    const status = student.billing_status;
+                    const computedAgeVal = calculateAge(student.birth_date || student.data_nascimento);
+
+                    const restricoesArr = parseHealthAlerts(student.restricoes_articulares);
+                    const cardioArr = parseHealthAlerts(student.condicoes_cardio_metabolicas);
+                    const hasHealthAlerts = restricoesArr.length > 0 || cardioArr.length > 0 || Boolean(student.contato_emergencia_nome);
+
+                    return (
+                      <div
+                        key={student.id}
+                        className="p-4 rounded-2xl bg-[#1C1C1E] border border-white/10 space-y-3 active:scale-[0.99] transition-all shadow-lg"
+                        onClick={() => openStudentProfile(student)}
+                      >
+                        {/* Avatar + Info + Badge */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {student.photo_base64 ? (
+                              <img
+                                src={student.photo_base64}
+                                alt={student.username}
+                                className="w-12 h-12 rounded-full object-cover border border-white/20 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-[#2C2C2E] border border-white/20 flex items-center justify-center font-extrabold text-emerald-400 shrink-0 text-base">
+                                {student.first_name?.[0] || student.username[0]?.toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-extrabold text-base text-white truncate">
+                                  {student.first_name} {student.last_name}
+                                </span>
+                                {computedAgeVal !== null && (
+                                  <span className="px-1.5 py-0.5 rounded bg-white/10 text-slate-300 text-[10px] font-semibold shrink-0">
+                                    {computedAgeVal}a
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-slate-400 font-mono block">@{student.username}</span>
+                            </div>
                           </div>
-                        )}
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-white group-hover:text-emerald-400 transition-colors truncate">
-                              {student.first_name} {student.last_name}
-                            </span>
-                            {computedAgeVal !== null && (
-                              <span className="px-1.5 py-0.5 rounded bg-white/10 text-slate-300 text-[10px] font-semibold shrink-0">
-                                {computedAgeVal}a
+
+                          <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                            {status === 'sem_cobranca' && (
+                              <span className="px-2.5 py-1 rounded-full font-semibold text-[10px] bg-rose-500/10 text-rose-300 border border-rose-500/20">
+                                Sem cobrança
                               </span>
                             )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[11px] text-slate-400 font-mono">@{student.username}</span>
-                            {student.instagram && (
-                              <a
-                                href={student.instagram.startsWith('http') ? student.instagram : `https://instagram.com/${student.instagram.replace(/^@/, '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-[11px] text-slate-400 hover:text-pink-400 transition-colors inline-flex items-center gap-1"
-                                title={`Instagram: ${student.instagram}`}
-                              >
-                                <Instagram className="w-3 h-3" />
-                                <span className="truncate">{student.instagram.startsWith('@') ? student.instagram : `@${student.instagram}`}</span>
-                              </a>
+                            {status === 'atrasada' && (
+                              <span className="px-2.5 py-1 rounded-full font-semibold text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                Atrasada
+                              </span>
+                            )}
+                            {status === 'pendente' && (
+                              <span className="px-2.5 py-1 rounded-full font-semibold text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                Pendente
+                              </span>
+                            )}
+                            {status === 'em_dia' && (
+                              <span className="px-2.5 py-1 rounded-full font-semibold text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                Em dia
+                              </span>
                             )}
                           </div>
                         </div>
-                      </td>
 
-                      {/* Coluna 2: Alertas de Saúde & Ficha */}
-                      <td className="py-3.5 px-4">
-                        {hasHealthAlerts ? (
-                          <div className="flex flex-col gap-1 items-start">
-                            {restricoesArr.length > 0 && (
-                              <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 font-semibold text-[10px] border border-amber-500/20 inline-flex items-center gap-1">
-                                <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
-                                <span>Restrição: {restricoesArr.join(', ')}</span>
+                        {/* Middle Tags */}
+                        <div className="space-y-1.5 pt-2 border-t border-white/5 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400 font-medium">Treino & Divisão:</span>
+                            <span className="font-bold text-white">{student.divisao_treino || '—'}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {student.fase_shape && (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold text-[10px] border border-emerald-500/20">
+                                {student.fase_shape}
                               </span>
                             )}
-                            {cardioArr.length > 0 && (
-                              <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-300 font-semibold text-[10px] border border-rose-500/20 inline-flex items-center gap-1">
-                                <ShieldAlert className="w-3 h-3 text-rose-400 shrink-0" />
-                                <span>Cardio: {cardioArr.join(', ')}</span>
-                              </span>
-                            )}
-                            {student.contato_emergencia_nome && (
-                              <span className="px-2 py-0.5 rounded-full bg-white/5 text-slate-300 font-semibold text-[10px] border border-white/10 inline-flex items-center gap-1">
-                                <Heart className="w-3 h-3 text-rose-400 fill-rose-400/20 shrink-0" />
-                                <span>Emergência: {student.contato_emergencia_nome}</span>
+                            {student.nivel_treino && (
+                              <span className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 font-semibold text-[10px] border border-purple-500/20">
+                                {student.nivel_treino}
                               </span>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-slate-500 text-[11px] italic">Sem restrições</span>
-                        )}
-                      </td>
 
-                      {/* Coluna 3: Treino & Divisão */}
-                      <td className="py-3.5 px-4">
-                        <span className="block font-semibold text-slate-200 text-xs">
-                          {student.divisao_treino || '—'}
-                        </span>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          {student.fase_shape && (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold text-[10px] border border-emerald-500/20">
-                              {student.fase_shape}
-                            </span>
-                          )}
-                          {student.nivel_treino && (
-                            <span className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 font-semibold text-[10px] border border-purple-500/20">
-                              {student.nivel_treino}
-                            </span>
-                          )}
-                          {(student.objetivo_principal || student.goal) && (
-                            <span className="px-2 py-0.5 rounded-full bg-white/5 text-slate-300 font-medium text-[10px] border border-white/10">
-                              {student.objetivo_principal || student.goal}
-                            </span>
+                          {hasHealthAlerts && (
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {restricoesArr.length > 0 && (
+                                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 font-semibold text-[10px] border border-amber-500/20 inline-flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                                  <span>{restricoesArr.join(', ')}</span>
+                                </span>
+                              )}
+                              {cardioArr.length > 0 && (
+                                <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-300 font-semibold text-[10px] border border-rose-500/20 inline-flex items-center gap-1">
+                                  <ShieldAlert className="w-3 h-3 text-rose-400 shrink-0" />
+                                  <span>{cardioArr.join(', ')}</span>
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
-                      </td>
 
-                      {/* Coluna 4: Situação Cobrança */}
-                      <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                        {status === 'sem_cobranca' && (
-                          <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-rose-500/10 text-rose-300 border border-rose-500/20 inline-flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                            Sem cobrança
-                          </span>
-                        )}
-                        {status === 'atrasada' && (
-                          <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-rose-500/10 text-rose-400 border border-rose-500/20 inline-flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                            Atrasada
-                          </span>
-                        )}
-                        {status === 'pendente' && (
-                          <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                            Pendente
-                          </span>
-                        )}
-                        {status === 'em_dia' && (
-                          <span className="px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            Em dia
-                          </span>
-                        )}
-                      </td>
+                        {/* Actions Toolbar */}
+                        <div className="flex items-center gap-2 pt-2.5 border-t border-white/10" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => openStudentProfile(student)}
+                            className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-500/20 min-h-[44px] cursor-pointer"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span>Ver Ficha</span>
+                          </button>
 
-                      {/* Coluna 5: Ações Streamlined */}
-                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
                           {waUrl && (
                             <a
                               href={waUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-all active:scale-95"
+                              className="w-11 h-11 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 flex items-center justify-center active:scale-95 transition-all shrink-0 min-h-[44px]"
                               title="WhatsApp"
                             >
-                              <MessageCircle className="w-4 h-4" />
+                              <MessageCircle className="w-5 h-5" />
                             </a>
                           )}
 
@@ -1234,59 +1466,51 @@ export default function StudentsPage() {
                               }
                             }}
                             disabled={generatingLinkId === student.id}
-                            className="p-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                            title="Gerar / Copiar Link da Ficha do Aluno"
+                            className="w-11 h-11 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 flex items-center justify-center active:scale-95 transition-all shrink-0 cursor-pointer disabled:opacity-50 min-h-[44px]"
+                            title="Copiar Link Ficha"
                           >
-                            <Sparkles className="w-4 h-4 text-blue-400" />
-                          </button>
-
-                          <button
-                            onClick={() => openStudentProfile(student)}
-                            title="Ver Ficha Completa"
-                            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-500/10 cursor-pointer"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Ver Ficha</span>
+                            <Sparkles className="w-5 h-5 text-blue-400" />
                           </button>
 
                           <button
                             onClick={() => handleOpenEditWizard(student)}
-                            title="Editar Aluno"
-                            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-all active:scale-95 cursor-pointer"
+                            className="w-11 h-11 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 flex items-center justify-center active:scale-95 transition-all shrink-0 cursor-pointer min-h-[44px]"
+                            title="Editar"
                           >
-                            <Edit3 className="w-4 h-4" />
+                            <Edit3 className="w-5 h-5 text-slate-300" />
                           </button>
 
                           <button
                             onClick={() => handleCancelEnrollment(student.id, student.first_name || student.username)}
-                            title="Desativar Aluno / Inativar Matrícula"
-                            className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-all active:scale-95 cursor-pointer"
+                            className="w-11 h-11 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 flex items-center justify-center active:scale-95 transition-all shrink-0 cursor-pointer min-h-[44px]"
+                            title="Inativar"
                           >
-                            <AlertTriangle className="w-4 h-4" />
+                            <AlertTriangle className="w-5 h-5 text-amber-400" />
                           </button>
 
                           <button
                             onClick={() => handleDelete(student.id, student.first_name || student.username)}
-                            title="Excluir Permanentemente em Cascata (Requer 3 confirmações)"
-                            className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all active:scale-95 cursor-pointer"
+                            className="w-11 h-11 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 flex items-center justify-center active:scale-95 transition-all shrink-0 cursor-pointer min-h-[44px]"
+                            title="Excluir"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-5 h-5 text-rose-400" />
                           </button>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            );
+          })()
         )}
       </div>
 
       {/* MODAL 1: FICHA DO ALUNO COMPLETA */}
       {viewingStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md">
-          <div className="glass-panel w-full max-w-4xl rounded-3xl p-4 sm:p-6 border border-slate-800 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-xl transition-all">
+          <div className="glass-panel w-full max-w-4xl rounded-t-[32px] sm:rounded-3xl p-4 sm:p-6 border border-white/10 shadow-2xl space-y-6 max-h-[94vh] overflow-y-auto">
+            <div className="ios-sheet-handle md:hidden mt-2" />
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div className="flex items-center gap-2">
@@ -1875,10 +2099,11 @@ export default function StudentsPage() {
 
       {/* MODAL 2: CADASTRO / EDIÇÃO DE ALUNO (WIZARD DE ALTA USABILIDADE DE NÍVEL APPLE iOS) */}
       {showWizardModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-xl transition-all">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-xl transition-all">
           <div className="glass-panel w-full max-w-3xl rounded-t-[32px] sm:rounded-3xl border border-white/10 shadow-2xl space-y-0 max-h-[94vh] overflow-y-auto flex flex-col justify-between">
+            <div className="ios-sheet-handle md:hidden mt-2" />
             {/* Top Modal Header (iOS Sheet Header Style) */}
-            <div className="p-5 sm:p-6 border-b border-white/10 space-y-4 sticky top-0 z-20 bg-slate-950/90 backdrop-blur-md shrink-0">
+            <div className="p-5 sm:p-6 border-b border-white/10 space-y-4 sticky top-0 z-20 bg-[#121214]/95 backdrop-blur-md shrink-0">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg sm:text-xl font-black text-white tracking-tight flex items-center gap-2">
