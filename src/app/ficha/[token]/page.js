@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import PhoneInputWithContacts from '@/components/PhoneInputWithContacts';
 import { compressImageFile } from '@/lib/imageCompression';
 import {
   User, Dumbbell, Heart, CheckCircle2, AlertCircle, Camera, ChevronRight, ChevronLeft,
@@ -486,16 +487,18 @@ export default function PublicStudentFichaPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">WhatsApp / Celular</label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                    <input
-                      type="tel"
-                      placeholder="(11) 99999-9999"
-                      value={formData.whatsapp}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, whatsapp: e.target.value }))}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-all"
-                    />
-                  </div>
+                  <PhoneInputWithContacts
+                    value={formData.whatsapp}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, whatsapp: val }))}
+                    onContactPick={({ firstName, lastName, phone }) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        first_name: prev.first_name || firstName,
+                        last_name: prev.last_name || lastName,
+                        whatsapp: phone,
+                      }));
+                    }}
+                  />
                 </div>
 
                 <div>

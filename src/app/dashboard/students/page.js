@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import PhoneInputWithContacts from '@/components/PhoneInputWithContacts';
 import { compressImageFile } from '@/lib/imageCompression';
 import { 
   Users, UserPlus, Search, MessageCircle, Instagram, Edit3, Trash2, ArrowUpRight, Camera, Key, Check, 
@@ -2247,13 +2248,17 @@ export default function StudentsPage() {
                           <span>WhatsApp (DDD + N°)</span>
                           {formData.create_first_billing && <span className="text-[9px] text-amber-400 font-extrabold">* Obr. p/ Cobrança</span>}
                         </label>
-                        <input
-                          type="tel"
-                          inputMode="tel"
+                        <PhoneInputWithContacts
                           value={formData.whatsapp}
-                          onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                          placeholder="5511999999999"
-                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:border-emerald-500 text-sm"
+                          onChange={(val) => setFormData((prev) => ({ ...prev, whatsapp: val }))}
+                          onContactPick={({ firstName, lastName, phone }) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              first_name: prev.first_name || firstName,
+                              last_name: prev.last_name || lastName,
+                              whatsapp: phone,
+                            }));
+                          }}
                         />
                       </div>
 
@@ -2351,13 +2356,17 @@ export default function StudentsPage() {
                                 <span className="text-[9px] text-amber-400 font-extrabold">* Obr. p/ Cobrança</span>
                               )}
                             </label>
-                            <input
-                              type="tel"
-                              inputMode="tel"
+                            <PhoneInputWithContacts
                               value={formData.whatsapp}
-                              onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                              placeholder="5511999999999"
-                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white focus:border-emerald-500"
+                              onChange={(val) => setFormData((prev) => ({ ...prev, whatsapp: val }))}
+                              onContactPick={({ firstName, lastName, phone }) => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  first_name: prev.first_name || firstName,
+                                  last_name: prev.last_name || lastName,
+                                  whatsapp: phone,
+                                }));
+                              }}
                             />
                           </div>
                           <div>
@@ -2788,13 +2797,9 @@ export default function StudentsPage() {
 
                             <div>
                               <label className="block font-bold text-amber-200 mb-1 text-xs">Telefone / WhatsApp</label>
-                              <input
-                                type="tel"
-                                inputMode="tel"
+                              <PhoneInputWithContacts
                                 value={formData.contato_emergencia_telefone}
-                                onChange={(e) => setFormData({ ...formData, contato_emergencia_telefone: e.target.value })}
-                                placeholder="(11) 99999-9999"
-                                className="w-full bg-slate-900 border border-amber-500/30 focus:border-amber-400 rounded-xl px-3 py-2 text-white placeholder-slate-500"
+                                onChange={(val) => setFormData((prev) => ({ ...prev, contato_emergencia_telefone: val }))}
                               />
                             </div>
                           </div>
@@ -3888,12 +3893,17 @@ export default function StudentsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">WhatsApp</label>
-                  <input
-                    type="tel"
-                    placeholder="(11) 99999-9999"
+                  <PhoneInputWithContacts
                     value={quickStudentData.whatsapp}
-                    onChange={(e) => setQuickStudentData((prev) => ({ ...prev, whatsapp: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-3 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+                    onChange={(val) => setQuickStudentData((prev) => ({ ...prev, whatsapp: val }))}
+                    onContactPick={({ firstName, lastName, phone }) => {
+                      setQuickStudentData((prev) => ({
+                        ...prev,
+                        first_name: prev.first_name || firstName,
+                        last_name: prev.last_name || lastName,
+                        whatsapp: phone,
+                      }));
+                    }}
                   />
                 </div>
 
