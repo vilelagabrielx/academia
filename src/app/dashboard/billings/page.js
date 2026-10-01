@@ -555,8 +555,8 @@ export default function FinancialPage() {
         </div>
       </div>
 
-      {/* MASTER FINANCIAL OVERVIEW CARDS (2 colunas no Mobile, 4 no Desktop) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+      {/* MASTER FINANCIAL OVERVIEW CARDS (2 colunas no Mobile, 3 no Tablet, 5 no Desktop) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
         {/* Card 1: Total Recebido */}
         <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-white/10 flex items-center gap-2.5 bg-[#161618]">
           <div className="p-2.5 sm:p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
@@ -583,7 +583,20 @@ export default function FinancialPage() {
           </div>
         </div>
 
-        {/* Card 3: Total de Despesas */}
+        {/* Card 3: Total em Atraso */}
+        <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-white/10 flex items-center gap-2.5 bg-[#161618]">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+            <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider font-semibold block truncate">Total em Atraso</span>
+            <span className="text-sm sm:text-lg font-extrabold text-amber-400 block truncate">
+              R$ {parseFloat(summary.total_overdue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Total de Despesas */}
         <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-white/10 flex items-center gap-2.5 bg-[#161618]">
           <div className="p-2.5 sm:p-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
             <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -596,7 +609,7 @@ export default function FinancialPage() {
           </div>
         </div>
 
-        {/* Card 4: Lucro Parcial Mensal */}
+        {/* Card 5: Lucro Parcial Mensal */}
         <div className="glass-panel p-3.5 sm:p-4 rounded-2xl border border-white/10 flex items-center gap-2.5 bg-[#161618]">
           <div className={`p-2.5 sm:p-3 rounded-xl border shrink-0 ${
             cashflow.lucro_liquido >= 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
